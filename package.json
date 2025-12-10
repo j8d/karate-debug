@@ -2,7 +2,7 @@
   "name": "karate-runner",
   "displayName": "Karate Runner",
   "description": "Debug Karate tests",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "resmed",
   "license": "MIT",
   "icon": "resources/karate-icon.png",
@@ -26,8 +26,13 @@
     "languages": [
       {
         "id": "karate",
-        "aliases": ["Karate", "karate"],
-        "extensions": [".feature"],
+        "aliases": [
+          "Karate",
+          "karate"
+        ],
+        "extensions": [
+          ".feature"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -46,7 +51,9 @@
         "runtime": "node",
         "configurationAttributes": {
           "launch": {
-            "required": ["feature"],
+            "required": [
+              "feature"
+            ],
             "properties": {
               "feature": {
                 "type": "string",
