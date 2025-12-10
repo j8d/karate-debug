@@ -1,0 +1,27 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: patientcore-karate-vscode
+  namespace: default
+  description: Plugin to aid with creating, managing and debugging karate tests
+  title: patientcore-karate-vscode
+  tags: []
+  links:
+    - url: https://github.com/resmed/patientcore-karate-vscode
+      title: Repository URL
+  annotations:
+    backstage.io/techdocs-ref: "dir:."
+    sonarqube.org/project-key: "resmed_patientcore-karate-vscode"
+    resmed.com/capability-code: "intg-offrg-svcs"
+    resmed.com/business-owner: "christian.drouin@matrixcare.com"
+    resmed.com/product-identifier: "Platform_PatientCore_SLTC"
+    resmed.com/business-vertical: "SharedServices"
+    github.com/project-slug: "resmed/patientcore-karate-vscode"
+
+spec:
+  type: "module"
+  lifecycle: experimental
+  owner: patient-core
+  dependsOn: []
+  providesApis: []
+  consumesApis: []
