@@ -310,7 +310,18 @@ class FeatureExplorerProvider implements vscode.TreeDataProvider<FeatureItem> {
     private folderContainsFeatures(folderPath: string): boolean {
         try {
             const entries = fs.readdirSync(folderPath, { withFileTypes: true });
-            return entries.some(e => e.isFile() && e.name.endsWith('.feature'));
+            for (const entry of entries) {
+                if (entry.isFile() && entry.name.endsWith('.feature')) {
+                    return true;
+                }
+                if (entry.isDirectory()) {
+                    // Recursively check subdirectories
+                    if (this.folderContainsFeatures(path.join(folderPath, entry.name))) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         } catch {
             return false;
         }
@@ -321,11 +332,21 @@ class FeatureExplorerProvider implements vscode.TreeDataProvider<FeatureItem> {
         try {
             const entries = fs.readdirSync(folderPath, { withFileTypes: true });
             for (const entry of entries) {
-                if (entry.isFile() && entry.name.endsWith('.feature')) {
+                const entryPath = path.join(folderPath, entry.name);
+                if (entry.isDirectory()) {
+                    // Add subdirectories that contain features
+                    if (this.folderContainsFeatures(entryPath)) {
+                        items.push({
+                            type: 'folder',
+                            name: entry.name,
+                            filePath: entryPath
+                        });
+                    }
+                } else if (entry.isFile() && entry.name.endsWith('.feature')) {
                     items.push({
                         type: 'feature',
                         name: entry.name,
-                        filePath: path.join(folderPath, entry.name)
+                        filePath: entryPath
                     });
                 }
             }
