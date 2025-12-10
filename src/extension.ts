@@ -178,7 +178,8 @@ async function debugKarateFeature(uri: vscode.Uri, line: number) {
         type: 'karate',
         request: 'launch',
         name: 'Karate Debug',
-        feature: `${uri.fsPath}${lineSpec}`
+        feature: `${uri.fsPath}${lineSpec}`,
+        karateEnv: currentEnvironment
     });
 }
 
