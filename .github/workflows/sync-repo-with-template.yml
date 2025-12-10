@@ -3,7 +3,7 @@ name: Sync repo with DevX template
 
 on:
   schedule:
-    - cron: '0 0 * * SAT'
+    - cron: '0 19 10 * *'
   workflow_dispatch:
 
 jobs:
