@@ -1,21 +1,67 @@
+# Karate Runner
 
+A lightweight VS Code extension for debugging Karate API tests.
 
-**[DevX Reference Resources](https://docs.devx.resmed.com/)**
+## Download
 
-# About the project
+**[Download the latest release](https://github.com/resmed/patientcore-karate-vscode/releases/latest)**
 
+Download the `.vsix` file and install it in VS Code:
+```bash
+code --install-extension karate-runner-x.x.x.vsix
+```
 
-# Pull Request process
-Any changes to the *main* branch of the repository need to follow the *pull request* process.
-While creating a PR for the repository, template to be used to describe the changes in the PR is [here](https://github.com/resmed/devx-template-basic/blob/main/.github/pull_request_template.md)
+## Features
 
-# Contributing
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement". 
-Any contributions to this repository need to follow the following guidelines.
+- **Debug Karate tests** with breakpoints and step-through debugging
+- **CodeLens buttons** - Click `▶ Debug Feature` or `▶ Debug Scenario` directly in your `.feature` files
+- **Feature Explorer** - Browse all features and scenarios in the sidebar
+- **Environment selector** - Switch between `dev`, `qa`, and `stage` from the status bar
+- **Syntax highlighting** - Full Karate DSL syntax support
 
-* Clone the repository locally
-* Activate the git hooks (git config core.hooksPath .githooks)
-* Create your Feature Branch (git checkout -b feature/AmazingFeature)
-* Commit your Changes (git commit -m 'feat: Add some AmazingFeature')
-* Push to the Branch (git push origin feature/AmazingFeature)
-* Open a Pull Request
+## Requirements
+
+- Java 11+ installed and available on PATH
+- Maven project with Karate dependencies
+
+## Getting Started
+
+1. Install this extension
+2. Open a Maven project containing Karate tests
+3. Open any `.feature` file
+4. Click `▶ Debug Feature` or `▶ Debug Scenario` above your tests
+
+## Configuration
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `karateRunner.karateEnv` | Default Karate environment | `dev` |
+| `karateRunner.javaHome` | Path to Java home | System default |
+
+## Building from Source
+
+```bash
+npm install
+npm run compile
+npm run package
+```
+
+Install the generated `.vsix` file:
+```bash
+code --install-extension karate-runner-x.x.x.vsix
+```
+
+## Releasing a New Version
+
+1. Update the version in `package.json`
+2. Commit your changes
+3. Create and push a tag:
+   ```bash
+   git tag v0.1.2
+   git push origin v0.1.2
+   ```
+4. GitHub Actions will automatically build and attach the `.vsix` to the release
+
+## License
+
+MIT

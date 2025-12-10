@@ -48,6 +48,7 @@ build/
 
 # Package Files #
 *.jar
+!resources/karate-debug-server-*.jar
 *.war
 *.nar
 *.ear
@@ -59,3 +60,11 @@ build/
 hs_err_pid*
 
 .DS_store
+
+### Node.js ###
+node_modules/
+npm-debug.log*
+
+### VS Code Extension ###
+out/
+*.vsix

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Karate",
+  "scopeName": "source.karate",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#feature" },
+    { "include": "#background" },
+    { "include": "#scenario" },
+    { "include": "#tags" },
+    { "include": "#steps" },
+    { "include": "#variables" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#json" },
+    { "include": "#xml" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.karate",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "feature": {
+      "patterns": [
+        {
+          "name": "keyword.control.feature.karate",
+          "match": "^\\s*(Feature):\\s*(.*)$",
+          "captures": {
+            "1": { "name": "keyword.control.feature.karate" },
+            "2": { "name": "string.unquoted.feature-name.karate" }
+          }
+        }
+      ]
+    },
+    "background": {
+      "patterns": [
+        {
+          "name": "keyword.control.background.karate",
+          "match": "^\\s*(Background):\\s*$"
+        }
+      ]
+    },
+    "scenario": {
+      "patterns": [
+        {
+          "match": "^\\s*(Scenario Outline|Scenario):\\s*(.*)$",
+          "captures": {
+            "1": { "name": "keyword.control.scenario.karate" },
+            "2": { "name": "string.unquoted.scenario-name.karate" }
+          }
+        },
+        {
+          "name": "keyword.control.examples.karate",
+          "match": "^\\s*(Examples):\\s*$"
+        }
+      ]
+    },
+    "tags": {
+      "patterns": [
+        {
+          "name": "entity.name.tag.karate",
+          "match": "@[\\w\\-=,]+"
+        }
+      ]
+    },
+    "steps": {
+      "patterns": [
+        {
+          "name": "keyword.control.step.karate",
+          "match": "^\\s*(Given|When|Then|And|But|\\*)\\s+"
+        },
+        {
+          "name": "keyword.other.karate",
+          "match": "\\b(def|set|print|assert|match|contains|read|call|callonce|karate|configure|url|path|request|method|status|response|param|params|header|headers|cookie|cookies|form field|form fields|multipart file|multipart field|multipart entity|retry until|eval|listen|doc|table|text|replace|yaml|csv|bytes|copy|remove|get|json|xml|xmlstring|string|typeOf|sleep)\\b"
+        },
+        {
+          "name": "support.function.http.karate",
+          "match": "\\b(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|CONNECT|TRACE)\\b"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.karate",
+          "match": "<[^>]+>"
+        },
+        {
+          "name": "variable.other.embedded.karate",
+          "match": "#\\([^)]+\\)"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.karate",
+          "begin": "'",
+          "end": "'",
+          "patterns": [{ "include": "#variables" }]
+        },
+        {
+          "name": "string.quoted.double.karate",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [{ "include": "#variables" }]
+        },
+        {
+          "name": "string.quoted.triple.karate",
+          "begin": "\"\"\"",
+          "end": "\"\"\"",
+          "patterns": [{ "include": "#variables" }]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.karate",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "json": {
+      "patterns": [
+        {
+          "name": "punctuation.definition.dictionary.karate",
+          "match": "[{}\\[\\]]"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.karate",
+          "match": "(==|!=|&&|\\|\\||!|\\?|:)"
+        },
+        {
+          "name": "keyword.operator.match.karate",
+          "match": "\\b(only|any|each|deep|contains|not|null|present|notpresent|\\#ignore|\\#notnull|\\#present|\\#notpresent|\\#array|\\#object|\\#boolean|\\#number|\\#string|\\#uuid|\\#regex|\\#\\?)\\b"
+        }
+      ]
+    }
+  }
+}
+

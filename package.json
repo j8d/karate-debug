@@ -1,0 +1,184 @@
+{
+  "name": "karate-runner",
+  "displayName": "Karate Runner",
+  "description": "Debug Karate tests",
+  "version": "0.1.2",
+  "publisher": "resmed",
+  "license": "MIT",
+  "icon": "resources/karate-icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/resmed/patientcore-karate-vscode"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Debuggers",
+    "Testing"
+  ],
+  "activationEvents": [
+    "onLanguage:karate",
+    "workspaceContains:**/*.feature"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "karate",
+        "aliases": ["Karate", "karate"],
+        "extensions": [".feature"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "karate",
+        "scopeName": "source.karate",
+        "path": "./syntaxes/karate.tmLanguage.json"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "karate",
+        "label": "Karate Debug",
+        "program": "./out/debugAdapter.js",
+        "runtime": "node",
+        "configurationAttributes": {
+          "launch": {
+            "required": ["feature"],
+            "properties": {
+              "feature": {
+                "type": "string",
+                "description": "Path to the feature file to debug",
+                "default": "${file}"
+              },
+              "karateEnv": {
+                "type": "string",
+                "description": "Karate environment (karate.env)",
+                "default": "dev"
+              },
+              "karateOptions": {
+                "type": "string",
+                "description": "Additional Karate CLI options",
+                "default": ""
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "karate",
+            "request": "launch",
+            "name": "Karate Debug",
+            "feature": "${file}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Karate: Debug Feature",
+            "description": "Debug a Karate feature file",
+            "body": {
+              "type": "karate",
+              "request": "launch",
+              "name": "Karate Debug",
+              "feature": "^\"${1:\\${file}}\""
+            }
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "Karate Runner",
+      "properties": {
+        "karateRunner.karateEnv": {
+          "type": "string",
+          "default": "dev",
+          "description": "Default Karate environment"
+        },
+        "karateRunner.javaHome": {
+          "type": "string",
+          "default": "",
+          "description": "Path to Java home (uses system default if empty)"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "karateRunner.debugFeature",
+        "title": "Karate: Debug Scenario"
+      },
+      {
+        "command": "karateRunner.debugEntireFeature",
+        "title": "Karate: Debug Feature"
+      },
+      {
+        "command": "karateRunner.selectEnvironment",
+        "title": "Karate: Select Environment"
+      },
+      {
+        "command": "karateRunner.refreshFeatures",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "karateRunner.openFeature",
+        "title": "Open Feature"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "karate-explorer",
+          "title": "Karate",
+          "icon": "resources/karate-dark.svg"
+        }
+      ]
+    },
+    "views": {
+      "karate-explorer": [
+        {
+          "id": "karateFeatures",
+          "name": "Features"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "karateRunner.refreshFeatures",
+          "when": "view == karateFeatures",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "karateRunner.debugEntireFeature",
+          "when": "view == karateFeatures && viewItem == feature",
+          "group": "inline"
+        },
+        {
+          "command": "karateRunner.debugFeature",
+          "when": "view == karateFeatures && viewItem == scenario",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.0.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "dependencies": {
+    "@vscode/debugadapter": "^1.64.0",
+    "@vscode/debugprotocol": "^1.64.0"
+  }
+}
