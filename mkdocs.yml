@@ -1,0 +1,18 @@
+site_name: "@new_repo_name"
+# site_url: site_url
+# site_author: site_author
+repo_url: https://github.com/resmed/@new_repo_name
+repo_name: "@new_repo_name"
+edit_uri: edit/main/docs/
+copyright: 'Copyright © 2024 ResMed'
+nav:
+  - 'Overview': 'index.md'
+theme:
+  name: material
+  features:
+    - navigation.sections
+extra:
+  generator: false
+plugins:
+  - techdocs-core
+docs_dir: docs

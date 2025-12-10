@@ -1,0 +1,27 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, release** ]
+    paths-ignore:
+      - '**/README.md'  # README.md file anywhere in repo
+      - '**/docs/**'  # any files in a docs directory anywhere in the repo
+      - '.git*/**'  # top level directories with .git prefix
+      - '**/catalog-info.yaml' # catalog-info.yaml file anywhere in repo
+      - 'values-*.yaml'  # deployment value files at root of repo
+      - .gitignore
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+    paths-ignore:
+      - '**/README.md'  # README.md file anywhere in repo
+      - '**/docs/**'  # any files in a docs directory anywhere in the repo
+      - '.git*/**'  # top level directories with .git prefix
+      - '**/catalog-info.yaml' # catalog-info.yaml file anywhere in repo
+      - 'values-*.yaml'  # deployment value files at root of repo
+      - .gitignore
+
+jobs:
+  call-security-scan:
+    name: Security Scan
+    uses: resmed/devx-shared-workflows/.github/workflows/security-scan.yml@main
+    secrets: inherit
