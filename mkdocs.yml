@@ -1,8 +1,8 @@
-site_name: "@new_repo_name"
+site_name: "patientcore-karate-vscode"
 # site_url: site_url
 # site_author: site_author
-repo_url: https://github.com/resmed/@new_repo_name
-repo_name: "@new_repo_name"
+repo_url: https://github.com/resmed/patientcore-karate-vscode
+repo_name: "patientcore-karate-vscode"
 edit_uri: edit/main/docs/
 copyright: 'Copyright © 2024 ResMed'
 nav:
