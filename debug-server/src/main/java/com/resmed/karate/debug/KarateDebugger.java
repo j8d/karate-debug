@@ -158,7 +158,25 @@ public class KarateDebugger implements RuntimeHook {
     }
 
     private String normalizeSourcePath(String path) {
-        return new File(path).getAbsolutePath();
+        File file = new File(path);
+        if (file.isAbsolute()) {
+            return file.getAbsolutePath();
+        }
+        // For relative paths from Karate, resolve against common source directories
+        String[] sourceRoots = {
+            "src/test/java/",
+            "src/test/resources/",
+            "src/main/java/",
+            "src/main/resources/"
+        };
+        for (String root : sourceRoots) {
+            File resolved = new File(workspaceRoot, root + path);
+            if (resolved.exists()) {
+                return resolved.getAbsolutePath();
+            }
+        }
+        // Fallback: resolve against workspace root
+        return new File(workspaceRoot, path).getAbsolutePath();
     }
 
     /**
