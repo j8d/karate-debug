@@ -69,6 +69,11 @@
                 "type": "string",
                 "description": "Additional Karate CLI options",
                 "default": ""
+              },
+              "javaDebugPort": {
+                "type": "number",
+                "description": "Port for Java debugger (JDWP). When set, enables simultaneous Java and Feature breakpoints. Use with a compound launch config to attach Java debugger.",
+                "default": 0
               }
             }
           }

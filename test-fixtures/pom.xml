@@ -37,6 +37,8 @@
                 <directory>src/test/java</directory>
                 <includes>
                     <include>**/*.feature</include>
+                    <include>**/*.json</include>
+                    <include>**/*.js</include>
                 </includes>
             </testResource>
         </testResources>

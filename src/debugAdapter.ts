@@ -33,11 +33,19 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         const port = await this.findFreePort();
 
         // Start our custom Karate debug server
+        const javaDebugPort = config.javaDebugPort || 0;
         this.serverProcess = await this.startDebugServer(
             workspaceFolder.uri.fsPath,
             port,
-            config.karateEnv || 'dev'
+            config.karateEnv || 'dev',
+            javaDebugPort
         );
+
+        // If Java debug port is specified, notify user
+        if (javaDebugPort > 0) {
+            this.log(`Java debug agent enabled on port ${javaDebugPort}`);
+            this.log(`Attach Java debugger to port ${javaDebugPort} for Java breakpoints`);
+        }
 
         // Wait for server to be ready
         await this.waitForServer(port, 30000);
@@ -77,7 +85,8 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
     private async startDebugServer(
         workspaceRoot: string,
         port: number,
-        karateEnv: string
+        karateEnv: string,
+        javaDebugPort: number = 0
     ): Promise<ChildProcess> {
         const config = vscode.workspace.getConfiguration('karateRunner');
 
@@ -101,16 +110,24 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         // Our debug server JAR should be FIRST, followed by project classes, then Maven deps
         const fullClasspath = `${debugServerJar}:${testClasses}:${mainClasses}:${mavenCp}`;
 
-        // Start the debug server
-        const args = [
-            '-cp', fullClasspath,
-            'com.resmed.karate.debug.DebugServer',
-            '-p', String(port),
-            '-w', workspaceRoot,
-            '-e', karateEnv
-        ];
+        // Build Java args - add JDWP agent if javaDebugPort is specified
+        const args: string[] = [];
+
+        if (javaDebugPort > 0) {
+            // Enable JDWP for Java debugging - suspend=n so Karate starts immediately
+            args.push(`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${javaDebugPort}`);
+        }
+
+        args.push('-cp', fullClasspath);
+        args.push('com.resmed.karate.debug.DebugServer');
+        args.push('-p', String(port));
+        args.push('-w', workspaceRoot);
+        args.push('-e', karateEnv);
 
         this.log(`Starting Karate debug server on port ${port}`);
+        if (javaDebugPort > 0) {
+            this.log(`Java debug agent listening on port ${javaDebugPort}`);
+        }
         this.log(`Java: ${javaPath}`);
         this.log(`Debug server JAR: ${debugServerJar}`);
         this.log(`Workspace: ${workspaceRoot}`);

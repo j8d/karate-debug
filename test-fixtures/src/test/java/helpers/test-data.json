@@ -1,0 +1,32 @@
+{
+    "users": [
+        {
+            "id": "user-001",
+            "name": "John Doe",
+            "email": "john.doe@example.com",
+            "role": "admin"
+        },
+        {
+            "id": "user-002",
+            "name": "Jane Smith",
+            "email": "jane.smith@example.com",
+            "role": "user"
+        }
+    ],
+    "config": {
+        "baseUrl": "https://api.example.com",
+        "timeout": 5000,
+        "retries": 3
+    },
+    "testCases": {
+        "validUser": {
+            "name": "Test User",
+            "email": "test@example.com"
+        },
+        "invalidUser": {
+            "name": "",
+            "email": "invalid-email"
+        }
+    }
+}
+
