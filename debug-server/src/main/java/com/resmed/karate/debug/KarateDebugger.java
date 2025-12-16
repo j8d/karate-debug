@@ -153,7 +153,9 @@ public class KarateDebugger implements RuntimeHook {
             logger.info("Set breakpoint at {}:{}", sourcePath, line);
         }
 
-        breakpoints.put(normalizeSourcePath(sourcePath), lines);
+        String normalizedPath = normalizeSourcePath(sourcePath);
+        logger.info("Storing breakpoint with key: {}", normalizedPath);
+        breakpoints.put(normalizedPath, lines);
         return result;
     }
 
@@ -311,8 +313,12 @@ public class KarateDebugger implements RuntimeHook {
         currentStep = step;
         currentRuntime = sr;
 
-        String sourcePath = normalizeSourcePath(step.getFeature().getResource().getRelativePath());
+        String relativePath = step.getFeature().getResource().getRelativePath();
+        String sourcePath = normalizeSourcePath(relativePath);
         int line = step.getLine();
+
+        logger.debug("beforeStep: relativePath={}, normalized={}, line={}", relativePath, sourcePath, line);
+        logger.debug("beforeStep: breakpoints keys={}", breakpoints.keySet());
 
         boolean shouldPause = false;
 
@@ -382,8 +388,12 @@ public class KarateDebugger implements RuntimeHook {
             frame.addProperty("line", currentStep.getLine());
             frame.addProperty("column", 1);
 
+            // Use absolute path so VS Code opens the correct editor tab
+            String relativePath = currentStep.getFeature().getResource().getRelativePath();
+            String absolutePath = normalizeSourcePath(relativePath);
+
             JsonObject source = new JsonObject();
-            source.addProperty("path", currentStep.getFeature().getResource().getRelativePath());
+            source.addProperty("path", absolutePath);
             source.addProperty("name", currentStep.getFeature().getName());
             frame.add("source", source);
 

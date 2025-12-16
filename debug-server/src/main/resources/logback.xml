@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} -- %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Our debug server classes - DEBUG level to see breakpoint matching -->
+    <logger name="com.resmed.karate.debug" level="DEBUG"/>
+
+    <!-- Karate framework - INFO to reduce noise -->
+    <logger name="com.intuit.karate" level="INFO"/>
+
+    <!-- HTTP client - WARN to reduce noise -->
+    <logger name="org.apache.http" level="WARN"/>
+
+    <!-- Thymeleaf - WARN to reduce noise -->
+    <logger name="org.thymeleaf" level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
+
