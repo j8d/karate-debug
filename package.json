@@ -181,14 +181,14 @@
     "package": "vsce package"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.0",
     "@types/node": "^18.0.0",
     "@types/vscode": "^1.80.0",
-    "@types/mocha": "^10.0.0",
     "@vscode/test-electron": "^2.3.0",
+    "@vscode/vsce": "^3.7.1",
     "glob": "^10.3.0",
     "mocha": "^10.2.0",
-    "typescript": "^5.0.0",
-    "@vscode/vsce": "^2.22.0"
+    "typescript": "^5.0.0"
   },
   "dependencies": {
     "@vscode/debugadapter": "^1.64.0",
