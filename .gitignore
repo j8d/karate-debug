@@ -69,3 +69,6 @@ npm-debug.log*
 out/
 *.vsix
 .vscode-test/
+
+### Augment ###
+.augment-guidelines
