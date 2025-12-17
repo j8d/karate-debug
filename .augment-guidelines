@@ -1,0 +1,71 @@
+# Karate Debug - VS Code Extension
+
+## Overview
+A VS Code extension for debugging Karate API tests. Provides breakpoints, step-through debugging, CodeLens buttons, and a Feature Explorer sidebar for `.feature` files.
+
+## Tech Stack
+- **Frontend**: TypeScript VS Code extension
+- **Backend**: Java debug server implementing Debug Adapter Protocol (DAP)
+- **Build**: npm + Maven
+
+## Project Structure
+```
+├── src/                    # TypeScript extension source
+│   ├── extension.ts        # Main extension entry point
+│   └── debugAdapter.ts     # Debug adapter implementation
+├── debug-server/           # Java DAP server
+│   ├── pom.xml
+│   └── src/main/java/com/j8d/karate/debug/
+│       ├── DebugServer.java
+│       ├── DapSession.java
+│       └── KarateDebugger.java
+├── resources/              # Extension assets (icons, JAR)
+├── syntaxes/               # Karate syntax highlighting
+├── test-fixtures/          # Sample Karate project for testing
+└── .github/workflows/      # CI/CD (release on tag push)
+```
+
+## Build Commands
+
+### Full build
+```bash
+# Build Java debug server
+cd debug-server && mvn clean package -q && cd ..
+
+# Install npm dependencies and compile TypeScript
+npm install
+npm run compile
+
+# Package as .vsix
+npm run package
+```
+
+### Quick rebuild (TypeScript only)
+```bash
+npm run compile
+```
+
+## Releasing
+1. Update version in `package.json`
+2. Commit changes
+3. Create and push a tag: `git tag v0.x.x && git push origin v0.x.x`
+4. GitHub Actions will build and create a release with the .vsix
+
+## Key Files
+- `package.json` - Extension manifest, version, contributions
+- `src/extension.ts` - CodeLens, Feature Explorer, commands
+- `src/debugAdapter.ts` - Spawns Java debug server, handles DAP
+- `debug-server/pom.xml` - Java dependencies (Karate, logging)
+- `.github/workflows/release.yml` - Automated release workflow
+
+## Git Remote
+Uses SSH alias `github-j8d` for the j8d GitHub account:
+```
+origin  git@github-j8d:j8d/karate-debug.git
+```
+
+## Requirements
+- Node.js 20+
+- Java 17+
+- Maven 3.6+
+
