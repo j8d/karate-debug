@@ -42,7 +42,12 @@ public class DapSession {
         this.gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
-    public void run() {
+    /**
+     * Run the DAP session.
+     * @return true if at least one valid DAP message was processed, false if connection closed immediately
+     */
+    public boolean run() {
+        boolean hadValidMessage = false;
         try {
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             writer = socket.getOutputStream();
@@ -53,15 +58,19 @@ public class DapSession {
             while (running) {
                 JsonObject message = readMessage();
                 if (message == null) {
+                    logger.info("No more messages, ending session");
                     break;
                 }
+                hadValidMessage = true;
                 handleMessage(message);
             }
+            logger.info("Session loop ended, running={}, hadValidMessage={}", running, hadValidMessage);
         } catch (IOException e) {
             logger.error("Session error", e);
         } finally {
             cleanup();
         }
+        return hadValidMessage;
     }
 
     private JsonObject readMessage() throws IOException {
@@ -69,7 +78,9 @@ public class DapSession {
         int contentLength = -1;
         String line;
 
+        logger.debug("Waiting for message...");
         while ((line = reader.readLine()) != null) {
+            logger.debug("Header line: '{}'", line);
             if (line.isEmpty()) {
                 break;
             }
@@ -78,7 +89,13 @@ public class DapSession {
             }
         }
 
+        if (line == null) {
+            logger.info("Connection closed by client (readLine returned null)");
+            return null;
+        }
+
         if (contentLength < 0) {
+            logger.warn("No Content-Length header found");
             return null;
         }
 
@@ -141,6 +158,7 @@ public class DapSession {
 
         if ("request".equals(type)) {
             String command = message.get("command").getAsString();
+            logger.info("Handling command: {}", command);
             JsonObject args = message.has("arguments") ? message.getAsJsonObject("arguments") : new JsonObject();
 
             switch (command) {

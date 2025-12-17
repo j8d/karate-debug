@@ -2,7 +2,7 @@
   "name": "karate-debug",
   "displayName": "Karate Debug",
   "description": "Debug Karate tests",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "j8d",
   "license": "",
   "icon": "resources/karate-icon.png",
@@ -41,6 +41,11 @@
         "language": "karate",
         "scopeName": "source.karate",
         "path": "./syntaxes/karate.tmLanguage.json"
+      }
+    ],
+    "breakpoints": [
+      {
+        "language": "karate"
       }
     ],
     "debuggers": [
@@ -103,10 +108,18 @@
     "configuration": {
       "title": "Karate Debug",
       "properties": {
-        "karateDebug.karateEnv": {
+        "karateDebug.environments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["dev", "qa", "stage"],
+          "description": "List of available Karate environments"
+        },
+        "karateDebug.defaultEnvironment": {
           "type": "string",
           "default": "dev",
-          "description": "Default Karate environment"
+          "description": "Default Karate environment to use"
         },
         "karateDebug.javaHome": {
           "type": "string",

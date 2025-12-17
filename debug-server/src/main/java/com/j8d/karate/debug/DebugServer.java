@@ -39,24 +39,24 @@ public class DebugServer {
                 logger.info("Waiting for debugger connection...");
                 Socket clientSocket = serverSocket.accept();
                 logger.info("Debugger connected from {}", clientSocket.getRemoteSocketAddress());
-                
-                // Handle the debug session in a new thread
+
+                // Handle the debug session
                 DapSession session = new DapSession(clientSocket, workspaceRoot, karateEnv);
-                Thread sessionThread = new Thread(session::run, "dap-session");
-                sessionThread.start();
-                
-                // Wait for session to complete (single session at a time)
-                sessionThread.join();
-                
+                boolean hadValidSession = session.run();
+
+                if (hadValidSession) {
+                    logger.info("Debug session completed, shutting down server");
+                    break;  // Exit after a valid DAP session
+                } else {
+                    logger.info("Connection closed without DAP messages (probe connection), waiting for next...");
+                }
             } catch (IOException e) {
                 if (running) {
                     logger.error("Error accepting connection", e);
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
             }
         }
+        stop();
     }
 
     public void stop() {

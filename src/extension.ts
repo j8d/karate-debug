@@ -26,8 +26,10 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('Karate Runner');
     outputChannel.appendLine('Karate Runner extension activated');
 
-    // Load saved environment
-    currentEnvironment = context.workspaceState.get('karateEnv', 'dev');
+    // Load saved environment (fall back to default from settings)
+    const config = vscode.workspace.getConfiguration('karateDebug');
+    const defaultEnv = config.get<string>('defaultEnvironment', 'dev');
+    currentEnvironment = context.workspaceState.get('karateEnv', defaultEnv);
 
     // Register debug adapter factory
     const factory = new KarateDebugAdapterFactory(context, outputChannel);
@@ -46,7 +48,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Register select environment command
     context.subscriptions.push(
         vscode.commands.registerCommand('karateRunner.selectEnvironment', async () => {
-            const environments = ['dev', 'qa', 'stage'];
+            const config = vscode.workspace.getConfiguration('karateDebug');
+            const environments = config.get<string[]>('environments', ['dev', 'qa', 'stage']);
             const selected = await vscode.window.showQuickPick(environments, {
                 placeHolder: 'Select Karate environment',
                 title: 'Karate Environment'
