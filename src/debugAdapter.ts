@@ -119,7 +119,7 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         }
 
         args.push('-cp', fullClasspath);
-        args.push('com.resmed.karate.debug.DebugServer');
+        args.push('com.j8d.karate.debug.DebugServer');
         args.push('-p', String(port));
         args.push('-w', workspaceRoot);
         args.push('-e', karateEnv);

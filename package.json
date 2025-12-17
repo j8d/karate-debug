@@ -1,14 +1,14 @@
 {
-  "name": "karate-debugger",
-  "displayName": "Karate Debuger",
+  "name": "karate-debug",
+  "displayName": "Karate Debug",
   "description": "Debug Karate tests",
   "version": "0.1.10",
-  "publisher": "karate-runner",
-  "license": "MIT",
+  "publisher": "j8d",
+  "license": "",
   "icon": "resources/karate-icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/resmed/patientcore-karate-vscode"
+    "url": "https://github.com/j8d/karate-debug"
   },
   "engines": {
     "vscode": "^1.80.0"
@@ -101,14 +101,14 @@
       }
     ],
     "configuration": {
-      "title": "Karate Runner",
+      "title": "Karate Debug",
       "properties": {
-        "karateRunner.karateEnv": {
+        "karateDebug.karateEnv": {
           "type": "string",
           "default": "dev",
           "description": "Default Karate environment"
         },
-        "karateRunner.javaHome": {
+        "karateDebug.javaHome": {
           "type": "string",
           "default": "",
           "description": "Path to Java home (uses system default if empty)"
@@ -117,24 +117,24 @@
     },
     "commands": [
       {
-        "command": "karateRunner.debugFeature",
+        "command": "karateDebug.debugFeature",
         "title": "Karate: Debug Scenario"
       },
       {
-        "command": "karateRunner.debugEntireFeature",
+        "command": "karateDebug.debugEntireFeature",
         "title": "Karate: Debug Feature"
       },
       {
-        "command": "karateRunner.selectEnvironment",
+        "command": "karateDebug.selectEnvironment",
         "title": "Karate: Select Environment"
       },
       {
-        "command": "karateRunner.refreshFeatures",
+        "command": "karateDebug.refreshFeatures",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "karateRunner.openFeature",
+        "command": "karateDebug.openFeature",
         "title": "Open Feature"
       }
     ],
@@ -158,19 +158,19 @@
     "menus": {
       "view/title": [
         {
-          "command": "karateRunner.refreshFeatures",
+          "command": "karateDebug.refreshFeatures",
           "when": "view == karateFeatures",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "karateRunner.debugEntireFeature",
+          "command": "karateDebug.debugEntireFeature",
           "when": "view == karateFeatures && viewItem == feature",
           "group": "inline"
         },
         {
-          "command": "karateRunner.debugFeature",
+          "command": "karateDebug.debugFeature",
           "when": "view == karateFeatures && viewItem == scenario",
           "group": "inline"
         }

@@ -1,8 +1,8 @@
-site_name: "patientcore-karate-vscode"
+site_name: "karate-debug"
 # site_url: site_url
 # site_author: site_author
-repo_url: https://github.com/resmed/patientcore-karate-vscode
-repo_name: "patientcore-karate-vscode"
+repo_url: https://github.com/j8d/karate-debug
+repo_name: "karate-debug"
 edit_uri: edit/main/docs/
 copyright: 'Copyright © 2024 ResMed'
 nav:

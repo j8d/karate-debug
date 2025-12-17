@@ -1,4 +1,4 @@
-package com.resmed.karate.debug;
+package com.j8d.karate.debug;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,7 +1,0 @@
-README.md
-.github/CODEOWNERS
-.github/workflows/sync-repo-with-template.yml
-catalog-info.hbs
-catalog-info.yaml
-mkdocs.yml
-docs/

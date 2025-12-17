@@ -1,4 +1,4 @@
-package com.resmed.karate.debug;
+package com.j8d.karate.debug;
 
 import java.io.BufferedReader;
 import java.io.IOException;

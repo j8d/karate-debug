@@ -7,7 +7,7 @@
     </appender>
 
     <!-- Our debug server classes - DEBUG level to see breakpoint matching -->
-    <logger name="com.resmed.karate.debug" level="DEBUG"/>
+    <logger name="com.j8d.karate.debug" level="DEBUG"/>
 
     <!-- Karate framework - INFO to reduce noise -->
     <logger name="com.intuit.karate" level="INFO"/>

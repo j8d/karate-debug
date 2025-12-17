@@ -1,14 +1,14 @@
-# Karate Debugger
+# Karate Debug
 
 A lightweight VS Code extension for debugging Karate API tests.
 
 ## Installation
 
-**[Download the latest release](https://github.com/resmed/patientcore-karate-vscode/releases/latest)**
+**[Download the latest release](https://github.com/j8d/karate-debug/releases/latest)**
 
 Download the `.vsix` file and install it in VS Code:
 ```bash
-code --install-extension karate-debugger-x.x.x.vsix
+code --install-extension karate-debug-x.x.x.vsix
 ```
 
 ## Features
