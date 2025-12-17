@@ -28,37 +28,64 @@ mvn compile test-compile
 
 This method allows breakpoints in **both** `.feature` and `.java` files in the same session:
 
-### Quick Start (Compound Launch)
-
 1. **Set breakpoints** in both:
    - `helpers/debug-all-types.feature` (e.g., line 15)
    - `helpers/UserHelper.java` (e.g., inside `createUserPayload()`)
 
 2. **Open** the `.feature` file you want to debug
 
-3. **Launch** "Karate + Java: Full Debug" from the Run/Debug panel
-
-4. **Both debuggers start** - breakpoints work in both file types!
+3. Follow the **Two-Step Method** below
 
 ### How It Works
 
-The compound configuration:
-1. Launches Karate with `javaDebugPort: 5005` (enables JDWP agent)
-2. Automatically attaches VS Code Java debugger to the same JVM
+1. Launches Karate with `javaDebugPort: 5006` (enables JDWP agent)
+2. You attach VS Code Java debugger to the same JVM
 3. Feature breakpoints → handled by Karate debug adapter
 4. Java breakpoints → handled by Java debugger (JDWP)
 
-### Manual Two-Step Method
-
-If the compound launch doesn't work:
+### Two-Step Method
 
 1. **Start Karate with Java debug enabled:**
-   - Select "Karate: Debug with Java (port 5005)"
+   - Select "1. Karate: Start with Java Debug"
+   - Press F5
+   - Wait for output: `Java debug agent listening on port 5006`
+
+2. **Attach Java debugger:**
+   - Select "2. Java: Attach to Karate"
    - Press F5
 
-2. **Attach Java debugger** (within 5 seconds):
-   - Select "Java: Attach (port 5005)"
-   - Press F5
+### Example launch.json
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "karate",
+            "request": "launch",
+            "name": "1. Karate: Start with Java Debug",
+            "feature": "${file}",
+            "karateEnv": "dev",
+            "javaDebugPort": 5006
+        },
+        {
+            "type": "java",
+            "request": "attach",
+            "name": "2. Java: Attach to Karate",
+            "hostName": "localhost",
+            "port": 5006,
+            "timeout": 30000
+        },
+        {
+            "type": "karate",
+            "request": "launch",
+            "name": "Karate: Debug Feature Only",
+            "feature": "${file}",
+            "karateEnv": "dev"
+        }
+    ]
+}
+```
 
 ## Test Files
 
@@ -74,10 +101,9 @@ If the compound launch doesn't work:
 
 | Name | Description |
 |------|-------------|
-| `Karate: Debug Feature Only` | Debug .feature files only |
-| `Karate: Debug with Java (port 5005)` | Debug .feature with Java debug agent |
-| `Java: Attach (port 5005)` | Attach to running JVM for Java breakpoints |
-| `Karate + Java: Full Debug` | **Compound** - launches both for full debugging |
+| `1. Karate: Start with Java Debug` | Debug .feature with Java debug agent on port 5006 |
+| `2. Java: Attach to Karate` | Attach to running JVM for Java breakpoints |
+| `Karate: Debug Feature Only` | Debug .feature files only (no Java debugging) |
 
 ## Notes
 
@@ -85,4 +111,3 @@ If the compound launch doesn't work:
 - **Java breakpoints**: Handled by VS Code Java debugger (JDWP)
 - **JavaScript in Karate**: Runs in GraalJS; inspect via Karate variables panel
 - **JSON files**: Data only; inspect when loaded into variables
-- **Compound launch**: Both debuggers must connect; if Java attach fails, restart
