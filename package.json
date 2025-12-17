@@ -2,7 +2,7 @@
   "name": "karate-runner",
   "displayName": "Karate Runner",
   "description": "Debug Karate tests",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "publisher": "resmed",
   "license": "MIT",
   "icon": "resources/karate-icon.png",
