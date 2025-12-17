@@ -1,14 +1,25 @@
-# Karate Runner
+# Karate Debugger
 
 A lightweight VS Code extension for debugging Karate API tests.
 
-## Download
+## Installation
 
-**[Download the latest release](https://github.com/resmed/patientcore-karate-vscode/releases/latest)**
+### From VS Code Marketplace (Recommended)
 
-Download the `.vsix` file and install it in VS Code:
+**[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=karate-runner.karate-debugger)**
+
+Or install via command line:
 ```bash
-code --install-extension karate-runner-x.x.x.vsix
+code --install-extension karate-runner.karate-debugger
+```
+
+Or search for `karate-debugger` in VS Code Extensions (`Cmd+Shift+X`).
+
+### From GitHub Releases
+
+Download the `.vsix` file from [GitHub Releases](https://github.com/resmed/patientcore-karate-vscode/releases/latest) and install:
+```bash
+code --install-extension karate-debugger-x.x.x.vsix
 ```
 
 ## Features
@@ -53,14 +64,18 @@ code --install-extension karate-runner-x.x.x.vsix
 
 ## Releasing a New Version
 
-1. Update the version in `package.json`
-2. Commit your changes
-3. Create and push a tag:
+1. Update the version: `npm version patch`
+2. Commit and tag:
    ```bash
-   git tag v0.1.2
-   git push origin v0.1.2
+   git add package.json package-lock.json
+   git commit -m "chore: bump version to x.x.x"
+   git tag vx.x.x
+   git push && git push origin vx.x.x
    ```
-4. GitHub Actions will automatically build and attach the `.vsix` to the release
+3. Publish to Marketplace:
+   ```bash
+   npx vsce publish
+   ```
 
 ## License
 

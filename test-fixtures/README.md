@@ -1,13 +1,13 @@
 # Karate Test Fixtures
 
-Test fixtures for developing and testing the Karate Runner VS Code extension.
+Test fixtures for developing and testing the Karate Debugger VS Code extension.
 
 ## Prerequisites
 
 - Java 21+
 - Maven
 - VS Code with:
-  - Karate Runner extension (this project)
+  - [Karate Debugger](https://marketplace.visualstudio.com/items?itemName=karate-runner.karate-debugger) extension
   - [Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack) (for Java debugging)
 
 ## Setup

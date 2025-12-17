@@ -1,9 +1,9 @@
 {
-  "name": "karate-runner",
-  "displayName": "Karate Runner",
+  "name": "karate-debugger",
+  "displayName": "Karate Debuger",
   "description": "Debug Karate tests",
   "version": "0.1.8",
-  "publisher": "resmed",
+  "publisher": "karate-runner",
   "license": "MIT",
   "icon": "resources/karate-icon.png",
   "repository": {
