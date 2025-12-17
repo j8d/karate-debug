@@ -2,7 +2,7 @@
   "name": "karate-debugger",
   "displayName": "Karate Debuger",
   "description": "Debug Karate tests",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "publisher": "karate-runner",
   "license": "MIT",
   "icon": "resources/karate-icon.png",
