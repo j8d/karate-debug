@@ -23,8 +23,8 @@ interface FeatureItem {
 
 export function activate(context: vscode.ExtensionContext) {
     // Create output channel
-    outputChannel = vscode.window.createOutputChannel('Karate Runner');
-    outputChannel.appendLine('Karate Runner extension activated');
+    outputChannel = vscode.window.createOutputChannel('Karate Debug');
+    outputChannel.appendLine('Karate Debug extension activated');
 
     // Load saved environment (fall back to default from settings)
     const config = vscode.workspace.getConfiguration('karateDebug');

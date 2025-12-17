@@ -219,7 +219,57 @@ public class KarateDebugger implements RuntimeHook {
 
         running = true;
         executionThread = new Thread(() -> {
+            // Capture stdout/stderr and redirect to Debug Console
+            java.io.PrintStream originalOut = System.out;
+            java.io.PrintStream originalErr = System.err;
+
             try {
+                // Redirect stdout to Debug Console
+                System.setOut(new java.io.PrintStream(new java.io.OutputStream() {
+                    private StringBuilder buffer = new StringBuilder();
+
+                    @Override
+                    public void write(int b) {
+                        if (b == '\n') {
+                            sendOutputEvent("stdout", buffer.toString());
+                            buffer.setLength(0);
+                        } else {
+                            buffer.append((char) b);
+                        }
+                    }
+
+                    @Override
+                    public void flush() {
+                        if (buffer.length() > 0) {
+                            sendOutputEvent("stdout", buffer.toString());
+                            buffer.setLength(0);
+                        }
+                    }
+                }, true));
+
+                // Redirect stderr to Debug Console
+                System.setErr(new java.io.PrintStream(new java.io.OutputStream() {
+                    private StringBuilder buffer = new StringBuilder();
+
+                    @Override
+                    public void write(int b) {
+                        if (b == '\n') {
+                            sendOutputEvent("stderr", buffer.toString());
+                            buffer.setLength(0);
+                        } else {
+                            buffer.append((char) b);
+                        }
+                    }
+
+                    @Override
+                    public void flush() {
+                        if (buffer.length() > 0) {
+                            sendOutputEvent("stderr", buffer.toString());
+                            buffer.setLength(0);
+                        }
+                    }
+                }, true));
+
                 // Convert absolute path to classpath-relative path for Karate
                 String classpathPath = toClasspathPath(featurePath);
 
@@ -244,6 +294,10 @@ public class KarateDebugger implements RuntimeHook {
                 logger.error("Karate execution error", e);
                 sendOutputEvent("console", "Error: " + e.getMessage());
             } finally {
+                // Restore original streams
+                System.setOut(originalOut);
+                System.setErr(originalErr);
+
                 running = false;
                 sendTerminatedEvent();
             }
