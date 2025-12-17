@@ -190,11 +190,12 @@ class KarateCodeLensProvider implements vscode.CodeLensProvider {
         const lines = text.split('\n');
 
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
+            // Remove BOM, leading/trailing whitespace
+            const line = lines[i].replace(/^\uFEFF/, '').trim();
 
             // Add Debug button above Feature to run entire feature
-            if (line.startsWith('Feature:')) {
-                const range = new vscode.Range(i, 0, i, line.length);
+            if (/^Feature:/i.test(line)) {
+                const range = new vscode.Range(i, 0, i, lines[i].length);
                 codeLenses.push(new vscode.CodeLens(range, {
                     title: '▶ Debug Feature',
                     command: 'karateRunner.debugEntireFeature',
@@ -203,8 +204,8 @@ class KarateCodeLensProvider implements vscode.CodeLensProvider {
             }
 
             // Add Debug button above each Scenario/Scenario Outline
-            if (line.startsWith('Scenario:') || line.startsWith('Scenario Outline:')) {
-                const range = new vscode.Range(i, 0, i, line.length);
+            if (/^Scenario(\s+Outline)?:/i.test(line)) {
+                const range = new vscode.Range(i, 0, i, lines[i].length);
                 codeLenses.push(new vscode.CodeLens(range, {
                     title: '▶ Debug Scenario',
                     command: 'karateRunner.debugFeature',

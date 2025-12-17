@@ -3,13 +3,13 @@
   "name": "Karate",
   "scopeName": "source.karate",
   "patterns": [
+    { "include": "#variables" },
     { "include": "#comments" },
     { "include": "#feature" },
     { "include": "#background" },
     { "include": "#scenario" },
     { "include": "#tags" },
     { "include": "#steps" },
-    { "include": "#variables" },
     { "include": "#strings" },
     { "include": "#numbers" },
     { "include": "#json" },
@@ -21,7 +21,7 @@
       "patterns": [
         {
           "name": "comment.line.number-sign.karate",
-          "match": "#.*$"
+          "match": "#(?!\\().*$"
         }
       ]
     },
@@ -75,8 +75,20 @@
           "match": "^\\s*(Given|When|Then|And|But|\\*)\\s+"
         },
         {
+          "name": "keyword.other.multipart.karate",
+          "match": "\\b(multipart)\\s+(file|field|fields|entity)\\b"
+        },
+        {
+          "name": "keyword.other.compound.karate",
+          "match": "\\b(form)\\s+(field|fields)\\b"
+        },
+        {
+          "name": "keyword.other.compound.karate",
+          "match": "\\b(retry)\\s+(until)\\b"
+        },
+        {
           "name": "keyword.other.karate",
-          "match": "\\b(def|set|print|assert|match|contains|read|call|callonce|karate|configure|url|path|request|method|status|response|param|params|header|headers|cookie|cookies|form field|form fields|multipart file|multipart field|multipart entity|retry until|eval|listen|doc|table|text|replace|yaml|csv|bytes|copy|remove|get|json|xml|xmlstring|string|typeOf|sleep)\\b"
+          "match": "\\b(def|set|print|assert|match|contains|read|call|callonce|karate|configure|url|path|request|method|status|response|param|params|header|headers|cookie|cookies|eval|listen|doc|table|text|replace|yaml|csv|bytes|copy|remove|get|json|xml|xmlstring|string|typeOf|sleep)\\b"
         },
         {
           "name": "support.function.http.karate",
@@ -99,6 +111,15 @@
     "strings": {
       "patterns": [
         {
+          "name": "string.quoted.triple.karate",
+          "begin": "\"\"\"",
+          "end": "\"\"\"",
+          "patterns": [
+            { "include": "#variables" },
+            { "include": "#json-embedded" }
+          ]
+        },
+        {
           "name": "string.quoted.single.karate",
           "begin": "'",
           "end": "'",
@@ -109,12 +130,22 @@
           "begin": "\"",
           "end": "\"",
           "patterns": [{ "include": "#variables" }]
+        }
+      ]
+    },
+    "json-embedded": {
+      "patterns": [
+        {
+          "name": "support.type.property-name.json.karate",
+          "match": "\"[^\"]+\"(?=\\s*:)"
         },
         {
-          "name": "string.quoted.triple.karate",
-          "begin": "\"\"\"",
-          "end": "\"\"\"",
-          "patterns": [{ "include": "#variables" }]
+          "name": "constant.language.json.karate",
+          "match": "\\b(true|false|null)\\b"
+        },
+        {
+          "name": "constant.numeric.json.karate",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
         }
       ]
     },
@@ -148,4 +179,3 @@
     }
   }
 }
-
