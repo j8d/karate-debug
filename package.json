@@ -1,24 +1,47 @@
 {
   "name": "karate-debug",
   "displayName": "Karate Debug",
-  "description": "Debug Karate tests",
-  "version": "0.2.2",
+  "description": "Debug Karate API tests with breakpoints, step-through debugging, and an integrated test explorer. Features CodeLens buttons, environment switching, and full Karate DSL syntax highlighting.",
+  "version": "0.3.0",
   "publisher": "j8d",
-  "license": "",
+  "author": {
+    "name": "j8d"
+  },
+  "license": "MIT",
   "icon": "resources/karate-icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/j8d/karate-debug"
   },
+  "bugs": {
+    "url": "https://github.com/j8d/karate-debug/issues"
+  },
+  "homepage": "https://github.com/j8d/karate-debug#readme",
   "engines": {
     "vscode": "^1.80.0"
   },
   "categories": [
     "Debuggers",
-    "Testing"
+    "Testing",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "karate",
+    "api",
+    "testing",
+    "debug",
+    "debugger",
+    "bdd",
+    "gherkin",
+    "feature",
+    "rest",
+    "api-testing"
   ],
   "activationEvents": [
-    "onLanguage:karate",
     "workspaceContains:**/*.feature"
   ],
   "main": "./out/extension.js",
