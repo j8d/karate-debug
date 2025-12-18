@@ -6,33 +6,33 @@
 
 A powerful VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) API tests. Set breakpoints directly in your `.feature` files, step through scenarios, inspect variables, and run tests with a single click.
 
-## ✨ Features
+##  Features
 
-### 🔴 Breakpoint Debugging
+###  Breakpoint Debugging
 Set breakpoints in your `.feature` files and step through your Karate tests line by line. Inspect variables, view request/response data, and understand exactly what's happening at each step.
 
-### ▶️ One-Click Test Execution
+### ▶ One-Click Test Execution
 CodeLens buttons appear above every Feature and Scenario, letting you debug with a single click—no configuration required.
 
-### 🌳 Feature Explorer
+###  Feature Explorer
 Browse all your Karate features and scenarios in a dedicated sidebar. Navigate your test suite at a glance and run any test directly from the tree view.
 
-### 🔄 Environment Switching
+###  Environment Switching
 Quickly switch between environments (`dev`, `qa`, `stage`, or your custom environments) from the status bar. Your selection persists across sessions.
 
-### 🎨 Syntax Highlighting
+###  Syntax Highlighting
 Full syntax highlighting for the Karate DSL, including Gherkin keywords, JSON/XML payloads, JavaScript expressions, and embedded variables.
 
-### ☕ Java Debugging Support
+###  Java Debugging Support
 For advanced scenarios, attach a Java debugger simultaneously to debug both your Karate features and underlying Java code.
 
-## 📋 Requirements
+##  Requirements
 
 - **Java 17+** (Java 21 recommended for best compatibility)
 - **Maven** project with Karate dependencies
 - Tests located in `src/test/java` or `src/test/resources`
 
-## 🚀 Quick Start
+##  Quick Start
 
 1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
 2. **Open** a Maven project containing Karate tests
@@ -41,7 +41,7 @@ For advanced scenarios, attach a Java debugger simultaneously to debug both your
 
 That's it! The debugger will start, and you can set breakpoints, step through code, and inspect variables.
 
-## ⚙️ Configuration
+##  Configuration
 
 Configure the extension via VS Code Settings (`Cmd+,` or `Ctrl+,`):
 
@@ -60,9 +60,18 @@ Configure the extension via VS Code Settings (`Cmd+,` or `Ctrl+,`):
 }
 ```
 
-## 🔧 Launch Configuration
+## Launch Configuration
 
-For advanced scenarios, create a `.vscode/launch.json` configuration:
+For advanced scenarios, create a `.vscode/launch.json` configuration. When you create a new launch configuration and select "Karate Debug", the extension provides ready-to-use templates.
+
+### Simultaneous Karate and Java Debugging
+
+Debug both your `.feature` files AND underlying Java code in the same session. This is useful when your Karate tests call custom Java helpers or when you need to debug into Karate's internals.
+
+**How it works:**
+1. Start the "1. Karate: Start with Java Debug" configuration
+2. While it's waiting, start "2. Java: Attach to Karate"
+3. Both debuggers are now active - set breakpoints in `.feature` files AND `.java` files
 
 ```json
 {
@@ -71,17 +80,23 @@ For advanced scenarios, create a `.vscode/launch.json` configuration:
     {
       "type": "karate",
       "request": "launch",
-      "name": "Debug Current Feature",
+      "name": "1. Karate: Start with Java Debug",
       "feature": "${file}",
-      "karateEnv": "dev"
+      "javaDebugPort": 5006
+    },
+    {
+      "type": "java",
+      "request": "attach",
+      "name": "2. Java: Attach to Karate",
+      "hostName": "localhost",
+      "port": 5006,
+      "timeout": 30000
     },
     {
       "type": "karate",
       "request": "launch",
-      "name": "Debug with Java Debugger",
-      "feature": "${file}",
-      "karateEnv": "dev",
-      "javaDebugPort": 5005
+      "name": "Karate: Debug Feature Only",
+      "feature": "${file}"
     }
   ]
 }
@@ -93,9 +108,9 @@ For advanced scenarios, create a `.vscode/launch.json` configuration:
 |----------|-------------|
 | `feature` | Path to the feature file (use `${file}` for current file) |
 | `karateEnv` | Karate environment (`karate.env` system property) |
-| `javaDebugPort` | Port for Java debugger attachment (enables dual debugging) |
+| `javaDebugPort` | Port for Java debugger attachment (enables simultaneous Java/Karate debugging) |
 
-## 🏗️ Building from Source
+##  Building from Source
 
 ```bash
 # Clone the repository
@@ -116,15 +131,21 @@ npm run package
 code --install-extension karate-debug-*.vsix
 ```
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please feel free to submit a [Pull Request](https://github.com/j8d/karate-debug/pulls) or open an [Issue](https://github.com/j8d/karate-debug/issues).
 
-## 📄 License
+## Support the Project
+
+If this extension helps you, consider supporting my work:
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/_j8d)
+
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Karate](https://github.com/karatelabs/karate) - The powerful API testing framework
 - [VS Code Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/) - Debug adapter implementation

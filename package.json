@@ -2,7 +2,7 @@
   "name": "karate-debug",
   "displayName": "Karate Debug",
   "description": "Debug Karate API tests with breakpoints, step-through debugging, and an integrated test explorer. Features CodeLens buttons, environment switching, and full Karate DSL syntax highlighting.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "j8d",
   "author": {
     "name": "j8d"
@@ -110,19 +110,57 @@
           {
             "type": "karate",
             "request": "launch",
-            "name": "Karate Debug",
+            "name": "1. Karate: Start with Java Debug",
+            "feature": "${file}",
+            "javaDebugPort": 5006
+          },
+          {
+            "type": "java",
+            "request": "attach",
+            "name": "2. Java: Attach to Karate",
+            "hostName": "localhost",
+            "port": 5006,
+            "timeout": 30000
+          },
+          {
+            "type": "karate",
+            "request": "launch",
+            "name": "Karate: Debug Feature Only",
             "feature": "${file}"
           }
         ],
         "configurationSnippets": [
           {
-            "label": "Karate: Debug Feature",
-            "description": "Debug a Karate feature file",
+            "label": "Karate: Debug Feature Only",
+            "description": "Debug a Karate feature file without Java debugging",
             "body": {
               "type": "karate",
               "request": "launch",
-              "name": "Karate Debug",
+              "name": "Karate: Debug Feature Only",
               "feature": "^\"${1:\\${file}}\""
+            }
+          },
+          {
+            "label": "Karate: Start with Java Debug",
+            "description": "Debug Karate features with Java debugger attachment",
+            "body": {
+              "type": "karate",
+              "request": "launch",
+              "name": "1. Karate: Start with Java Debug",
+              "feature": "^\"${1:\\${file}}\"",
+              "javaDebugPort": 5006
+            }
+          },
+          {
+            "label": "Java: Attach to Karate",
+            "description": "Attach Java debugger to running Karate debug session",
+            "body": {
+              "type": "java",
+              "request": "attach",
+              "name": "2. Java: Attach to Karate",
+              "hostName": "localhost",
+              "port": 5006,
+              "timeout": 30000
             }
           }
         ]
