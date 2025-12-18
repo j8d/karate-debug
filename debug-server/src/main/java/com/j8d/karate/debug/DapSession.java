@@ -58,13 +58,13 @@ public class DapSession {
             while (running) {
                 JsonObject message = readMessage();
                 if (message == null) {
-                    logger.info("No more messages, ending session");
+                    logger.debug("No more messages, ending session");
                     break;
                 }
                 hadValidMessage = true;
                 handleMessage(message);
             }
-            logger.info("Session loop ended, running={}, hadValidMessage={}", running, hadValidMessage);
+            logger.debug("Session loop ended, running={}, hadValidMessage={}", running, hadValidMessage);
         } catch (IOException e) {
             logger.error("Session error", e);
         } finally {
@@ -90,7 +90,7 @@ public class DapSession {
         }
 
         if (line == null) {
-            logger.info("Connection closed by client (readLine returned null)");
+            logger.debug("Connection closed by client");
             return null;
         }
 
@@ -158,7 +158,7 @@ public class DapSession {
 
         if ("request".equals(type)) {
             String command = message.get("command").getAsString();
-            logger.info("Handling command: {}", command);
+            logger.debug("Handling command: {}", command);
             JsonObject args = message.has("arguments") ? message.getAsJsonObject("arguments") : new JsonObject();
 
             switch (command) {
