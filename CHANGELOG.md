@@ -5,6 +5,15 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2024-12-18
+
+### Fixed
+- Karate test output now appears in both Debug Console and Output panel
+- Improved stdout/stderr redirect to preserve output for both views
+
+### Changed
+- Reduced verbose logging during test execution for cleaner output
+
 ## [0.3.1] - 2024-12-18
 
 ### Added

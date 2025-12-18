@@ -211,6 +211,8 @@ public class KarateDebugger implements RuntimeHook {
     }
 
     public void startExecution() {
+        logger.info("startExecution called, featurePath={}, featureLine={}", featurePath, featureLine);
+
         if (featurePath == null) {
             logger.error("No feature path set");
             sendTerminatedEvent();
@@ -218,18 +220,20 @@ public class KarateDebugger implements RuntimeHook {
         }
 
         running = true;
+        logger.debug("Starting execution thread");
         executionThread = new Thread(() -> {
-            // Capture stdout/stderr and redirect to Debug Console
+            // Capture stdout/stderr BEFORE redirect so we can restore them later
             java.io.PrintStream originalOut = System.out;
             java.io.PrintStream originalErr = System.err;
 
             try {
-                // Redirect stdout to Debug Console
+                // Redirect stdout to Debug Console AND original stdout (for Output panel)
                 System.setOut(new java.io.PrintStream(new java.io.OutputStream() {
                     private StringBuilder buffer = new StringBuilder();
 
                     @Override
                     public void write(int b) {
+                        originalOut.write(b);  // Also write to original stdout
                         if (b == '\n') {
                             sendOutputEvent("stdout", buffer.toString());
                             buffer.setLength(0);
@@ -240,6 +244,7 @@ public class KarateDebugger implements RuntimeHook {
 
                     @Override
                     public void flush() {
+                        originalOut.flush();
                         if (buffer.length() > 0) {
                             sendOutputEvent("stdout", buffer.toString());
                             buffer.setLength(0);
@@ -247,12 +252,13 @@ public class KarateDebugger implements RuntimeHook {
                     }
                 }, true));
 
-                // Redirect stderr to Debug Console
+                // Redirect stderr to Debug Console AND original stderr (for Output panel)
                 System.setErr(new java.io.PrintStream(new java.io.OutputStream() {
                     private StringBuilder buffer = new StringBuilder();
 
                     @Override
                     public void write(int b) {
+                        originalErr.write(b);  // Also write to original stderr
                         if (b == '\n') {
                             sendOutputEvent("stderr", buffer.toString());
                             buffer.setLength(0);
@@ -263,6 +269,7 @@ public class KarateDebugger implements RuntimeHook {
 
                     @Override
                     public void flush() {
+                        originalErr.flush();
                         if (buffer.length() > 0) {
                             sendOutputEvent("stderr", buffer.toString());
                             buffer.setLength(0);
@@ -272,6 +279,7 @@ public class KarateDebugger implements RuntimeHook {
 
                 // Convert absolute path to classpath-relative path for Karate
                 String classpathPath = toClasspathPath(featurePath);
+                logger.debug("Classpath path: {}", classpathPath);
 
                 // Build the path spec - Karate accepts classpath:path:lineNumber format
                 String pathSpec = classpathPath;
@@ -293,6 +301,9 @@ public class KarateDebugger implements RuntimeHook {
             } catch (Exception e) {
                 logger.error("Karate execution error", e);
                 sendOutputEvent("console", "Error: " + e.getMessage());
+            } catch (Throwable t) {
+                logger.error("Unexpected error in execution thread", t);
+                sendOutputEvent("console", "Unexpected error: " + t.getMessage());
             } finally {
                 // Restore original streams
                 System.setOut(originalOut);
@@ -371,15 +382,14 @@ public class KarateDebugger implements RuntimeHook {
         String sourcePath = normalizeSourcePath(relativePath);
         int line = step.getLine();
 
-        logger.debug("beforeStep: relativePath={}, normalized={}, line={}", relativePath, sourcePath, line);
-        logger.debug("beforeStep: breakpoints keys={}", breakpoints.keySet());
+        logger.debug("beforeStep: {}:{}", sourcePath, line);
 
         boolean shouldPause = false;
 
         // Check for breakpoint
         Set<Integer> fileBreakpoints = breakpoints.get(sourcePath);
         if (fileBreakpoints != null && fileBreakpoints.contains(line)) {
-            logger.info("Hit breakpoint at {}:{}", sourcePath, line);
+            logger.debug("Hit breakpoint at {}:{}", sourcePath, line);
             shouldPause = true;
         }
 
