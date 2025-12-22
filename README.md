@@ -4,12 +4,17 @@
 [![GitHub Release](https://img.shields.io/github/v/release/j8d/karate-debug?logo=github)](https://github.com/j8d/karate-debug/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A powerful VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) API tests. Set breakpoints directly in your `.feature` files, step through scenarios, inspect variables, and run tests with a single click.
+A lightweight VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) tests. Set breakpoints directly in your `.feature` files, step through scenarios, inspect variables, and run tests with a single click.
+
+> **This is a new extension!** Feature requests, bug reports, and any other feedback or contributions are welcome! Please open an issue on [GitHub](https://github.com/j8d/karate-debug/issues).
 
 ##  Features
 
 ###  Breakpoint Debugging
 Set breakpoints in your `.feature` files and step through your Karate tests line by line. Inspect variables, view request/response data, and understand exactly what's happening at each step.
+
+###  Hot Reload Variables
+Modify variable values on-the-fly while paused at a breakpoint. Right-click any variable in the Variables panel and set a new value to test different scenarios without restarting your test.
 
 ### ▶ One-Click Test Execution
 CodeLens buttons appear above every Feature and Scenario, letting you debug with a single click—no configuration required.

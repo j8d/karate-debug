@@ -170,6 +170,7 @@ public class DapSession {
                 case "stackTrace" -> handleStackTrace(message, args);
                 case "scopes" -> handleScopes(message, args);
                 case "variables" -> handleVariables(message, args);
+                case "setVariable" -> handleSetVariable(message, args);
                 case "source" -> handleSource(message, args);
                 case "continue" -> handleContinue(message, args);
                 case "next" -> handleNext(message, args);
@@ -191,7 +192,7 @@ public class DapSession {
         capabilities.addProperty("supportsConditionalBreakpoints", false);
         capabilities.addProperty("supportsEvaluateForHovers", true);
         capabilities.addProperty("supportsStepBack", false);
-        capabilities.addProperty("supportsSetVariable", false);
+        capabilities.addProperty("supportsSetVariable", true);
         capabilities.addProperty("supportsRestartFrame", false);
         capabilities.addProperty("supportsGotoTargetsRequest", false);
         capabilities.addProperty("supportsStepInTargetsRequest", false);
@@ -265,6 +266,20 @@ public class DapSession {
         var variables = debugger.getVariables(variablesReference);
         JsonObject body = new JsonObject();
         body.add("variables", variables);
+        sendResponse(request, true, body);
+    }
+
+    private void handleSetVariable(JsonObject request, JsonObject args) {
+        int variablesReference = args.get("variablesReference").getAsInt();
+        String name = args.get("name").getAsString();
+        String value = args.get("value").getAsString();
+
+        var result = debugger.setVariable(variablesReference, name, value);
+
+        JsonObject body = new JsonObject();
+        body.addProperty("value", result.displayValue());
+        body.addProperty("type", result.type());
+        body.addProperty("variablesReference", 0);
         sendResponse(request, true, body);
     }
 
