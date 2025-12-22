@@ -29,6 +29,9 @@ import com.intuit.karate.core.Variable;
 public class KarateDebugger implements RuntimeHook {
     private static final Logger logger = LoggerFactory.getLogger(KarateDebugger.class);
 
+    /** Result of a setVariable operation */
+    public record SetVariableResult(String displayValue, String type) {}
+
     private final DapSession session;
     private final String workspaceRoot;
     private final String karateEnv;
@@ -514,6 +517,61 @@ public class KarateDebugger implements RuntimeHook {
             }
         }
         return value.toString();
+    }
+
+    /**
+     * Sets a variable value at runtime (hot reload).
+     * Parses the string value and updates Karate's variable store.
+     */
+    public SetVariableResult setVariable(int variablesReference, String name, String value) {
+        if (currentRuntime == null) {
+            throw new IllegalStateException("No active runtime - cannot set variable");
+        }
+
+        Object parsedValue = parseValue(value);
+        currentRuntime.engine.vars.put(name, new Variable(parsedValue));
+
+        String displayValue = formatValue(parsedValue);
+        String type = parsedValue != null ? parsedValue.getClass().getSimpleName() : "null";
+
+        logger.debug("Set variable '{}' = {} (type: {})", name, displayValue, type);
+        return new SetVariableResult(displayValue, type);
+    }
+
+    /**
+     * Parses a string value into an appropriate Java object.
+     * Supports: null, boolean, numbers, strings, JSON objects/arrays.
+     */
+    private Object parseValue(String value) {
+        if (value == null || value.equals("null")) return null;
+        if (value.equals("true")) return true;
+        if (value.equals("false")) return false;
+
+        // Quoted string
+        if (value.startsWith("\"") && value.endsWith("\"") && value.length() >= 2) {
+            return value.substring(1, value.length() - 1);
+        }
+
+        // JSON object or array
+        if (value.startsWith("{") || value.startsWith("[")) {
+            try {
+                return com.intuit.karate.Json.of(value).value();
+            } catch (Exception e) {
+                logger.warn("Failed to parse JSON value: {}", value, e);
+                return value; // Fall back to string
+            }
+        }
+
+        // Try as number
+        try {
+            if (value.contains(".")) {
+                return Double.parseDouble(value);
+            }
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            // Not a number, treat as plain string
+            return value;
+        }
     }
 
     private void sendOutputEvent(String category, String output) {
