@@ -58,13 +58,13 @@ public class DapSession {
             while (running) {
                 JsonObject message = readMessage();
                 if (message == null) {
-                    logger.debug("No more messages, ending session");
+                    logger.trace("No more messages, ending session");
                     break;
                 }
                 hadValidMessage = true;
                 handleMessage(message);
             }
-            logger.debug("Session loop ended, running={}, hadValidMessage={}", running, hadValidMessage);
+            logger.trace("Session loop ended, running={}, hadValidMessage={}", running, hadValidMessage);
         } catch (IOException e) {
             logger.error("Session error", e);
         } finally {
@@ -78,9 +78,9 @@ public class DapSession {
         int contentLength = -1;
         String line;
 
-        logger.debug("Waiting for message...");
+        logger.trace("Waiting for message...");
         while ((line = reader.readLine()) != null) {
-            logger.debug("Header line: '{}'", line);
+            logger.trace("Header line: '{}'", line);
             if (line.isEmpty()) {
                 break;
             }
@@ -90,7 +90,7 @@ public class DapSession {
         }
 
         if (line == null) {
-            logger.debug("Connection closed by client");
+            logger.trace("Connection closed by client");
             return null;
         }
 
@@ -111,7 +111,7 @@ public class DapSession {
         }
 
         String json = new String(buffer);
-        logger.debug("Received: {}", json);
+        logger.trace("Received: {}", json);
         return gson.fromJson(json, JsonObject.class);
     }
 
@@ -120,7 +120,7 @@ public class DapSession {
             String json = gson.toJson(message);
             String header = CONTENT_LENGTH + json.getBytes(StandardCharsets.UTF_8).length + "\r\n\r\n";
 
-            logger.debug("Sending: {}", json);
+            logger.trace("Sending: {}", json);
             writer.write(header.getBytes(StandardCharsets.UTF_8));
             writer.write(json.getBytes(StandardCharsets.UTF_8));
             writer.flush();
@@ -158,7 +158,7 @@ public class DapSession {
 
         if ("request".equals(type)) {
             String command = message.get("command").getAsString();
-            logger.debug("Handling command: {}", command);
+            logger.trace("Handling command: {}", command);
             JsonObject args = message.has("arguments") ? message.getAsJsonObject("arguments") : new JsonObject();
 
             switch (command) {
@@ -176,6 +176,7 @@ public class DapSession {
                 case "next" -> handleNext(message, args);
                 case "stepIn" -> handleStepIn(message, args);
                 case "stepOut" -> handleStepOut(message, args);
+                case "evaluate" -> handleEvaluate(message, args);
                 case "disconnect" -> handleDisconnect(message);
                 default -> {
                     logger.warn("Unknown command: {}", command);
@@ -278,6 +279,19 @@ public class DapSession {
 
         JsonObject body = new JsonObject();
         body.addProperty("value", result.displayValue());
+        body.addProperty("type", result.type());
+        body.addProperty("variablesReference", 0);
+        sendResponse(request, true, body);
+    }
+
+    private void handleEvaluate(JsonObject request, JsonObject args) {
+        String expression = args.get("expression").getAsString();
+        String context = args.has("context") ? args.get("context").getAsString() : "repl";
+
+        var result = debugger.evaluate(expression, context);
+
+        JsonObject body = new JsonObject();
+        body.addProperty("result", result.value());
         body.addProperty("type", result.type());
         body.addProperty("variablesReference", 0);
         sendResponse(request, true, body);

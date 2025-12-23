@@ -1,0 +1,437 @@
+import * as vscode from 'vscode';
+import * as crypto from 'crypto';
+import * as os from 'os';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const API_BASE_URL = 'https://karate-debug-api.vercel.app/api';
+const GITHUB_CLIENT_ID = 'Ov23lilyMXLAitkqwqPL';
+const BACKUP_FILE_NAME = '.karate-debug-license';
+
+export interface LicenseStatus {
+    isValid: boolean;
+    status: 'active' | 'trialing' | 'expired' | 'none';
+    daysRemaining?: number;
+    githubUsername?: string;
+    trialStartDate?: Date;
+}
+
+export interface User {
+    userId: string;
+    githubUsername: string;
+    email?: string;
+}
+
+interface LocalLicenseData {
+    odUserId: string;
+    trialStartTimestamp: number;
+    machineId: string;
+    lastValidated: number;
+}
+
+export class LicenseManager {
+    private context: vscode.ExtensionContext;
+    private machineId: string;
+    private statusBarItem: vscode.StatusBarItem;
+    private currentStatus: LicenseStatus = { isValid: false, status: 'none' };
+
+    constructor(context: vscode.ExtensionContext) {
+        this.context = context;
+        this.machineId = this.getMachineId();
+
+        // Create status bar item
+        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
+        this.statusBarItem.command = 'karateDebug.showLicenseInfo';
+        context.subscriptions.push(this.statusBarItem);
+    }
+
+    private getMachineId(): string {
+        const hostname = os.hostname();
+        const platform = os.platform();
+        const arch = os.arch();
+        const cpus = os.cpus()[0]?.model || 'unknown';
+        const totalMem = os.totalmem();
+        const raw = `karate-debug-${hostname}-${platform}-${arch}-${cpus}-${totalMem}`;
+        return crypto.createHash('sha256').update(raw).digest('hex').substring(0, 32);
+    }
+
+    // === Local Backup Storage (Anti-Piracy Layer) ===
+
+    private getBackupFilePath(): string {
+        return path.join(os.homedir(), BACKUP_FILE_NAME);
+    }
+
+    private encrypt(data: string): string {
+        const key = this.machineId.substring(0, 16);
+        const cipher = crypto.createCipheriv('aes-128-ecb', key, null);
+        let encrypted = cipher.update(data, 'utf8', 'base64');
+        encrypted += cipher.final('base64');
+        return encrypted;
+    }
+
+    private decrypt(encrypted: string): string | null {
+        try {
+            const key = this.machineId.substring(0, 16);
+            const decipher = crypto.createDecipheriv('aes-128-ecb', key, null);
+            let decrypted = decipher.update(encrypted, 'base64', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        } catch {
+            return null;
+        }
+    }
+
+    private readLocalBackup(): LocalLicenseData | null {
+        try {
+            const filePath = this.getBackupFilePath();
+            if (!fs.existsSync(filePath)) {
+                return null;
+            }
+            const encrypted = fs.readFileSync(filePath, 'utf8');
+            const decrypted = this.decrypt(encrypted);
+            if (!decrypted) {
+                return null;
+            }
+            return JSON.parse(decrypted);
+        } catch {
+            return null;
+        }
+    }
+
+    private writeLocalBackup(data: LocalLicenseData): void {
+        try {
+            const filePath = this.getBackupFilePath();
+            const encrypted = this.encrypt(JSON.stringify(data));
+            fs.writeFileSync(filePath, encrypted, { mode: 0o600 });
+        } catch (error) {
+            console.error('[LicenseManager] Failed to write backup file:', error);
+        }
+    }
+
+    /**
+     * Get the earliest trial start from both server data and local backup.
+     * This prevents users from extending trials by clearing one storage.
+     */
+    private getEarliestTrialStart(serverTrialStart: number | null): number | null {
+        const timestamps: number[] = [];
+
+        if (serverTrialStart) {
+            timestamps.push(serverTrialStart);
+        }
+
+        const localData = this.readLocalBackup();
+        if (localData && localData.machineId === this.machineId) {
+            timestamps.push(localData.trialStartTimestamp);
+        }
+
+        const globalStateTimestamp = this.context.globalState.get<number>('trialStartTimestamp');
+        if (globalStateTimestamp) {
+            timestamps.push(globalStateTimestamp);
+        }
+
+        return timestamps.length > 0 ? Math.min(...timestamps) : null;
+    }
+
+    /**
+     * Sync trial start to all storage locations using the earliest timestamp.
+     */
+    private async syncTrialStart(userId: string, timestamp: number): Promise<void> {
+        await this.context.globalState.update('trialStartTimestamp', timestamp);
+        this.writeLocalBackup({
+            odUserId: userId,
+            trialStartTimestamp: timestamp,
+            machineId: this.machineId,
+            lastValidated: Date.now()
+        });
+    }
+
+
+    // === Server-Side Authentication & License Management ===
+
+    async initialize(): Promise<LicenseStatus> {
+        const userId = this.context.globalState.get<string>('userId');
+
+        if (!userId) {
+            this.updateStatusBar({ isValid: false, status: 'none' });
+            return this.currentStatus;
+        }
+
+        return this.validateLicense();
+    }
+
+    async login(): Promise<User | null> {
+        const redirectUri = encodeURIComponent(`${API_BASE_URL}/auth/callback`);
+        const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user:email&redirect_uri=${redirectUri}`;
+
+        vscode.env.openExternal(vscode.Uri.parse(authUrl));
+
+        const code = await this.waitForAuthCode();
+        if (!code) {
+            vscode.window.showErrorMessage('Authentication cancelled or failed');
+            return null;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/github`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+
+            if (!response.ok) {
+                const error = await response.json() as { error?: string };
+                throw new Error(error.error || 'Authentication failed');
+            }
+
+            const user = await response.json() as User;
+
+            await this.context.globalState.update('userId', user.userId);
+            await this.context.globalState.update('githubUsername', user.githubUsername);
+
+            await this.activateMachine(user.userId);
+            await this.validateLicense();
+
+            vscode.window.showInformationMessage(`Logged in as ${user.githubUsername}`);
+            return user;
+
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Login failed: ${error.message}`);
+            return null;
+        }
+    }
+
+    private async waitForAuthCode(): Promise<string | null> {
+        return new Promise((resolve) => {
+            const disposable = vscode.window.registerUriHandler({
+                handleUri(uri: vscode.Uri): vscode.ProviderResult<void> {
+                    const code = new URLSearchParams(uri.query).get('code');
+                    disposable.dispose();
+                    resolve(code);
+                }
+            });
+
+            setTimeout(() => {
+                disposable.dispose();
+                resolve(null);
+            }, 5 * 60 * 1000);
+        });
+    }
+
+    async logout(): Promise<void> {
+        const userId = this.context.globalState.get<string>('userId');
+
+        if (userId) {
+            try {
+                await fetch(`${API_BASE_URL}/license/deactivate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, machineId: this.machineId })
+                });
+            } catch {
+                // Ignore errors during logout
+            }
+        }
+
+        await this.context.globalState.update('userId', undefined);
+        await this.context.globalState.update('githubUsername', undefined);
+        await this.context.globalState.update('trialStartTimestamp', undefined);
+
+        this.updateStatusBar({ isValid: false, status: 'none' });
+        vscode.window.showInformationMessage('Logged out of Karate Debug');
+    }
+
+    async validateLicense(): Promise<LicenseStatus> {
+        const userId = this.context.globalState.get<string>('userId');
+
+        if (!userId) {
+            this.currentStatus = { isValid: false, status: 'none' };
+            this.updateStatusBar(this.currentStatus);
+            return this.currentStatus;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/license/validate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, machineId: this.machineId })
+            });
+
+            if (!response.ok) {
+                throw new Error('Validation failed');
+            }
+
+            const data = await response.json() as {
+                valid: boolean;
+                status: string;
+                daysRemaining?: number;
+                expiresAt?: string;
+            };
+
+            // Get server's trial start and sync with local backup
+            if (data.status === 'trialing' && data.expiresAt) {
+                const serverTrialEnd = new Date(data.expiresAt).getTime();
+                const serverTrialStart = serverTrialEnd - (30 * 24 * 60 * 60 * 1000); // Assuming 30-day trial
+                const earliestStart = this.getEarliestTrialStart(serverTrialStart);
+
+                if (earliestStart && earliestStart < serverTrialStart) {
+                    // Local has earlier trial start - recalculate days remaining
+                    const now = Date.now();
+                    const trialEnd = earliestStart + (30 * 24 * 60 * 60 * 1000);
+                    data.daysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000)));
+                    if (data.daysRemaining === 0) {
+                        data.valid = false;
+                        data.status = 'expired';
+                    }
+                }
+
+                await this.syncTrialStart(userId, earliestStart || serverTrialStart);
+            }
+
+            this.currentStatus = {
+                isValid: data.valid,
+                status: data.status as LicenseStatus['status'],
+                daysRemaining: data.daysRemaining,
+                githubUsername: this.context.globalState.get('githubUsername')
+            };
+
+        } catch {
+            this.currentStatus = { isValid: false, status: 'expired' };
+        }
+
+        this.updateStatusBar(this.currentStatus);
+        return this.currentStatus;
+    }
+
+    private async activateMachine(userId: string): Promise<boolean> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/license/activate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId,
+                    machineId: this.machineId,
+                    machineName: os.hostname()
+                })
+            });
+
+            return response.ok;
+        } catch {
+            return false;
+        }
+    }
+
+    async openSubscriptionPortal(): Promise<void> {
+        const userId = this.context.globalState.get<string>('userId');
+
+        if (!userId) {
+            vscode.window.showErrorMessage('Please log in first');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/subscription/portal`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to open portal');
+            }
+
+            const data = await response.json() as { url: string };
+            vscode.env.openExternal(vscode.Uri.parse(data.url));
+
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Failed to open subscription portal: ${error.message}`);
+        }
+    }
+
+    async startCheckout(): Promise<void> {
+        const userId = this.context.globalState.get<string>('userId');
+
+        if (!userId) {
+            vscode.window.showErrorMessage('Please log in first');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/subscription/checkout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to start checkout');
+            }
+
+            const data = await response.json() as { url: string };
+            vscode.env.openExternal(vscode.Uri.parse(data.url));
+
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Failed to start checkout: ${error.message}`);
+        }
+    }
+
+    private updateStatusBar(status: LicenseStatus): void {
+        if (status.status === 'none') {
+            this.statusBarItem.text = '$(key) Karate Debug: Free';
+            this.statusBarItem.tooltip = 'Click to sign in';
+            this.statusBarItem.backgroundColor = undefined;
+        } else if (status.status === 'active') {
+            this.statusBarItem.text = '$(verified) Karate Debug Pro';
+            this.statusBarItem.tooltip = `Licensed to ${status.githubUsername}`;
+            this.statusBarItem.backgroundColor = undefined;
+        } else if (status.status === 'trialing') {
+            if (status.daysRemaining !== undefined && status.daysRemaining <= 3) {
+                this.statusBarItem.text = `$(warning) Trial: ${status.daysRemaining}d left`;
+                this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+            } else {
+                this.statusBarItem.text = `$(clock) Trial: ${status.daysRemaining}d left`;
+                this.statusBarItem.backgroundColor = undefined;
+            }
+            this.statusBarItem.tooltip = 'Click to upgrade';
+        } else {
+            this.statusBarItem.text = '$(warning) Trial Expired';
+            this.statusBarItem.tooltip = 'Click to upgrade';
+            this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+        }
+        this.statusBarItem.show();
+    }
+
+    getStatus(): LicenseStatus {
+        return this.currentStatus;
+    }
+
+    isFeatureEnabled(_feature: 'debugging' | 'matchDiagnostics'): boolean {
+        return this.currentStatus.isValid;
+    }
+
+    isTrialValid(): boolean {
+        return this.currentStatus.isValid;
+    }
+
+    async showTrialExpiredMessage(): Promise<void> {
+        const action = await vscode.window.showErrorMessage(
+            'Your Karate Debug trial has expired. Please purchase a license to continue.',
+            'Purchase License',
+            'Learn More'
+        );
+
+        if (action === 'Purchase License') {
+            await this.startCheckout();
+        } else if (action === 'Learn More') {
+            vscode.env.openExternal(vscode.Uri.parse('https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug'));
+        }
+    }
+
+    getTrialInfo(): { startDate: Date | undefined; daysRemaining: number; isExpired: boolean; username?: string } {
+        return {
+            startDate: this.currentStatus.trialStartDate,
+            daysRemaining: this.currentStatus.daysRemaining || 0,
+            isExpired: !this.currentStatus.isValid,
+            username: this.currentStatus.githubUsername
+        };
+    }
+}

@@ -2,25 +2,21 @@
   "name": "karate-debug",
   "displayName": "Karate Debug",
   "description": "Debug Karate API tests with breakpoints, step-through debugging, and an integrated test explorer. Features CodeLens buttons, environment switching, and full Karate DSL syntax highlighting.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "publisher": "j8d",
   "author": {
     "name": "j8d"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "icon": "resources/karate-icon.png",
   "galleryBanner": {
     "color": "#1e1e1e",
     "theme": "dark"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/j8d/karate-debug"
-  },
   "bugs": {
-    "url": "https://github.com/j8d/karate-debug/issues"
+    "email": "karate-debug@j8d.dev"
   },
-  "homepage": "https://github.com/j8d/karate-debug#readme",
+  "homepage": "https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -42,9 +38,14 @@
     "api-testing"
   ],
   "activationEvents": [
-    "workspaceContains:**/*.feature"
+    "workspaceContains:**/*.feature",
+    "onUri"
   ],
   "main": "./out/extension.js",
+  "extensionKind": [
+    "ui",
+    "workspace"
+  ],
   "contributes": {
     "languages": [
       {
@@ -186,21 +187,37 @@
           "type": "string",
           "default": "",
           "description": "Path to Java home (uses system default if empty)"
+        },
+        "karateDebug.matchDiagnostics.showPassing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show green underlines for passing match statements"
+        },
+        "karateDebug.matchDiagnostics.showFailing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show red underlines for failing match statements"
+        },
+        "karateDebug.logLevel": {
+          "type": "string",
+          "enum": ["error", "warn", "info", "debug", "trace"],
+          "default": "info",
+          "description": "Log level for Karate Debug output"
         }
       }
     },
     "commands": [
       {
         "command": "karateDebug.debugFeature",
-        "title": "Karate: Debug Scenario"
+        "title": "Karate Debug: Debug Scenario"
       },
       {
         "command": "karateDebug.debugEntireFeature",
-        "title": "Karate: Debug Feature"
+        "title": "Karate Debug: Debug Feature"
       },
       {
         "command": "karateDebug.selectEnvironment",
-        "title": "Karate: Select Environment"
+        "title": "Karate Debug: Select Environment"
       },
       {
         "command": "karateDebug.refreshFeatures",
@@ -210,6 +227,35 @@
       {
         "command": "karateDebug.openFeature",
         "title": "Open Feature"
+      },
+      {
+        "command": "karateDebug.toggleMatchDiagnostics",
+        "title": "Karate Debug: Toggle Match Diagnostics"
+      },
+      {
+        "command": "karateDebug.openSettings",
+        "title": "Karate Debug: Open Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "karateDebug.login",
+        "title": "Karate Debug: Sign In with GitHub"
+      },
+      {
+        "command": "karateDebug.logout",
+        "title": "Karate Debug: Sign Out"
+      },
+      {
+        "command": "karateDebug.upgrade",
+        "title": "Karate Debug: Upgrade to Pro"
+      },
+      {
+        "command": "karateDebug.manageSubscription",
+        "title": "Karate Debug: Manage Subscription"
+      },
+      {
+        "command": "karateDebug.showLicenseInfo",
+        "title": "Karate Debug: License Info"
       }
     ],
     "viewsContainers": {
@@ -233,6 +279,11 @@
       "view/title": [
         {
           "command": "karateDebug.refreshFeatures",
+          "when": "view == karateFeatures",
+          "group": "navigation"
+        },
+        {
+          "command": "karateDebug.openSettings",
           "when": "view == karateFeatures",
           "group": "navigation"
         }

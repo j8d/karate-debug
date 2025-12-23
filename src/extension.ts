@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { KarateDebugAdapterFactory } from './debugAdapter';
+import { MatchDiagnosticsProvider } from './matchDiagnostics';
+import { LicenseManager } from './licensing';
 
 // Global output channel for logging
 export let outputChannel: vscode.OutputChannel;
@@ -9,6 +11,10 @@ export let outputChannel: vscode.OutputChannel;
 // Global environment state
 let currentEnvironment = 'dev';
 let environmentStatusBar: vscode.StatusBarItem;
+let logLevelStatusBar: vscode.StatusBarItem;
+
+// License manager
+let licenseManager: LicenseManager;
 
 // Tree item types for Feature Explorer
 type FeatureItemType = 'folder' | 'feature' | 'scenario';
@@ -26,6 +32,26 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('Karate Debug');
     outputChannel.appendLine('Karate Debug extension activated');
 
+    // Initialize license manager and check trial status
+    licenseManager = new LicenseManager(context);
+    licenseManager.initialize().then(status => {
+        outputChannel.appendLine(`License status: ${status.status}, days remaining: ${status.daysRemaining}`);
+
+        // Show trial expired message if needed
+        if (!status.isValid) {
+            licenseManager.showTrialExpiredMessage();
+        }
+    });
+
+    // Register license commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('karateDebug.login', () => licenseManager.login()),
+        vscode.commands.registerCommand('karateDebug.logout', () => licenseManager.logout()),
+        vscode.commands.registerCommand('karateDebug.upgrade', () => licenseManager.startCheckout()),
+        vscode.commands.registerCommand('karateDebug.manageSubscription', () => licenseManager.openSubscriptionPortal()),
+        vscode.commands.registerCommand('karateDebug.showLicenseInfo', () => showLicenseInfo())
+    );
+
     // Load saved environment (fall back to default from settings)
     const config = vscode.workspace.getConfiguration('karateDebug');
     const defaultEnv = config.get<string>('defaultEnvironment', 'dev');
@@ -37,6 +63,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.debug.registerDebugAdapterDescriptorFactory('karate', factory)
     );
     context.subscriptions.push(outputChannel);
+
+    // Initialize match diagnostics provider
+    const matchDiagnostics = new MatchDiagnosticsProvider(context);
+    context.subscriptions.push({ dispose: () => matchDiagnostics.dispose() });
 
     // Create environment status bar item
     environmentStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -63,9 +93,40 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Create log level status bar item (to the right of environment, lower priority = more right)
+    logLevelStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
+    logLevelStatusBar.command = 'karateRunner.selectLogLevel';
+    updateLogLevelStatusBar();
+    logLevelStatusBar.show();
+    context.subscriptions.push(logLevelStatusBar);
+
+    // Register select log level command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('karateRunner.selectLogLevel', async () => {
+            const logLevels = ['error', 'warn', 'info', 'debug', 'trace'];
+            const config = vscode.workspace.getConfiguration('karateDebug');
+            const currentLevel = config.get<string>('logLevel', 'info');
+            const selected = await vscode.window.showQuickPick(logLevels, {
+                placeHolder: `Current: ${currentLevel}`,
+                title: 'Karate Log Level'
+            });
+            if (selected) {
+                await config.update('logLevel', selected, vscode.ConfigurationTarget.Global);
+                updateLogLevelStatusBar();
+                vscode.window.showInformationMessage(`Karate log level set to: ${selected}`);
+            }
+        })
+    );
+
     // Register debug command (with line number argument from CodeLens or tree view)
     context.subscriptions.push(
         vscode.commands.registerCommand('karateRunner.debugFeature', async (arg?: vscode.Uri | FeatureItem, line?: number) => {
+            // Check trial status before allowing debug
+            if (!licenseManager.isTrialValid()) {
+                await licenseManager.showTrialExpiredMessage();
+                return;
+            }
+
             let filePath: string;
             let scenarioLine: number;
 
@@ -95,6 +156,12 @@ export function activate(context: vscode.ExtensionContext) {
     // Register debug entire feature command
     context.subscriptions.push(
         vscode.commands.registerCommand('karateRunner.debugEntireFeature', async (arg?: vscode.Uri | FeatureItem) => {
+            // Check trial status before allowing debug
+            if (!licenseManager.isTrialValid()) {
+                await licenseManager.showTrialExpiredMessage();
+                return;
+            }
+
             let filePath: string;
 
             if (!arg) {
@@ -128,6 +195,13 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('karateRunner.refreshFeatures', () => featureExplorerProvider.refresh())
     );
 
+    // Register open settings command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('karateDebug.openSettings', () => {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'karateDebug');
+        })
+    );
+
     // Register open feature command
     context.subscriptions.push(
         vscode.commands.registerCommand('karateRunner.openFeature', (filePath: string, line?: number) => {
@@ -159,12 +233,57 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function updateEnvironmentStatusBar() {
-    environmentStatusBar.text = `Karate: ${currentEnvironment}`;
+    environmentStatusBar.text = `KD: env:${currentEnvironment}`;
     environmentStatusBar.tooltip = 'Click to change Karate environment';
+}
+
+function updateLogLevelStatusBar() {
+    const config = vscode.workspace.getConfiguration('karateDebug');
+    const logLevel = config.get<string>('logLevel', 'info');
+    logLevelStatusBar.text = `KD: log:${logLevel}`;
+    logLevelStatusBar.tooltip = 'Click to change Karate log level';
 }
 
 export function getCurrentEnvironment(): string {
     return currentEnvironment;
+}
+
+async function showLicenseInfo(): Promise<void> {
+    const status = licenseManager.getStatus();
+
+    if (status.status === 'none') {
+        const action = await vscode.window.showInformationMessage(
+            'Karate Debug: Not signed in. Sign in with GitHub to start your free trial.',
+            'Sign In'
+        );
+        if (action === 'Sign In') {
+            licenseManager.login();
+        }
+    } else if (status.status === 'active') {
+        const action = await vscode.window.showInformationMessage(
+            `Karate Debug Pro - Licensed to ${status.githubUsername}`,
+            'Manage Subscription'
+        );
+        if (action === 'Manage Subscription') {
+            licenseManager.openSubscriptionPortal();
+        }
+    } else if (status.status === 'trialing') {
+        const action = await vscode.window.showInformationMessage(
+            `Karate Debug Trial: ${status.daysRemaining} days remaining`,
+            'Upgrade Now'
+        );
+        if (action === 'Upgrade Now') {
+            licenseManager.startCheckout();
+        }
+    } else {
+        const action = await vscode.window.showWarningMessage(
+            'Karate Debug: Trial expired. Upgrade to continue using Pro features.',
+            'Upgrade Now'
+        );
+        if (action === 'Upgrade Now') {
+            licenseManager.startCheckout();
+        }
+    }
 }
 
 async function debugKarateFeature(uri: vscode.Uri, line: number) {

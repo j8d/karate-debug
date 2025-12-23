@@ -1,34 +1,39 @@
 # Karate Debug
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/j8d.karate-debug?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
-[![GitHub Release](https://img.shields.io/github/v/release/j8d/karate-debug?logo=github)](https://github.com/j8d/karate-debug/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A lightweight VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) tests. Set breakpoints directly in your `.feature` files, step through scenarios, inspect variables, and run tests with a single click.
+A powerful VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) API tests. Set breakpoints directly in your `.feature` files, step through scenarios, inspect variables, and run tests with a single click.
 
-> **This is a new extension!** Feature requests, bug reports, and any other feedback or contributions are welcome! Please open an issue on [GitHub](https://github.com/j8d/karate-debug/issues).
+## Free Trial
 
-##  Features
+Karate Debug offers a **30-day free trial** with full access to all features. Sign in with your GitHub account to start your trial - no credit card required.
 
-###  Breakpoint Debugging
+After the trial, upgrade to **Karate Debug Pro** to continue using the extension.
+
+## Features
+
+### Breakpoint Debugging
 Set breakpoints in your `.feature` files and step through your Karate tests line by line. Inspect variables, view request/response data, and understand exactly what's happening at each step.
 
-###  Hot Reload Variables
+### Hot Reload Variables
 Modify variable values on-the-fly while paused at a breakpoint. Right-click any variable in the Variables panel and set a new value to test different scenarios without restarting your test.
 
-### ▶ One-Click Test Execution
-CodeLens buttons appear above every Feature and Scenario, letting you debug with a single click—no configuration required.
+### One-Click Test Execution
+CodeLens buttons appear above every Feature and Scenario, letting you debug with a single click - no configuration required.
 
-###  Feature Explorer
+### Feature Explorer
 Browse all your Karate features and scenarios in a dedicated sidebar. Navigate your test suite at a glance and run any test directly from the tree view.
 
-###  Environment Switching
+### Environment Switching
 Quickly switch between environments (`dev`, `qa`, `stage`, or your custom environments) from the status bar. Your selection persists across sessions.
 
-###  Syntax Highlighting
+### Match Expression Diagnostics
+Real-time validation of Karate match expressions with inline error highlighting. Get instant feedback on syntax issues with suggested fixes - hover over underlined expressions to see the problem and apply quick fixes with a single click.
+
+### Syntax Highlighting
 Full syntax highlighting for the Karate DSL, including Gherkin keywords, JSON/XML payloads, JavaScript expressions, and embedded variables.
 
-###  Java Debugging Support
+### Java Debugging Support
 For advanced scenarios, attach a Java debugger simultaneously to debug both your Karate features and underlying Java code.
 
 ##  Requirements
@@ -115,40 +120,38 @@ Debug both your `.feature` files AND underlying Java code in the same session. T
 | `karateEnv` | Karate environment (`karate.env` system property) |
 | `javaDebugPort` | Port for Java debugger attachment (enables simultaneous Java/Karate debugging) |
 
-##  Building from Source
+## Getting Started
 
-```bash
-# Clone the repository
-git clone https://github.com/j8d/karate-debug.git
-cd karate-debug
+1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
+2. **Sign in** with your GitHub account (click the status bar or run "Karate Debug: Sign In with GitHub")
+3. **Start debugging** - your 30-day free trial begins automatically
 
-# Build the Java debug server
-cd debug-server && mvn clean package -q && cd ..
+## License Management
 
-# Install dependencies and compile
-npm install
-npm run compile
+### Status Bar
+The license status bar shows your current subscription status:
+- **"Karate Debug: Free"** - Not signed in, click to sign in
+- **"Trial: Xd left"** - Active trial with days remaining
+- **"Karate Debug Pro"** - Active Pro subscription
+- **"Trial Expired"** - Trial ended, upgrade to continue
 
-# Package the extension
-npm run package
+### Commands
+- `Karate Debug: Sign In with GitHub` - Start your free trial
+- `Karate Debug: Sign Out` - Sign out of your account
+- `Karate Debug: Upgrade to Pro` - Purchase a Pro subscription
+- `Karate Debug: Manage Subscription` - Manage billing and subscription
+- `Karate Debug: License Info` - View current license status
 
-# Install locally
-code --install-extension karate-debug-*.vsix
-```
+### Machine Activations
+Your license can be activated on up to 5 machines. Manage your activations through your account settings.
 
-##  Contributing
+## Feedback
 
-Contributions are welcome! Please feel free to submit a [Pull Request](https://github.com/j8d/karate-debug/pulls) or open an [Issue](https://github.com/j8d/karate-debug/issues).
-
-## Support the Project
-
-If this extension helps you, consider supporting my work:
-
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/_j8d)
+Have a feature request or found a bug? Email us at karate-debug@j8d.dev.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This extension is proprietary software. See the LICENSE file included with the extension for terms.
 
 ## Acknowledgments
 

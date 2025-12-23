@@ -118,11 +118,15 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
             args.push(`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${javaDebugPort}`);
         }
 
+        // Get log level from settings
+        const logLevel = vscode.workspace.getConfiguration('karateDebug').get<string>('logLevel', 'info');
+
         args.push('-cp', fullClasspath);
         args.push('com.j8d.karate.debug.DebugServer');
         args.push('-p', String(port));
         args.push('-w', workspaceRoot);
         args.push('-e', karateEnv);
+        args.push('-l', logLevel);
 
         this.log(`Starting Karate debug server on port ${port}`);
         if (javaDebugPort > 0) {
@@ -132,6 +136,7 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         this.log(`Debug server JAR: ${debugServerJar}`);
         this.log(`Workspace: ${workspaceRoot}`);
         this.log(`Environment: ${karateEnv}`);
+        this.log(`Log level: ${logLevel}`);
         this.log(`Classpath: ${fullClasspath}`);
 
         const serverProcess = spawn(javaPath, args, {

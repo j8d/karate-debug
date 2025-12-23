@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.intuit.karate.Match;
 import com.intuit.karate.Results;
 import com.intuit.karate.Runner;
 import com.intuit.karate.RuntimeHook;
@@ -31,6 +32,9 @@ public class KarateDebugger implements RuntimeHook {
 
     /** Result of a setVariable operation */
     public record SetVariableResult(String displayValue, String type) {}
+
+    /** Result of an evaluate operation */
+    public record EvaluateResult(String value, String type) {}
 
     private final DapSession session;
     private final String workspaceRoot;
@@ -89,7 +93,7 @@ public class KarateDebugger implements RuntimeHook {
 
                 this.featureLine = lineNum;
                 this.featurePath = filePath;
-                logger.info("Parsed feature path: {} at line {}", this.featurePath, this.featureLine);
+                logger.debug("Parsed feature path: {} at line {}", this.featurePath, this.featureLine);
                 return;
             } catch (NumberFormatException e) {
                 // Not a line number, use full path
@@ -153,11 +157,11 @@ public class KarateDebugger implements RuntimeHook {
             verified.addProperty("line", line);
             result.add(verified);
 
-            logger.info("Set breakpoint at {}:{}", sourcePath, line);
+            logger.trace("Set breakpoint at {}:{}", sourcePath, line);
         }
 
         String normalizedPath = normalizeSourcePath(sourcePath);
-        logger.info("Storing breakpoint with key: {}", normalizedPath);
+        logger.trace("Storing breakpoint with key: {}", normalizedPath);
         breakpoints.put(normalizedPath, lines);
         return result;
     }
@@ -214,7 +218,7 @@ public class KarateDebugger implements RuntimeHook {
     }
 
     public void startExecution() {
-        logger.info("startExecution called, featurePath={}, featureLine={}", featurePath, featureLine);
+        logger.debug("startExecution called, featurePath={}, featureLine={}", featurePath, featureLine);
 
         if (featurePath == null) {
             logger.error("No feature path set");
@@ -367,7 +371,7 @@ public class KarateDebugger implements RuntimeHook {
     @Override
     public boolean beforeScenario(ScenarioRuntime sr) {
         currentRuntime = sr;
-        logger.debug("Before scenario: {}", sr.scenario.getName());
+        logger.trace("Before scenario: {}", sr.scenario.getName());
         return true;
     }
 
@@ -385,14 +389,14 @@ public class KarateDebugger implements RuntimeHook {
         String sourcePath = normalizeSourcePath(relativePath);
         int line = step.getLine();
 
-        logger.debug("beforeStep: {}:{}", sourcePath, line);
+        logger.trace("beforeStep: {}:{}", sourcePath, line);
 
         boolean shouldPause = false;
 
         // Check for breakpoint
         Set<Integer> fileBreakpoints = breakpoints.get(sourcePath);
         if (fileBreakpoints != null && fileBreakpoints.contains(line)) {
-            logger.debug("Hit breakpoint at {}:{}", sourcePath, line);
+            logger.trace("Hit breakpoint at {}:{}", sourcePath, line);
             shouldPause = true;
         }
 
@@ -536,6 +540,127 @@ public class KarateDebugger implements RuntimeHook {
 
         logger.debug("Set variable '{}' = {} (type: {})", name, displayValue, type);
         return new SetVariableResult(displayValue, type);
+    }
+
+    /**
+     * Evaluates an expression in the Debug Console.
+     * Supports:
+     * - Variable inspection: response, response.name, myVar
+     * - Match expressions: match response.name == 'pikachu'
+     * - Karate expressions: response.types.length, karate.get('foo')
+     */
+    public EvaluateResult evaluate(String expression, String context) {
+        if (currentRuntime == null) {
+            return new EvaluateResult("No active runtime", "error");
+        }
+
+        // Only allow evaluation when truly paused to prevent interfering with step execution
+        if (!paused) {
+            return new EvaluateResult("Cannot evaluate while running", "error");
+        }
+
+        expression = expression.trim();
+        logger.trace("Evaluating expression: '{}' (context: {})", expression, context);
+
+        try {
+            // Check if this is a match expression
+            if (expression.startsWith("match ")) {
+                return evaluateMatch(expression.substring(6).trim());
+            }
+
+            // For hover/watch context, check if the root variable exists first
+            // to avoid corrupting engine state with evaluations of non-existent variables
+            if ("hover".equals(context) || "watch".equals(context)) {
+                String rootVar = expression.split("[.\\[\\(]")[0].trim();
+                if (!currentRuntime.engine.vars.containsKey(rootVar)) {
+                    return new EvaluateResult("undefined", "undefined");
+                }
+            }
+
+            // Otherwise evaluate as a Karate expression
+            Variable result = currentRuntime.engine.evalKarateExpression(expression);
+
+            if (result == null || result.isNull()) {
+                return new EvaluateResult("null", "null");
+            }
+
+            Object value = result.getValue();
+            String displayValue = formatValue(value);
+            String type = value != null ? value.getClass().getSimpleName() : "null";
+
+            return new EvaluateResult(displayValue, type);
+
+        } catch (Exception e) {
+            logger.trace("Evaluation error: {}", e.getMessage());
+            return new EvaluateResult("Error: " + e.getMessage(), "error");
+        }
+    }
+
+    /**
+     * Evaluates a match expression (e.g., "response.name == 'pikachu'").
+     * Returns pass/fail result with details.
+     */
+    private EvaluateResult evaluateMatch(String matchExpression) {
+        try {
+            // Parse the match expression: "lhs == rhs" or "lhs contains rhs" etc.
+            Match.Type matchType = Match.Type.EQUALS;
+            String lhs;
+            String rhs;
+
+            // Find the match operator
+            int opIndex = -1;
+            String operator = null;
+
+            // Check for different match operators (order matters - check longer ones first)
+            String[] operators = {"!contains", "contains only", "contains deep", "contains any", "contains", "!=", "=="};
+            for (String op : operators) {
+                int idx = matchExpression.indexOf(" " + op + " ");
+                if (idx != -1) {
+                    opIndex = idx;
+                    operator = op;
+                    break;
+                }
+            }
+
+            if (opIndex == -1 || operator == null) {
+                return new EvaluateResult("Invalid match syntax. Use: match <expr> == <expected>", "error");
+            }
+
+            lhs = matchExpression.substring(0, opIndex).trim();
+            rhs = matchExpression.substring(opIndex + operator.length() + 2).trim();
+
+            // Check if the root variable on the left-hand side exists
+            // to avoid corrupting engine state with evaluations of non-existent variables
+            String rootVar = lhs.split("[.\\[\\(]")[0].trim();
+            if (!currentRuntime.engine.vars.containsKey(rootVar)) {
+                return new EvaluateResult("Variable not defined: " + rootVar, "error");
+            }
+
+            // Determine match type
+            matchType = switch (operator) {
+                case "==" -> Match.Type.EQUALS;
+                case "!=" -> Match.Type.NOT_EQUALS;
+                case "contains" -> Match.Type.CONTAINS;
+                case "!contains" -> Match.Type.NOT_CONTAINS;
+                case "contains only" -> Match.Type.CONTAINS_ONLY;
+                case "contains any" -> Match.Type.CONTAINS_ANY;
+                case "contains deep" -> Match.Type.CONTAINS_DEEP;
+                default -> Match.Type.EQUALS;
+            };
+
+            // Use Karate's match method
+            Match.Result matchResult = currentRuntime.engine.match(matchType, lhs, null, rhs);
+
+            if (matchResult.pass) {
+                return new EvaluateResult("PASS", "boolean");
+            } else {
+                return new EvaluateResult("FAIL: " + matchResult.message, "boolean");
+            }
+
+        } catch (Exception e) {
+            logger.trace("Match evaluation error: {}", e.getMessage());
+            return new EvaluateResult("Match error: " + e.getMessage(), "error");
+        }
     }
 
     /**
