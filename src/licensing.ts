@@ -257,6 +257,15 @@ export class LicenseManager {
             });
 
             if (!response.ok) {
+                // If user not found (404), clear local state and treat as new user
+                if (response.status === 404) {
+                    await this.context.globalState.update('userId', undefined);
+                    await this.context.globalState.update('githubUsername', undefined);
+                    await this.context.globalState.update('trialStartTimestamp', undefined);
+                    this.currentStatus = { isValid: false, status: 'none' };
+                    this.updateStatusBar(this.currentStatus);
+                    return this.currentStatus;
+                }
                 throw new Error('Validation failed');
             }
 
@@ -295,7 +304,18 @@ export class LicenseManager {
             };
 
         } catch {
-            this.currentStatus = { isValid: false, status: 'expired' };
+            // On error, check if user seems to have never had a valid session
+            // If no local trial data exists, treat as new user, not expired
+            const localData = this.readLocalBackup();
+            const globalStateTimestamp = this.context.globalState.get<number>('trialStartTimestamp');
+
+            if (!localData && !globalStateTimestamp) {
+                // No prior trial data - treat as new user
+                await this.context.globalState.update('userId', undefined);
+                this.currentStatus = { isValid: false, status: 'none' };
+            } else {
+                this.currentStatus = { isValid: false, status: 'expired' };
+            }
         }
 
         this.updateStatusBar(this.currentStatus);
