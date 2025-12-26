@@ -3,9 +3,8 @@ import * as crypto from 'crypto';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
+import { API_BASE_URL, GITHUB_CLIENT_ID } from './config';
 
-const API_BASE_URL = 'https://karate-debug-api.vercel.app/api';
-const GITHUB_CLIENT_ID = 'Ov23lilyMXLAitkqwqPL';
 const BACKUP_FILE_NAME = '.karate-debug-license';
 
 export interface LicenseStatus {
