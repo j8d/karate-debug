@@ -42,6 +42,7 @@
     "api-testing"
   ],
   "activationEvents": [
+    "onStartupFinished",
     "workspaceContains:**/*.feature",
     "onUri"
   ],

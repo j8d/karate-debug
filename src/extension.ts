@@ -34,12 +34,15 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Initialize license manager and check trial status
     licenseManager = new LicenseManager(context);
-    licenseManager.initialize().then(status => {
+    licenseManager.initialize().then(async status => {
         outputChannel.appendLine(`License status: ${status.status}, days remaining: ${status.daysRemaining}`);
 
-        // Show trial expired message if needed
-        if (!status.isValid) {
-            licenseManager.showTrialExpiredMessage();
+        if (status.status === 'none') {
+            // New user - prompt to login to start trial
+            await licenseManager.showLoginRequiredMessage();
+        } else if (status.status === 'expired') {
+            // Trial/subscription expired
+            await licenseManager.showTrialExpiredMessage();
         }
     });
 
@@ -123,7 +126,11 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('karateRunner.debugFeature', async (arg?: vscode.Uri | FeatureItem, line?: number) => {
             // Check trial status before allowing debug
             if (!licenseManager.isTrialValid()) {
-                await licenseManager.showTrialExpiredMessage();
+                if (licenseManager.getStatus().status === 'none') {
+                    await licenseManager.showLoginRequiredMessage();
+                } else {
+                    await licenseManager.showTrialExpiredMessage();
+                }
                 return;
             }
 
@@ -158,7 +165,11 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('karateRunner.debugEntireFeature', async (arg?: vscode.Uri | FeatureItem) => {
             // Check trial status before allowing debug
             if (!licenseManager.isTrialValid()) {
-                await licenseManager.showTrialExpiredMessage();
+                if (licenseManager.getStatus().status === 'none') {
+                    await licenseManager.showLoginRequiredMessage();
+                } else {
+                    await licenseManager.showTrialExpiredMessage();
+                }
                 return;
             }
 

@@ -11,6 +11,7 @@ export interface LicenseStatus {
     isValid: boolean;
     status: 'active' | 'trialing' | 'expired' | 'none';
     daysRemaining?: number;
+    expiresAt?: string;
     githubUsername?: string;
     trialStartDate?: Date;
 }
@@ -33,6 +34,7 @@ export class LicenseManager {
     private machineId: string;
     private statusBarItem: vscode.StatusBarItem;
     private currentStatus: LicenseStatus = { isValid: false, status: 'none' };
+    private pendingAuthResolve: ((code: string | null) => void) | null = null;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
@@ -42,6 +44,28 @@ export class LicenseManager {
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
         this.statusBarItem.command = 'karateDebug.showLicenseInfo';
         context.subscriptions.push(this.statusBarItem);
+
+        // Register URI handler once during construction
+        const uriHandler = vscode.window.registerUriHandler({
+            handleUri: (uri: vscode.Uri) => {
+                console.log('[Karate Debug] URI handler received:', uri.toString());
+                console.log('[Karate Debug] URI path:', uri.path);
+                console.log('[Karate Debug] URI query:', uri.query);
+
+                // Accept both /auth-callback and auth-callback (with or without leading slash)
+                if (uri.path === '/auth-callback' || uri.path === 'auth-callback') {
+                    const code = new URLSearchParams(uri.query).get('code');
+                    console.log('[Karate Debug] Auth code received:', code ? 'yes' : 'no');
+                    if (this.pendingAuthResolve) {
+                        this.pendingAuthResolve(code);
+                        this.pendingAuthResolve = null;
+                    } else {
+                        console.log('[Karate Debug] No pending auth resolve!');
+                    }
+                }
+            }
+        });
+        context.subscriptions.push(uriHandler);
     }
 
     private getMachineId(): string {
@@ -159,12 +183,16 @@ export class LicenseManager {
     }
 
     async login(): Promise<User | null> {
+        console.log('[Karate Debug] Starting login...');
         const redirectUri = encodeURIComponent(`${API_BASE_URL}/auth/callback`);
         const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user:email&redirect_uri=${redirectUri}`;
 
+        console.log('[Karate Debug] Opening auth URL:', authUrl);
         vscode.env.openExternal(vscode.Uri.parse(authUrl));
 
+        console.log('[Karate Debug] Waiting for auth code...');
         const code = await this.waitForAuthCode();
+        console.log('[Karate Debug] Auth code received:', code ? 'yes' : 'no');
         if (!code) {
             vscode.window.showErrorMessage('Authentication cancelled or failed');
             return null;
@@ -201,17 +229,15 @@ export class LicenseManager {
 
     private async waitForAuthCode(): Promise<string | null> {
         return new Promise((resolve) => {
-            const disposable = vscode.window.registerUriHandler({
-                handleUri(uri: vscode.Uri): vscode.ProviderResult<void> {
-                    const code = new URLSearchParams(uri.query).get('code');
-                    disposable.dispose();
-                    resolve(code);
-                }
-            });
+            // Use the pre-registered URI handler
+            this.pendingAuthResolve = resolve;
 
+            // Timeout after 5 minutes
             setTimeout(() => {
-                disposable.dispose();
-                resolve(null);
+                if (this.pendingAuthResolve === resolve) {
+                    this.pendingAuthResolve = null;
+                    resolve(null);
+                }
             }, 5 * 60 * 1000);
         });
     }
@@ -299,6 +325,7 @@ export class LicenseManager {
                 isValid: data.valid,
                 status: data.status as LicenseStatus['status'],
                 daysRemaining: data.daysRemaining,
+                expiresAt: data.expiresAt,
                 githubUsername: this.context.globalState.get('githubUsername')
             };
 
@@ -393,6 +420,28 @@ export class LicenseManager {
         }
     }
 
+    private formatTimeRemaining(expiresAt?: string): string {
+        if (!expiresAt) return '?';
+
+        const now = Date.now();
+        const expiryTime = new Date(expiresAt).getTime();
+        const msRemaining = expiryTime - now;
+
+        if (msRemaining <= 0) return '0m';
+
+        const minutes = Math.floor(msRemaining / (60 * 1000));
+        const hours = Math.floor(msRemaining / (60 * 60 * 1000));
+        const days = Math.floor(msRemaining / (24 * 60 * 60 * 1000));
+
+        if (days >= 1) {
+            return `${days}d`;
+        } else if (hours >= 1) {
+            return `${hours}h`;
+        } else {
+            return `${minutes}m`;
+        }
+    }
+
     private updateStatusBar(status: LicenseStatus): void {
         if (status.status === 'none') {
             this.statusBarItem.text = '$(key) Karate Debug: Free';
@@ -403,11 +452,14 @@ export class LicenseManager {
             this.statusBarItem.tooltip = `Licensed to ${status.githubUsername}`;
             this.statusBarItem.backgroundColor = undefined;
         } else if (status.status === 'trialing') {
-            if (status.daysRemaining !== undefined && status.daysRemaining <= 3) {
-                this.statusBarItem.text = `$(warning) Trial: ${status.daysRemaining}d left`;
+            const timeLeft = this.formatTimeRemaining(status.expiresAt);
+            const isUrgent = status.daysRemaining !== undefined && status.daysRemaining <= 3;
+
+            if (isUrgent) {
+                this.statusBarItem.text = `$(warning) Trial: ${timeLeft} left`;
                 this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
             } else {
-                this.statusBarItem.text = `$(clock) Trial: ${status.daysRemaining}d left`;
+                this.statusBarItem.text = `$(clock) Trial: ${timeLeft} left`;
                 this.statusBarItem.backgroundColor = undefined;
             }
             this.statusBarItem.tooltip = 'Click to upgrade';
@@ -442,6 +494,17 @@ export class LicenseManager {
             await this.startCheckout();
         } else if (action === 'Learn More') {
             vscode.env.openExternal(vscode.Uri.parse('https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug'));
+        }
+    }
+
+    async showLoginRequiredMessage(): Promise<void> {
+        const action = await vscode.window.showInformationMessage(
+            'Please sign in to start your free trial of Karate Debug.',
+            'Sign In with GitHub'
+        );
+
+        if (action === 'Sign In with GitHub') {
+            await this.login();
         }
     }
 
