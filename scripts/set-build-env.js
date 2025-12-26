@@ -53,7 +53,19 @@ export const GITHUB_CLIENT_ID = '${config.GITHUB_CLIENT_ID}';
 `;
 
 fs.writeFileSync(CONFIG_FILE, content);
-console.log(`✓ Set build environment to: ${env}`);
-console.log(`  API_BASE_URL: ${config.API_BASE_URL}`);
-console.log(`  GITHUB_CLIENT_ID: ${config.GITHUB_CLIENT_ID}`);
+
+// Check if this is a reset after dev build (called with 'prod' after packaging)
+const isReset = env === 'prod' && process.argv[3] !== '--verbose';
+const resetFlag = process.argv.includes('--reset');
+
+if (resetFlag || (env === 'prod' && !process.argv.includes('--verbose'))) {
+    // Silent reset after dev build - only show if explicitly requested
+    if (process.argv.includes('--verbose')) {
+        console.log(`✓ Reset source to: ${env}`);
+    }
+} else {
+    console.log(`✓ Building with: ${env}`);
+    console.log(`  API_BASE_URL: ${config.API_BASE_URL}`);
+    console.log(`  GITHUB_CLIENT_ID: ${config.GITHUB_CLIENT_ID}`);
+}
 
