@@ -170,5 +170,4 @@ This extension is proprietary software. See the LICENSE file included with the e
 
 ## Acknowledgments
 
-- [Karate](https://github.com/karatelabs/karate) - The powerful API testing framework
-- [VS Code Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/) - Debug adapter implementation
+- [Karate](https://github.com/karatelabs/karate) - The best API testing framework
