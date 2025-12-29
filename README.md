@@ -1,10 +1,21 @@
 # Karate Debug
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/j8d.karate-debug?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/j8d.karate-debug)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/j8d.karate-debug)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
 
-A powerful VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) API tests. Set breakpoints directly in your `.feature` files, step through scenarios, inspect variables, and run tests with a single click.
+**A real debugger for Karate `.feature` tests in VS Code.** Breakpoints, variable inspection, hot-swap values, and environment switching—without rewiring your project.
 
 ![Karate Debug Demo](https://raw.githubusercontent.com/j8d/karate-debug-marketing/main/demo.gif)
+
+## Get Started in Under 2 Minutes
+
+No complex setup. No configuration files. Just install and start debugging.
+
+1. **Install** - Search "Karate Debug" in VS Code Extensions
+2. **Open** - Navigate to any `.feature` file in your project
+3. **Click** - Hit the "Debug Scenario" button above any Scenario
+4. **Sign In** - One-time GitHub sign-in activates your 30-day free trial (no credit card required)
 
 ## Features
 
@@ -32,22 +43,13 @@ Full syntax highlighting for the Karate DSL, including Gherkin keywords, JSON/XM
 ### Java Debugging Support
 For advanced scenarios, attach a Java debugger simultaneously to debug both your Karate features and underlying Java code.
 
-##  Requirements
+## Requirements
 
-- **Java 17+** (Java 21 recommended for best compatibility)
+- **Java 17+** (Java 21 recommended)
 - **Maven** project with Karate dependencies
-- Tests located in `src/test/java` or `src/test/resources`
+- Tests in `src/test/java` or `src/test/resources`
 
-##  Quick Start
-
-1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
-2. **Open** a Maven project containing Karate tests
-3. **Open** any `.feature` file
-4. **Click** `▶ Debug Feature` or `▶ Debug Scenario` above your test
-
-That's it! The debugger will start, and you can set breakpoints, step through code, and inspect variables.
-
-##  Configuration
+## Configuration
 
 Configure the extension via VS Code Settings (`Cmd+,` or `Ctrl+,`):
 
@@ -116,12 +118,6 @@ Debug both your `.feature` files AND underlying Java code in the same session. T
 | `karateEnv` | Karate environment (`karate.env` system property) |
 | `javaDebugPort` | Port for Java debugger attachment (enables simultaneous Java/Karate debugging) |
 
-## Getting Started
-
-1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
-2. **Sign in** with your GitHub account (click the status bar or run "Karate Debug: Sign In with GitHub")
-3. **Start debugging** - your 30-day free trial begins automatically
-
 ## License Management
 
 ### Status Bar
@@ -141,11 +137,28 @@ The license status bar shows your current subscription status:
 ### Machine Activations
 Your license can be activated on up to 5 machines. Manage your activations through your account settings.
 
-## Free Trial
+## Pricing
 
-Karate Debug offers a **30-day free trial** with full access to all features. Sign in with your GitHub account to start your trial - no credit card required.
+**Free Trial** - $0 for 30 days with full access to all features. No credit card required.
 
-After the trial, upgrade to **Karate Debug Pro** to continue using the extension.
+**Karate Debug Pro** - $29.99/month for unlimited debugging sessions, priority support, up to 5 machine activations, and early access to new features.
+
+## Privacy and Security
+
+- **Your code stays local.** All debugging happens on your machine. We never see, access, or store your code, tests, or test data.
+- **GitHub sign-in is for licensing only.** We verify your GitHub identity to manage your trial or subscription. No repository access is requested.
+- **Works offline.** Once activated, Karate Debug works fully offline. An internet connection is only needed for initial activation and periodic license checks.
+
+## FAQ
+
+**What are the system requirements?**
+Java 17+ (21 recommended), a Maven project with Karate dependencies, and VS Code. Tests should be in `src/test/java` or `src/test/resources`.
+
+**Can I use it on multiple machines?**
+Pro subscribers can activate on up to 5 machines—perfect for work laptop, home desktop, and CI environments.
+
+**What happens after the 30-day trial?**
+Subscribe to Pro for $29.99/month to continue using all features. No credit card is required to start the trial.
 
 ## Feedback
 
