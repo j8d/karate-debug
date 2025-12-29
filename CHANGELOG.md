@@ -5,6 +5,14 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2024-12-29
+
+### Fixed
+- Hot reload variables now works correctly - variable changes are applied on the Karate execution thread to handle thread-local JS engine bindings
+
+### Added
+- Demo GIF in README showcasing extension features
+
 ## [0.5.1] - 2024-12-23
 
 ### Fixed
