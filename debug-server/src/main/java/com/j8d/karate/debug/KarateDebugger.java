@@ -63,6 +63,10 @@ public class KarateDebugger implements RuntimeHook {
     private final AtomicInteger variableRefCounter = new AtomicInteger(1000);
     private final Map<Integer, Object> variableRefs = new ConcurrentHashMap<>();
 
+    // Pending variable changes to apply when resuming (thread-safe queue)
+    // Key: variable name, Value: parsed value to set
+    private final Map<String, Object> pendingVariableChanges = new ConcurrentHashMap<>();
+
     public KarateDebugger(DapSession session, String workspaceRoot, String karateEnv) {
         this.session = session;
         this.workspaceRoot = workspaceRoot;
@@ -447,6 +451,9 @@ public class KarateDebugger implements RuntimeHook {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+
+        // Apply any pending variable changes now that we're on the Karate execution thread
+        applyPendingVariableChanges();
     }
 
     public JsonArray getStackFrames() {
@@ -525,7 +532,8 @@ public class KarateDebugger implements RuntimeHook {
 
     /**
      * Sets a variable value at runtime (hot reload).
-     * Parses the string value and updates Karate's variable store.
+     * Queues the change to be applied on the Karate execution thread when it resumes.
+     * This is necessary because Karate's JS engine uses thread-local bindings.
      */
     public SetVariableResult setVariable(int variablesReference, String name, String value) {
         if (currentRuntime == null) {
@@ -533,13 +541,35 @@ public class KarateDebugger implements RuntimeHook {
         }
 
         Object parsedValue = parseValue(value);
-        currentRuntime.engine.vars.put(name, new Variable(parsedValue));
+
+        // Queue the change to be applied on the Karate execution thread.
+        // We can't apply it here because the JS engine is thread-local.
+        pendingVariableChanges.put(name, parsedValue);
 
         String displayValue = formatValue(parsedValue);
         String type = parsedValue != null ? parsedValue.getClass().getSimpleName() : "null";
 
-        logger.debug("Set variable '{}' = {} (type: {})", name, displayValue, type);
+        logger.debug("Queued variable change: {} = {}", name, displayValue);
         return new SetVariableResult(displayValue, type);
+    }
+
+    /**
+     * Applies any pending variable changes on the current thread.
+     * Must be called from the Karate execution thread.
+     */
+    private void applyPendingVariableChanges() {
+        if (pendingVariableChanges.isEmpty() || currentRuntime == null) {
+            return;
+        }
+
+        for (Map.Entry<String, Object> entry : pendingVariableChanges.entrySet()) {
+            String name = entry.getKey();
+            Object value = entry.getValue();
+            logger.debug("Applying variable change: {} = {}", name, formatValue(value));
+            currentRuntime.engine.setVariable(name, value);
+        }
+
+        pendingVariableChanges.clear();
     }
 
     /**
@@ -665,15 +695,20 @@ public class KarateDebugger implements RuntimeHook {
 
     /**
      * Parses a string value into an appropriate Java object.
-     * Supports: null, boolean, numbers, strings, JSON objects/arrays.
+     * Supports: null, boolean, numbers, strings (single or double quoted), JSON objects/arrays.
      */
     private Object parseValue(String value) {
         if (value == null || value.equals("null")) return null;
         if (value.equals("true")) return true;
         if (value.equals("false")) return false;
 
-        // Quoted string
+        // Double-quoted string
         if (value.startsWith("\"") && value.endsWith("\"") && value.length() >= 2) {
+            return value.substring(1, value.length() - 1);
+        }
+
+        // Single-quoted string (common in Karate feature files)
+        if (value.startsWith("'") && value.endsWith("'") && value.length() >= 2) {
             return value.substring(1, value.length() - 1);
         }
 

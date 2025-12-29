@@ -2,7 +2,7 @@
   "name": "karate-debug",
   "displayName": "Karate Debug",
   "description": "Debug Karate API tests with breakpoints, step-through debugging, and an integrated test explorer. Features CodeLens buttons, environment switching, and full Karate DSL syntax highlighting.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "publisher": "j8d",
   "author": {
     "name": "j8d"
@@ -180,7 +180,11 @@
           "items": {
             "type": "string"
           },
-          "default": ["dev", "qa", "stage"],
+          "default": [
+            "dev",
+            "qa",
+            "stage"
+          ],
           "description": "List of available Karate environments"
         },
         "karateDebug.defaultEnvironment": {
@@ -205,7 +209,13 @@
         },
         "karateDebug.logLevel": {
           "type": "string",
-          "enum": ["error", "warn", "info", "debug", "trace"],
+          "enum": [
+            "error",
+            "warn",
+            "info",
+            "debug",
+            "trace"
+          ],
           "default": "info",
           "description": "Log level for Karate Debug output"
         }

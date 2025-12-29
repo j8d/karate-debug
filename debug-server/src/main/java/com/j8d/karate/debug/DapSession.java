@@ -275,13 +275,26 @@ public class DapSession {
         String name = args.get("name").getAsString();
         String value = args.get("value").getAsString();
 
-        var result = debugger.setVariable(variablesReference, name, value);
+        logger.debug("setVariable request: name='{}', value='{}', ref={}", name, value, variablesReference);
 
-        JsonObject body = new JsonObject();
-        body.addProperty("value", result.displayValue());
-        body.addProperty("type", result.type());
-        body.addProperty("variablesReference", 0);
-        sendResponse(request, true, body);
+        try {
+            var result = debugger.setVariable(variablesReference, name, value);
+
+            JsonObject body = new JsonObject();
+            body.addProperty("value", result.displayValue());
+            body.addProperty("type", result.type());
+            body.addProperty("variablesReference", 0);
+            sendResponse(request, true, body);
+
+            logger.debug("setVariable success: name='{}' -> {}", name, result.displayValue());
+        } catch (Exception e) {
+            logger.error("setVariable failed: name='{}', value='{}'", name, value, e);
+            JsonObject body = new JsonObject();
+            body.addProperty("value", "Error: " + e.getMessage());
+            body.addProperty("type", "error");
+            body.addProperty("variablesReference", 0);
+            sendResponse(request, false, body);
+        }
     }
 
     private void handleEvaluate(JsonObject request, JsonObject args) {

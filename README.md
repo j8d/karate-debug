@@ -4,11 +4,7 @@
 
 A powerful VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) API tests. Set breakpoints directly in your `.feature` files, step through scenarios, inspect variables, and run tests with a single click.
 
-## Free Trial
-
-Karate Debug offers a **30-day free trial** with full access to all features. Sign in with your GitHub account to start your trial - no credit card required.
-
-After the trial, upgrade to **Karate Debug Pro** to continue using the extension.
+![Karate Debug Demo](resources/demo.gif)
 
 ## Features
 
@@ -144,6 +140,12 @@ The license status bar shows your current subscription status:
 
 ### Machine Activations
 Your license can be activated on up to 5 machines. Manage your activations through your account settings.
+
+## Free Trial
+
+Karate Debug offers a **30-day free trial** with full access to all features. Sign in with your GitHub account to start your trial - no credit card required.
+
+After the trial, upgrade to **Karate Debug Pro** to continue using the extension.
 
 ## Feedback
 
