@@ -149,7 +149,7 @@ After the trial, upgrade to **Karate Debug Pro** to continue using the extension
 
 ## Feedback
 
-Have a feature request or found a bug? Email us at karate-debug@j8d.dev.
+Have a feature request or found a bug? Email me at ryan@karatedebug.com.
 
 ## License
 
