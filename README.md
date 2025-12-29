@@ -4,7 +4,7 @@
 
 A powerful VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) API tests. Set breakpoints directly in your `.feature` files, step through scenarios, inspect variables, and run tests with a single click.
 
-![Karate Debug Demo](resources/demo.gif)
+![Karate Debug Demo](https://raw.githubusercontent.com/j8d/karate-debug/main/resources/demo.gif)
 
 ## Features
 
