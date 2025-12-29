@@ -18,7 +18,7 @@
     "url": "https://github.com/j8d/karate-debug"
   },
   "bugs": {
-    "email": "karate-debug@j8d.dev"
+    "email": "ryan@karatedebug.com"
   },
   "homepage": "https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug",
   "engines": {
@@ -26,20 +26,21 @@
   },
   "categories": [
     "Debuggers",
-    "Testing",
-    "Programming Languages"
+    "Testing"
   ],
   "keywords": [
     "karate",
+    "api-testing",
+    "automation",
+    "test-automation",
     "api",
-    "testing",
+    "rest",
     "debug",
     "debugger",
     "bdd",
     "gherkin",
-    "feature",
-    "rest",
-    "api-testing"
+    "integration-testing",
+    "functional-testing"
   ],
   "activationEvents": [
     "onStartupFinished",
