@@ -97,7 +97,7 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         }
 
         // Find Java - prefer Java 17 or 21 for GraalJS compatibility
-        let javaPath = this.findCompatibleJava(config);
+        const javaPath = this.findCompatibleJava(config);
 
         // Build classpath using Maven to get all project dependencies
         // This ensures we use the same versions as the project (including GraalJS)
@@ -271,7 +271,7 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
     }
 
     private async getMavenClasspath(workspaceRoot: string): Promise<string> {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, _reject) => {
             const cpFile = path.join(workspaceRoot, 'target', 'debug-classpath.txt');
             const mvn = spawn('mvn', [
                 '-q',

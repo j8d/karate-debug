@@ -322,6 +322,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
     "pretest": "npm run compile",
     "test": "node ./out/test/runTest.js",
     "package": "vsce package",
@@ -329,14 +330,19 @@
     "package:prod": "node scripts/set-build-env.js prod && npm run compile && vsce package"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/mocha": "^10.0.0",
     "@types/node": "^18.0.0",
     "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^8.51.0",
+    "@typescript-eslint/parser": "^8.51.0",
     "@vscode/test-electron": "^2.3.0",
     "@vscode/vsce": "^3.7.1",
+    "eslint": "^9.39.2",
     "glob": "^10.3.0",
     "mocha": "^10.2.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.51.0"
   },
   "dependencies": {
     "@vscode/debugadapter": "^1.64.0",

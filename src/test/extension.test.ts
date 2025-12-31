@@ -5,7 +5,7 @@ import * as fs from 'fs';
 
 suite('Karate Debugger Extension Test Suite', () => {
     const fixturesPath = path.join(__dirname, '../../test-fixtures');
-    const extensionId = 'karate-runner.karate-debugger';
+    const extensionId = 'j8d.karate-debug';
 
     test('Extension should be present', () => {
         assert.ok(vscode.extensions.getExtension(extensionId));
