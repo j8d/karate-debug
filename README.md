@@ -162,11 +162,11 @@ Subscribe to Pro for $29.99/month to continue using all features. No credit card
 
 ## Feedback
 
-Have a feature request or found a bug? Email me at ryan@karatedebug.com.
+Have a feature request or found a bug? Email me at [ryan@karatedebug.com](mailto:ryan@karatedebug.com).
 
 ## License
 
-This extension is proprietary software. See the LICENSE file included with the extension for terms.
+This extension is proprietary software. See the [full license terms](https://www.karatedebug.com/license).
 
 ## Acknowledgments
 
