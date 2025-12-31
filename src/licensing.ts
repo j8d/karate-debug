@@ -221,8 +221,9 @@ export class LicenseManager {
             vscode.window.showInformationMessage(`Logged in as ${user.githubUsername}`);
             return user;
 
-        } catch (error: any) {
-            vscode.window.showErrorMessage(`Login failed: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            vscode.window.showErrorMessage(`Login failed: ${message}`);
             return null;
         }
     }
@@ -388,8 +389,9 @@ export class LicenseManager {
             const data = await response.json() as { url: string };
             vscode.env.openExternal(vscode.Uri.parse(data.url));
 
-        } catch (error: any) {
-            vscode.window.showErrorMessage(`Failed to open subscription portal: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            vscode.window.showErrorMessage(`Failed to open subscription portal: ${message}`);
         }
     }
 
@@ -415,8 +417,9 @@ export class LicenseManager {
             const data = await response.json() as { url: string };
             vscode.env.openExternal(vscode.Uri.parse(data.url));
 
-        } catch (error: any) {
-            vscode.window.showErrorMessage(`Failed to start checkout: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            vscode.window.showErrorMessage(`Failed to start checkout: ${message}`);
         }
     }
 
