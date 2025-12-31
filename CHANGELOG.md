@@ -5,6 +5,23 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2025-01-01
+
+### Added
+- CI workflow with linting and automated tests on every push/PR
+- ESLint configuration for TypeScript code quality
+- License page at https://www.karatedebug.com/license
+
+### Changed
+- Release workflow now automatically publishes to VS Code Marketplace
+- Updated copyright to 2025-2026
+- Updated contact email to ryan@karatedebug.com
+- License now correctly states 30-day trial period
+
+### Fixed
+- Fixed ESLint warnings with proper error type handling
+- Fixed test extension ID for CI compatibility
+
 ## [0.6.3] - 2024-12-29
 
 ### Changed
