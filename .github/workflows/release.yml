@@ -46,11 +46,13 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      - name: Publish to VS Code Marketplace
+        run: npx vsce publish --no-dependencies -p ${{ secrets.AZUREPAT }}
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: '*.vsix'
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
