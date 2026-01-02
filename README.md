@@ -58,6 +58,9 @@ Configure the extension via VS Code Settings (`Cmd+,` or `Ctrl+,`):
 | `karateDebug.environments` | List of available Karate environments | `["dev", "qa", "stage"]` |
 | `karateDebug.defaultEnvironment` | Default environment when starting a debug session | `"dev"` |
 | `karateDebug.javaHome` | Path to Java installation (auto-detected if empty) | `""` |
+| `karateDebug.matchDiagnostics.showPassing` | Show green underlines for passing match statements | `true` |
+| `karateDebug.matchDiagnostics.showFailing` | Show red underlines for failing match statements | `true` |
+| `karateDebug.matchDiagnostics.showActualValues` | Show actual values and Fix button next to failing matches | `true` |
 
 ### Example `settings.json`
 

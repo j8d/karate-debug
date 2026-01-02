@@ -208,6 +208,11 @@
           "default": true,
           "description": "Show red underlines for failing match statements"
         },
+        "karateDebug.matchDiagnostics.showActualValues": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show actual values and Fix button next to failing match statements"
+        },
         "karateDebug.logLevel": {
           "type": "string",
           "enum": [

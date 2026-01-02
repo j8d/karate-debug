@@ -104,16 +104,16 @@ export class MatchDiagnosticsProvider {
     private static readonly FAILURE_TYPE_MISMATCH_REGEX = /not (?:an? )?([^(]+) \([^)]+\)\n\s+'([^']+)'\n\s+'([^']+)'/;
 
     constructor(private context: vscode.ExtensionContext) {
-        // Create decoration types with subtle styling
+        // Create decoration types with visible styling
         this.passingDecorationType = vscode.window.createTextEditorDecorationType({
-            textDecoration: 'underline dotted rgba(80, 160, 80, 0.6)',
-            overviewRulerColor: 'rgba(80, 160, 80, 0.5)',
+            textDecoration: 'underline dotted rgba(50, 205, 50, 0.85)',
+            overviewRulerColor: 'rgba(50, 205, 50, 0.7)',
             overviewRulerLane: vscode.OverviewRulerLane.Right
         });
 
         this.failingDecorationType = vscode.window.createTextEditorDecorationType({
-            textDecoration: 'underline dotted rgba(200, 80, 80, 0.6)',
-            overviewRulerColor: 'rgba(200, 80, 80, 0.5)',
+            textDecoration: 'underline dotted rgba(255, 80, 80, 0.85)',
+            overviewRulerColor: 'rgba(255, 80, 80, 0.7)',
             overviewRulerLane: vscode.OverviewRulerLane.Right
         });
 
@@ -168,12 +168,13 @@ export class MatchDiagnosticsProvider {
         );
     }
 
-    /** Returns true if either showPassing or showFailing is enabled */
+    /** Returns true if any match diagnostics feature is enabled */
     private isEnabled(): boolean {
         const config = vscode.workspace.getConfiguration('karateDebug');
         const showPassing = config.get<boolean>('matchDiagnostics.showPassing', true);
         const showFailing = config.get<boolean>('matchDiagnostics.showFailing', true);
-        return showPassing || showFailing;
+        const showActualValues = config.get<boolean>('matchDiagnostics.showActualValues', true);
+        return showPassing || showFailing || showActualValues;
     }
 
     private updateStatusBar(): void {
@@ -284,6 +285,7 @@ export class MatchDiagnosticsProvider {
         const config = vscode.workspace.getConfiguration('karateDebug');
         const showPassing = config.get<boolean>('matchDiagnostics.showPassing', true);
         const showFailing = config.get<boolean>('matchDiagnostics.showFailing', true);
+        const showActualValues = config.get<boolean>('matchDiagnostics.showActualValues', true);
 
         const passingRanges: vscode.DecorationOptions[] = [];
         const failingRanges: vscode.DecorationOptions[] = [];
@@ -318,7 +320,7 @@ export class MatchDiagnosticsProvider {
                         range: new vscode.Range(i, line.firstNonWhitespaceCharacterIndex, i, line.text.length),
                         hoverMessage: 'Match PASSED'
                     });
-                } else if (result.status === 'fail' && showFailing) {
+                } else if (result.status === 'fail' && (showFailing || showActualValues)) {
                     const lineRange = new vscode.Range(i, line.firstNonWhitespaceCharacterIndex, i, line.text.length);
                     let hoverMessage = `Match FAILED: ${result.message}`;
 
@@ -329,21 +331,24 @@ export class MatchDiagnosticsProvider {
                         matchFailures.set(failureInfo.key, failureInfo.info);
                         hoverMessage = failureInfo.hoverMessage;
 
-                        // Create diagnostic covering the whole line for easy hover
+                        // Create diagnostic for Code Actions (use Hint severity to avoid duplicate squiggly underline)
                         const diagnostic = new vscode.Diagnostic(
                             lineRange,
                             hoverMessage,
-                            vscode.DiagnosticSeverity.Error
+                            vscode.DiagnosticSeverity.Hint
                         );
                         diagnostic.source = 'Karate Debug';
                         diagnostic.code = 'match-failed';
                         diagnostics.push(diagnostic);
                     }
 
-                    failingRanges.push({
-                        range: lineRange,
-                        hoverMessage
-                    });
+                    // Only add decoration if showFailing is enabled
+                    if (showFailing) {
+                        failingRanges.push({
+                            range: lineRange,
+                            hoverMessage
+                        });
+                    }
                 }
             }
         }
@@ -662,6 +667,13 @@ class MatchInlayHintsProvider implements vscode.InlayHintsProvider {
     ): vscode.InlayHint[] {
         const hints: vscode.InlayHint[] = [];
         const docUri = document.uri.toString();
+
+        // Check if actual values display is enabled
+        const config = vscode.workspace.getConfiguration('karateDebug');
+        const showActualValues = config.get<boolean>('matchDiagnostics.showActualValues', true);
+        if (!showActualValues) {
+            return hints;
+        }
 
         console.log(`[InlayHints] provideInlayHints called for ${docUri}, matchFailures size: ${matchFailures.size}`);
 

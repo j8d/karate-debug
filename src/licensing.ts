@@ -262,7 +262,8 @@ export class LicenseManager {
         await this.context.globalState.update('githubUsername', undefined);
         await this.context.globalState.update('trialStartTimestamp', undefined);
 
-        this.updateStatusBar({ isValid: false, status: 'none' });
+        this.currentStatus = { isValid: false, status: 'none' };
+        this.updateStatusBar(this.currentStatus);
         vscode.window.showInformationMessage('Logged out of Karate Debug');
     }
 
