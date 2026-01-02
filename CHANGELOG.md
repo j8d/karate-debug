@@ -5,6 +5,19 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2025-01-02
+
+### Added
+- New `showActualValues` setting to control inlay hints independently from decorations
+- Match diagnostics settings now documented in README
+
+### Changed
+- Brighter green/red colors for match diagnostics underlines
+- Use `DiagnosticSeverity.Hint` to avoid duplicate squiggly underlines
+
+### Fixed
+- Fixed logout not updating status - clicking status bar after logout now correctly shows "Sign In" option
+
 ## [0.6.4] - 2025-01-01
 
 ### Added
