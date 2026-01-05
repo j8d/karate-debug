@@ -5,6 +5,16 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.7] - 2026-01-05
+
+### Changed
+- Trial now starts automatically when you install the extension - no sign-in required
+- GitHub sign-in is only needed when purchasing a Pro subscription
+- Purchase flow now triggers GitHub authentication automatically if not signed in
+
+### Fixed
+- Trial days remaining now displays consistently between status bar and info popup
+
 ## [0.6.6] - 2025-01-02
 
 ### Removed
