@@ -86,7 +86,6 @@ export class MatchDiagnosticsProvider {
     private passingDecorationType: vscode.TextEditorDecorationType;
     private failingDecorationType: vscode.TextEditorDecorationType;
     private diagnosticCollection: vscode.DiagnosticCollection;
-    private statusBarItem: vscode.StatusBarItem;
     private documentChangeListener: vscode.Disposable | undefined;
     private debounceTimer: NodeJS.Timeout | undefined;
     private activeSession: vscode.DebugSession | undefined;
@@ -143,17 +142,6 @@ export class MatchDiagnosticsProvider {
             vscode.commands.registerCommand('karateDebug.acceptActualValue', acceptActualValue)
         );
 
-        // Create status bar item
-        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
-        this.statusBarItem.command = 'karateDebug.toggleMatchDiagnostics';
-        this.updateStatusBar();
-        context.subscriptions.push(this.statusBarItem);
-
-        // Register toggle command
-        context.subscriptions.push(
-            vscode.commands.registerCommand('karateDebug.toggleMatchDiagnostics', () => this.toggle())
-        );
-
         // Listen for debug session events
         context.subscriptions.push(
             vscode.debug.onDidStartDebugSession(session => this.onDebugSessionStarted(session))
@@ -177,38 +165,6 @@ export class MatchDiagnosticsProvider {
         return showPassing || showFailing || showActualValues;
     }
 
-    private updateStatusBar(): void {
-        if (this.isPaused && this.isEnabled()) {
-            this.statusBarItem.text = '$(check) Match Diagnostics';
-            this.statusBarItem.tooltip = 'Match diagnostics enabled (click to open settings)';
-            this.statusBarItem.show();
-        } else if (this.isPaused && !this.isEnabled()) {
-            this.statusBarItem.text = '$(circle-slash) Match Diagnostics';
-            this.statusBarItem.tooltip = 'Match diagnostics disabled (click to open settings)';
-            this.statusBarItem.show();
-        } else {
-            this.statusBarItem.hide();
-        }
-    }
-
-    private toggle(): void {
-        // Toggle both settings together
-        const config = vscode.workspace.getConfiguration('karateDebug');
-        const currentlyEnabled = this.isEnabled();
-        const newValue = !currentlyEnabled;
-
-        config.update('matchDiagnostics.showPassing', newValue, vscode.ConfigurationTarget.Global);
-        config.update('matchDiagnostics.showFailing', newValue, vscode.ConfigurationTarget.Global);
-
-        this.updateStatusBar();
-
-        if (newValue && this.isPaused) {
-            this.evaluateMatchStatements();
-        } else {
-            this.clearDecorations();
-        }
-    }
-
     private onDebugSessionStarted(session: vscode.DebugSession): void {
         if (session.type === 'karate') {
             this.activeSession = session;
@@ -221,7 +177,6 @@ export class MatchDiagnosticsProvider {
             this.isPaused = false;
             this.clearDecorations();
             this.stopDocumentListener();
-            this.updateStatusBar();
         }
     }
 
@@ -229,7 +184,6 @@ export class MatchDiagnosticsProvider {
         // When a stack frame becomes active, the debugger has stopped
         if (item && this.activeSession) {
             this.isPaused = true;
-            this.updateStatusBar();
             this.startDocumentListener();
             // Delay evaluation slightly to ensure pause state is fully established
             if (this.isEnabled()) {
@@ -244,7 +198,6 @@ export class MatchDiagnosticsProvider {
             this.isPaused = false;
             this.clearDecorations();
             this.stopDocumentListener();
-            this.updateStatusBar();
         }
     }
 
@@ -607,7 +560,6 @@ export class MatchDiagnosticsProvider {
         this.passingDecorationType.dispose();
         this.failingDecorationType.dispose();
         this.diagnosticCollection.dispose();
-        this.statusBarItem.dispose();
     }
 }
 

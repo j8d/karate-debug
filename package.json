@@ -2,7 +2,7 @@
   "name": "karate-debug",
   "displayName": "Karate Debug",
   "description": "Debug Karate API tests with breakpoints, step-through debugging, and an integrated test explorer. Features CodeLens buttons, environment switching, and full Karate DSL syntax highlighting.",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "publisher": "j8d",
   "author": {
     "name": "j8d"
@@ -248,10 +248,6 @@
       {
         "command": "karateDebug.openFeature",
         "title": "Open Feature"
-      },
-      {
-        "command": "karateDebug.toggleMatchDiagnostics",
-        "title": "Karate Debug: Toggle Match Diagnostics"
       },
       {
         "command": "karateDebug.openSettings",
