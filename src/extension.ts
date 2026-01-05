@@ -33,17 +33,17 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Karate Debug extension activated');
 
     // Initialize license manager and check trial status
+    // Trial now starts automatically - no login required
     licenseManager = new LicenseManager(context);
     licenseManager.initialize().then(async status => {
         outputChannel.appendLine(`License status: ${status.status}, days remaining: ${status.daysRemaining}`);
 
-        if (status.status === 'none') {
-            // New user - prompt to login to start trial
-            await licenseManager.showLoginRequiredMessage();
-        } else if (status.status === 'expired') {
-            // Trial/subscription expired
+        if (status.status === 'expired') {
+            // Trial/subscription expired - prompt to purchase
             await licenseManager.showTrialExpiredMessage();
         }
+        // Note: 'none' status only happens if offline on first install
+        // In that case, features still work and we'll sync when online
     });
 
     // Register license commands
@@ -126,11 +126,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('karateRunner.debugFeature', async (arg?: vscode.Uri | FeatureItem, line?: number) => {
             // Check trial status before allowing debug
             if (!licenseManager.isTrialValid()) {
-                if (licenseManager.getStatus().status === 'none') {
-                    await licenseManager.showLoginRequiredMessage();
-                } else {
-                    await licenseManager.showTrialExpiredMessage();
-                }
+                // Trial expired - prompt to purchase (no login required for trial)
+                await licenseManager.showTrialExpiredMessage();
                 return;
             }
 
@@ -165,11 +162,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('karateRunner.debugEntireFeature', async (arg?: vscode.Uri | FeatureItem) => {
             // Check trial status before allowing debug
             if (!licenseManager.isTrialValid()) {
-                if (licenseManager.getStatus().status === 'none') {
-                    await licenseManager.showLoginRequiredMessage();
-                } else {
-                    await licenseManager.showTrialExpiredMessage();
-                }
+                // Trial expired - prompt to purchase (no login required for trial)
+                await licenseManager.showTrialExpiredMessage();
                 return;
             }
 
@@ -263,13 +257,10 @@ async function showLicenseInfo(): Promise<void> {
     const status = licenseManager.getStatus();
 
     if (status.status === 'none') {
-        const action = await vscode.window.showInformationMessage(
-            'Karate Debug: Not signed in. Sign in with GitHub to start your free trial.',
-            'Sign In'
+        // Offline on first install - just inform
+        vscode.window.showInformationMessage(
+            'Karate Debug: Unable to verify trial. Please check your internet connection.'
         );
-        if (action === 'Sign In') {
-            licenseManager.login();
-        }
     } else if (status.status === 'active') {
         const action = await vscode.window.showInformationMessage(
             `Karate Debug Pro - Licensed to ${status.githubUsername}`,
@@ -281,17 +272,17 @@ async function showLicenseInfo(): Promise<void> {
     } else if (status.status === 'trialing') {
         const action = await vscode.window.showInformationMessage(
             `Karate Debug Trial: ${status.daysRemaining} days remaining`,
-            'Upgrade Now'
+            'Purchase License'
         );
-        if (action === 'Upgrade Now') {
+        if (action === 'Purchase License') {
             licenseManager.startCheckout();
         }
     } else {
         const action = await vscode.window.showWarningMessage(
-            'Karate Debug: Trial expired. Upgrade to continue using Pro features.',
-            'Upgrade Now'
+            'Karate Debug: Trial expired. Purchase a license to continue.',
+            'Purchase License'
         );
-        if (action === 'Upgrade Now') {
+        if (action === 'Purchase License') {
             licenseManager.startCheckout();
         }
     }

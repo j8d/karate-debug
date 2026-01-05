@@ -16,6 +16,15 @@ export interface LicenseStatus {
     trialStartDate?: Date;
 }
 
+interface AnonymousTrialResponse {
+    status: 'trialing' | 'expired' | 'converted' | 'none';
+    startedAt?: string;
+    expiresAt?: string;
+    daysRemaining?: number;
+    isNew?: boolean;
+    convertedUserId?: string;
+}
+
 export interface User {
     userId: string;
     githubUsername: string;
@@ -174,12 +183,91 @@ export class LicenseManager {
     async initialize(): Promise<LicenseStatus> {
         const userId = this.context.globalState.get<string>('userId');
 
-        if (!userId) {
-            this.updateStatusBar({ isValid: false, status: 'none' });
+        // If user is logged in, validate their subscription
+        if (userId) {
+            return this.validateLicense();
+        }
+
+        // Otherwise, start/check anonymous trial (no auth required)
+        return this.startOrCheckAnonymousTrial();
+    }
+
+    /**
+     * Start or check anonymous machine-based trial.
+     * No GitHub auth required - trial starts immediately.
+     */
+    private async startOrCheckAnonymousTrial(): Promise<LicenseStatus> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/trial/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    machineId: this.machineId,
+                    machineName: os.hostname()
+                })
+            });
+
+            if (!response.ok) {
+                console.error('[LicenseManager] Failed to start trial:', response.status);
+                // Fall back to local trial check
+                return this.checkLocalTrialFallback();
+            }
+
+            const data = await response.json() as AnonymousTrialResponse;
+
+            // Sync to local backup
+            if (data.startedAt) {
+                const trialStart = new Date(data.startedAt).getTime();
+                await this.syncTrialStart('anonymous', trialStart);
+            }
+
+            this.currentStatus = {
+                isValid: data.status === 'trialing',
+                status: data.status === 'trialing' ? 'trialing' :
+                        data.status === 'expired' ? 'expired' : 'none',
+                daysRemaining: data.daysRemaining,
+                expiresAt: data.expiresAt,
+            };
+
+            this.updateStatusBar(this.currentStatus);
+            return this.currentStatus;
+
+        } catch (error) {
+            console.error('[LicenseManager] Error starting trial:', error);
+            return this.checkLocalTrialFallback();
+        }
+    }
+
+    /**
+     * Fallback to local trial check when offline.
+     */
+    private checkLocalTrialFallback(): LicenseStatus {
+        const localData = this.readLocalBackup();
+        const globalStateTimestamp = this.context.globalState.get<number>('trialStartTimestamp');
+
+        const trialStart = localData?.trialStartTimestamp || globalStateTimestamp;
+
+        if (!trialStart) {
+            // No trial data - show as none (will prompt to try again when online)
+            this.currentStatus = { isValid: false, status: 'none' };
+            this.updateStatusBar(this.currentStatus);
             return this.currentStatus;
         }
 
-        return this.validateLicense();
+        // Calculate trial expiry (30 days)
+        const trialEnd = trialStart + (30 * 24 * 60 * 60 * 1000);
+        const now = Date.now();
+        const daysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000)));
+
+        this.currentStatus = {
+            isValid: daysRemaining > 0,
+            status: daysRemaining > 0 ? 'trialing' : 'expired',
+            daysRemaining,
+            expiresAt: new Date(trialEnd).toISOString(),
+        };
+
+        this.updateStatusBar(this.currentStatus);
+        return this.currentStatus;
     }
 
     async login(): Promise<User | null> {
@@ -199,10 +287,11 @@ export class LicenseManager {
         }
 
         try {
+            // Pass machineId to link any anonymous trial to this user
             const response = await fetch(`${API_BASE_URL}/auth/github`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code })
+                body: JSON.stringify({ code, machineId: this.machineId })
             });
 
             if (!response.ok) {
@@ -448,8 +537,9 @@ export class LicenseManager {
 
     private updateStatusBar(status: LicenseStatus): void {
         if (status.status === 'none') {
-            this.statusBarItem.text = '$(key) Karate Debug: Free';
-            this.statusBarItem.tooltip = 'Click to sign in';
+            // Offline on first install - show neutral status
+            this.statusBarItem.text = '$(sync) Karate Debug';
+            this.statusBarItem.tooltip = 'Checking license status...';
             this.statusBarItem.backgroundColor = undefined;
         } else if (status.status === 'active') {
             this.statusBarItem.text = '$(verified) Karate Debug Pro';
@@ -466,10 +556,10 @@ export class LicenseManager {
                 this.statusBarItem.text = `$(clock) Trial: ${timeLeft} left`;
                 this.statusBarItem.backgroundColor = undefined;
             }
-            this.statusBarItem.tooltip = 'Click to upgrade';
+            this.statusBarItem.tooltip = 'Click for license info';
         } else {
             this.statusBarItem.text = '$(warning) Trial Expired';
-            this.statusBarItem.tooltip = 'Click to upgrade';
+            this.statusBarItem.tooltip = 'Click to purchase license';
             this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
         }
         this.statusBarItem.show();
