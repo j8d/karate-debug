@@ -486,11 +486,16 @@ export class LicenseManager {
     }
 
     async startCheckout(): Promise<void> {
-        const userId = this.context.globalState.get<string>('userId');
+        let userId = this.context.globalState.get<string>('userId');
 
+        // If not logged in, authenticate first (this will link the anonymous trial)
         if (!userId) {
-            vscode.window.showErrorMessage('Please log in first');
-            return;
+            const user = await this.login();
+            if (!user) {
+                // Login was cancelled or failed
+                return;
+            }
+            userId = user.userId;
         }
 
         try {
@@ -513,7 +518,12 @@ export class LicenseManager {
         }
     }
 
-    private formatTimeRemaining(expiresAt?: string): string {
+    private formatTimeRemaining(expiresAt?: string, daysRemaining?: number): string {
+        // Use daysRemaining from API if available (more accurate)
+        if (daysRemaining !== undefined && daysRemaining >= 1) {
+            return `${daysRemaining}d`;
+        }
+
         if (!expiresAt) return '?';
 
         const now = Date.now();
@@ -522,9 +532,9 @@ export class LicenseManager {
 
         if (msRemaining <= 0) return '0m';
 
-        const minutes = Math.floor(msRemaining / (60 * 1000));
-        const hours = Math.floor(msRemaining / (60 * 60 * 1000));
-        const days = Math.floor(msRemaining / (24 * 60 * 60 * 1000));
+        const minutes = Math.ceil(msRemaining / (60 * 1000));
+        const hours = Math.ceil(msRemaining / (60 * 60 * 1000));
+        const days = Math.ceil(msRemaining / (24 * 60 * 60 * 1000));
 
         if (days >= 1) {
             return `${days}d`;
@@ -546,7 +556,7 @@ export class LicenseManager {
             this.statusBarItem.tooltip = `Licensed to ${status.githubUsername}`;
             this.statusBarItem.backgroundColor = undefined;
         } else if (status.status === 'trialing') {
-            const timeLeft = this.formatTimeRemaining(status.expiresAt);
+            const timeLeft = this.formatTimeRemaining(status.expiresAt, status.daysRemaining);
             const isUrgent = status.daysRemaining !== undefined && status.daysRemaining <= 3;
 
             if (isUrgent) {

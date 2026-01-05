@@ -10,12 +10,12 @@
 
 ## Get Started in Under 2 Minutes
 
-No complex setup. No configuration files. Just install and start debugging.
+No complex setup. No configuration files. No sign-up required. Just install and start debugging.
 
 1. **Install** - Search "Karate Debug" in VS Code Extensions
 2. **Open** - Navigate to any `.feature` file in your project
 3. **Click** - Hit the "Debug Scenario" button above any Scenario
-4. **Sign In** - One-time GitHub sign-in activates your 30-day free trial (no credit card required)
+4. **Debug** - Your 30-day free trial starts automatically (no sign-in required)
 
 ## Features
 
@@ -125,31 +125,32 @@ Debug both your `.feature` files AND underlying Java code in the same session. T
 
 ### Status Bar
 The license status bar shows your current subscription status:
-- **"Karate Debug: Free"** - Not signed in, click to sign in
 - **"Trial: Xd left"** - Active trial with days remaining
 - **"Karate Debug Pro"** - Active Pro subscription
-- **"Trial Expired"** - Trial ended, upgrade to continue
+- **"Trial Expired"** - Trial ended, click to purchase
 
 ### Commands
-- `Karate Debug: Sign In with GitHub` - Start your free trial
-- `Karate Debug: Sign Out` - Sign out of your account
 - `Karate Debug: Upgrade to Pro` - Purchase a Pro subscription
+- `Karate Debug: Sign In with GitHub` - Link your account (only needed for purchase)
+- `Karate Debug: Sign Out` - Sign out of your account
 - `Karate Debug: Manage Subscription` - Manage billing and subscription
 - `Karate Debug: License Info` - View current license status
 
-### Machine Activations
-Your license can be activated on up to 5 machines. Manage your activations through your account settings.
+### How Licensing Works
+- **Trial starts automatically** when you install the extension—no sign-in required
+- **GitHub sign-in is only needed when you purchase** a Pro subscription
+- **Your license activates on up to 5 machines** after purchase
 
 ## Pricing
 
-**Free Trial** - $0 for 30 days with full access to all features. No credit card required.
+**Free Trial** - $0 for 30 days with full access to all features. No sign-up or credit card required.
 
 **Karate Debug Pro** - $29.99/month for unlimited debugging sessions, priority support, up to 5 machine activations, and early access to new features.
 
 ## Privacy and Security
 
 - **Your code stays local.** All debugging happens on your machine. We never see, access, or store your code, tests, or test data.
-- **GitHub sign-in is for licensing only.** We verify your GitHub identity to manage your trial or subscription. No repository access is requested.
+- **No sign-in required for trial.** Your trial starts automatically when you install. GitHub sign-in is only needed when you purchase.
 - **Works offline.** Once activated, Karate Debug works fully offline. An internet connection is only needed for initial activation and periodic license checks.
 
 ## FAQ
