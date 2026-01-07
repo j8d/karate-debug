@@ -75,8 +75,16 @@ public class KarateToolWindowContent {
             }
         });
 
-        // Populate tree with feature files
-        populateTree(root);
+        // Populate tree with feature files (in background to avoid EDT blocking)
+        com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            // Collect data in background
+            List<FeatureFileNode> featureNodes = collectFeatureNodes();
+
+            // Update UI on EDT
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                populateTreeFromNodes(root, featureNodes);
+            });
+        });
 
         // Toolbar with buttons
         JPanel toolbar = createToolbar();
@@ -179,23 +187,40 @@ public class KarateToolWindowContent {
         // This will create a run configuration and execute it
     }
 
-    private void populateTree(DefaultMutableTreeNode root) {
-        root.removeAllChildren();
+    /**
+     * Collects feature nodes in background thread (does file I/O).
+     */
+    private List<FeatureFileNode> collectFeatureNodes() {
+        List<FeatureFileNode> nodes = new ArrayList<>();
 
         KarateProjectService projectService = KarateProjectService.getInstance(project);
         List<VirtualFile> featureFiles = projectService.getFeatureFiles();
 
         for (VirtualFile file : featureFiles) {
             FeatureFileNode fileNode = new FeatureFileNode(file);
-            DefaultMutableTreeNode fileTreeNode = new DefaultMutableTreeNode(fileNode);
 
-            // Parse feature file for scenarios
+            // Parse feature file for scenarios (file I/O)
             List<ScenarioNode> scenarios = parseFeatureFile(file);
             if (!scenarios.isEmpty()) {
                 fileNode.setFeatureName(scenarios.get(0).getFeatureName());
             }
+            fileNode.setScenarios(scenarios);
+            nodes.add(fileNode);
+        }
 
-            for (ScenarioNode scenario : scenarios) {
+        return nodes;
+    }
+
+    /**
+     * Populates tree from pre-collected nodes (must run on EDT).
+     */
+    private void populateTreeFromNodes(DefaultMutableTreeNode root, List<FeatureFileNode> featureNodes) {
+        root.removeAllChildren();
+
+        for (FeatureFileNode fileNode : featureNodes) {
+            DefaultMutableTreeNode fileTreeNode = new DefaultMutableTreeNode(fileNode);
+
+            for (ScenarioNode scenario : fileNode.getScenarios()) {
                 fileTreeNode.add(new DefaultMutableTreeNode(scenario));
             }
 
@@ -203,6 +228,14 @@ public class KarateToolWindowContent {
         }
 
         ((DefaultTreeModel) tree.getModel()).reload();
+    }
+
+    /**
+     * @deprecated Use collectFeatureNodes + populateTreeFromNodes instead
+     */
+    private void populateTree(DefaultMutableTreeNode root) {
+        List<FeatureFileNode> nodes = collectFeatureNodes();
+        populateTreeFromNodes(root, nodes);
     }
 
     private List<ScenarioNode> parseFeatureFile(VirtualFile file) {
@@ -252,10 +285,21 @@ public class KarateToolWindowContent {
     }
 
     public void refresh() {
-        KarateProjectService.getInstance(project).refresh();
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
-        populateTree(root);
-        updateStatus();
+        // Run refresh in background to avoid slow operations on EDT
+        com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            KarateProjectService projectService = KarateProjectService.getInstance(project);
+            projectService.refresh();
+
+            // Collect feature data in background
+            List<FeatureFileNode> featureNodes = collectFeatureNodes();
+
+            // Update UI on EDT
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
+                populateTreeFromNodes(root, featureNodes);
+                updateStatus();
+            });
+        });
     }
 
     private void updateStatus() {
@@ -314,6 +358,7 @@ public class KarateToolWindowContent {
     private static class FeatureFileNode {
         private final VirtualFile file;
         private String featureName;
+        private List<ScenarioNode> scenarios = new ArrayList<>();
 
         public FeatureFileNode(VirtualFile file) {
             this.file = file;
@@ -332,6 +377,14 @@ public class KarateToolWindowContent {
             if (name != null && !name.isEmpty()) {
                 this.featureName = name;
             }
+        }
+
+        public List<ScenarioNode> getScenarios() {
+            return scenarios;
+        }
+
+        public void setScenarios(List<ScenarioNode> scenarios) {
+            this.scenarios = scenarios;
         }
 
         @Override

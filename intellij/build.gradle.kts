@@ -52,8 +52,8 @@ intellijPlatform {
         version = providers.gradleProperty("pluginVersion")
         
         ideaVersion {
-            sinceBuild = "232"    // IntelliJ 2023.2 (minimum supported)
-            untilBuild = "251.*"  // IntelliJ 2025.1 (allow future versions)
+            sinceBuild = "251"    // IntelliJ 2025.1 (minimum supported)
+            untilBuild = "253.*"  // IntelliJ 2025.3 (allow future versions)
         }
         
         description = """

@@ -789,6 +789,14 @@ intellij/
 3. Fixed classpath generation removing `!/` suffixes from JAR paths
 4. Added breakpoint queuing for breakpoints set before DAP connection
 5. Added null checks in `KarateBreakpointHandler`
+6. Implemented `createDocument()` in `KarateEditorsProvider` (was causing AbstractMethodError)
+7. Fixed Maven property resolution for version detection (e.g., `${karate.version}` -> `1.5.2`)
+8. Fixed EDT slow operation warnings:
+   - Moved project detection to background thread using `ProgressManager`
+   - Made `isKarateProject()` return cached values only (no detection on EDT)
+   - Updated tool window to populate tree in background thread
+   - Made `KarateToolWindowFactory` implement `DumbAware` and always be available
+9. Updated Gradle regex to support `io.karatelabs` group ID (newer Karate releases)
 
 **Test Results:**
 - Debug server starts correctly
@@ -796,6 +804,9 @@ intellij/
 - Breakpoints set and hit
 - Tests execute and pass (2 scenarios, 0 failed)
 - Debugger properly pauses at breakpoints
+- No more EDT slow operation warnings
+- Tool window displays correctly with feature files
+- Karate version detected correctly (1.5.2)
 
 **Next Steps (Phase 2):**
 - Variable modification (hot reload)

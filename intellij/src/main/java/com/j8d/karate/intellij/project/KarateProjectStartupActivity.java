@@ -2,7 +2,12 @@ package com.j8d.karate.intellij.project;
 
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.ProgressManager;
+import com.intellij.openapi.progress.Task;
+import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.ProjectActivity;
 import kotlin.Unit;
@@ -26,9 +31,27 @@ public class KarateProjectStartupActivity implements ProjectActivity {
         // Initialize build file listener for auto-refresh
         KarateBuildFileListener.getInstance(project);
 
+        // Wait for smart mode (indexing complete) before detecting Karate project
+        DumbService.getInstance(project).runWhenSmart(() -> {
+            // Run detection in background to avoid slow operations on EDT
+            ProgressManager.getInstance().run(new Task.Backgroundable(project, "Detecting Karate project", false) {
+                @Override
+                public void run(@NotNull ProgressIndicator indicator) {
+                    detectAndNotify(project);
+                }
+            });
+        });
+
+        return Unit.INSTANCE;
+    }
+
+    private void detectAndNotify(Project project) {
         // Detect Karate project
         KarateProjectService service = KarateProjectService.getInstance(project);
         KarateProjectSettings settings = KarateProjectSettings.getInstance(project);
+
+        // Force re-detection now that indexing is complete
+        service.refresh();
 
         if (service.isKarateProject()) {
             LOG.info("Karate project detected: " + project.getName() +
@@ -36,23 +59,23 @@ public class KarateProjectStartupActivity implements ProjectActivity {
                 ", type=" + service.getProjectType() +
                 ", features=" + service.getFeatureFiles().size());
 
-            // Show notification if enabled
+            // Show notification if enabled (must be on EDT)
             if (settings.showDetectionNotification) {
-                String message = buildNotificationMessage(service);
-                NotificationGroupManager.getInstance()
-                    .getNotificationGroup("Karate Debug")
-                    .createNotification(
-                        "Karate Debug",
-                        message,
-                        NotificationType.INFORMATION
-                    )
-                    .notify(project);
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    String message = buildNotificationMessage(service);
+                    NotificationGroupManager.getInstance()
+                        .getNotificationGroup("Karate Debug")
+                        .createNotification(
+                            "Karate Debug",
+                            message,
+                            NotificationType.INFORMATION
+                        )
+                        .notify(project);
+                });
             }
         } else {
             LOG.info("Not a Karate project: " + project.getName());
         }
-
-        return Unit.INSTANCE;
     }
 
     private String buildNotificationMessage(KarateProjectService service) {

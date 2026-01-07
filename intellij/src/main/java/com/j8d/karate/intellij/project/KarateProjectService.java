@@ -56,16 +56,24 @@ public final class KarateProjectService {
 
     /**
      * Check if this project contains Karate dependencies.
+     * Returns cached result only - does not trigger detection on EDT.
      */
     public boolean isKarateProject() {
-        if (!initialized) {
-            detectKarateProject();
-        }
+        // Don't trigger detection on EDT - just return cached result
+        // Detection is triggered by startup activity in background
         return isKarateProject;
     }
 
     /**
+     * Check if detection has completed.
+     */
+    public boolean isInitialized() {
+        return initialized;
+    }
+
+    /**
      * Force re-detection of Karate project status.
+     * Must be called from a background thread (not EDT).
      */
     public void refresh() {
         initialized = false;
@@ -79,23 +87,19 @@ public final class KarateProjectService {
 
     /**
      * Get the detected Karate version, if any.
+     * Returns cached result only - does not trigger detection.
      */
     @Nullable
     public String getKarateVersion() {
-        if (!initialized) {
-            detectKarateProject();
-        }
         return karateVersion;
     }
 
     /**
      * Get the project build system type ("maven", "gradle", or null).
+     * Returns cached result only - does not trigger detection.
      */
     @Nullable
     public String getProjectType() {
-        if (!initialized) {
-            detectKarateProject();
-        }
         return projectType;
     }
 
@@ -311,17 +315,44 @@ public final class KarateProjectService {
             "<artifactId>karate-[^<]+</artifactId>\\s*<version>([^<]+)</version>");
         Matcher mavenMatcher = mavenPattern.matcher(content);
         if (mavenMatcher.find()) {
-            karateVersion = mavenMatcher.group(1);
+            String version = mavenMatcher.group(1);
+            // Resolve Maven property references like ${karate.version}
+            karateVersion = resolveMavenProperty(content, version);
             return;
         }
 
-        // Try Gradle format: 'com.intuit.karate:karate-core:1.4.0'
+        // Try Gradle format: 'com.intuit.karate:karate-core:1.4.0' or 'io.karatelabs:karate-core:1.5.0'
         Pattern gradlePattern = Pattern.compile(
-            "['\"]com\\.intuit\\.karate:karate-[^:]+:([^'\"]+)['\"]");
+            "['\"](?:com\\.intuit\\.karate|io\\.karatelabs):karate-[^:]+:([^'\"]+)['\"]");
         Matcher gradleMatcher = gradlePattern.matcher(content);
         if (gradleMatcher.find()) {
             karateVersion = gradleMatcher.group(1);
         }
+    }
+
+    /**
+     * Resolves Maven property references like ${karate.version} to actual values.
+     */
+    private String resolveMavenProperty(String content, String version) {
+        if (!version.startsWith("${") || !version.endsWith("}")) {
+            return version;
+        }
+
+        // Extract property name from ${property.name}
+        String propertyName = version.substring(2, version.length() - 1);
+
+        // Look for <property.name>value</property.name> in properties section
+        // Handle dots in property names by escaping them for regex
+        String escapedName = propertyName.replace(".", "\\.");
+        Pattern propertyPattern = Pattern.compile("<" + escapedName + ">([^<]+)</" + escapedName + ">");
+        Matcher propertyMatcher = propertyPattern.matcher(content);
+
+        if (propertyMatcher.find()) {
+            return propertyMatcher.group(1);
+        }
+
+        // Property not found, return original (will show as unresolved)
+        return version;
     }
 
     private void detectKarateConfigFiles() {
