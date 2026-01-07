@@ -31,6 +31,14 @@
         <projectService
             serviceImplementation="com.j8d.karate.intellij.project.KarateProjectService"/>
 
+        <!-- Karate project settings (persistent) -->
+        <projectService
+            serviceImplementation="com.j8d.karate.intellij.project.KarateProjectSettings"/>
+
+        <!-- Build file listener for auto-refresh -->
+        <projectService
+            serviceImplementation="com.j8d.karate.intellij.project.KarateBuildFileListener"/>
+
         <!-- Startup activity to detect Karate projects -->
         <postStartupActivity
             implementation="com.j8d.karate.intellij.project.KarateProjectStartupActivity"/>

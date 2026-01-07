@@ -14,17 +14,18 @@ repositories {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    // IntelliJ 2024.2+ requires Java 21
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 dependencies {
     intellijPlatform {
         val platformType = providers.gradleProperty("platformType")
         val platformVersion = providers.gradleProperty("platformVersion")
-        
+
         create(platformType, platformVersion)
-        
+
         // Java plugin for project detection
         bundledPlugin("com.intellij.java")
 
@@ -34,10 +35,13 @@ dependencies {
 
         // TextMate bundles support for syntax highlighting
         bundledPlugin("org.jetbrains.plugins.textmate")
-        
+
         pluginVerifier()
     }
-    
+
+    // Gson for DAP JSON protocol
+    implementation("com.google.code.gson:gson:2.10.1")
+
     // Add the shared debug-server JAR
     implementation(files("../shared/debug-server/target/karate-debug-server-1.0.0.jar"))
 }
@@ -48,8 +52,8 @@ intellijPlatform {
         version = providers.gradleProperty("pluginVersion")
         
         ideaVersion {
-            sinceBuild = "232"    // IntelliJ 2023.2
-            untilBuild = "243.*"  // IntelliJ 2024.3
+            sinceBuild = "232"    // IntelliJ 2023.2 (minimum supported)
+            untilBuild = "251.*"  // IntelliJ 2025.1 (allow future versions)
         }
         
         description = """

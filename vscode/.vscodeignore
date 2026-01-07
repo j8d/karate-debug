@@ -1,0 +1,42 @@
+# Source files (compiled output is in out/)
+src/**
+
+# TypeScript config
+tsconfig.json
+
+# Build scripts
+scripts/**
+
+# ESLint config
+eslint.config.mjs
+
+# Development files
+.vscode/**
+.github/**
+
+# Test files
+test/**
+test-fixtures/**
+*.test.ts
+
+# Git
+.git/**
+.gitignore
+
+# npm
+node_modules/**
+!node_modules/@vscode/debugadapter/**
+!node_modules/@vscode/debugprotocol/**
+!node_modules/vscode-languageclient/**
+
+# Package files
+*.vsix
+package-lock.json
+
+# Documentation (keep readme and changelog)
+docs/**
+
+# Other
+*.map
+.DS_Store
+

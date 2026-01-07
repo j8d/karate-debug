@@ -620,6 +620,67 @@ karate-debug/
 - [x] **Create UI stubs** - `KarateToolWindowFactory`, action classes
 - [x] **Verify plugin builds** - Successfully ran `./gradlew build`
 
+### Phase 1.5: Debug Infrastructure
+
+**Status:** COMPLETE
+**Started:** 2026-01-07
+**Completed:** 2026-01-07
+
+#### Completed Tasks
+
+- [x] **Implement KarateDapClient** - Full DAP protocol implementation:
+  - Socket-based communication with Content-Length framing
+  - Request/response handling with CompletableFuture
+  - Event handling (stopped, terminated, output)
+  - Initialize, launch, configurationDone sequence
+  - Stepping commands (stepOver, stepIn, stepOut, continue)
+  - Breakpoint management per file
+  - Stack trace, scopes, and variables retrieval
+
+- [x] **Implement KarateDebugProcess** - XDebugger bridge:
+  - Spawns debug-server JAR as subprocess
+  - Handles session lifecycle (start, stop)
+  - `onStopped()` callback for breakpoint hits
+  - Console logging integration
+  - KarateSuspendContext for position tracking
+
+- [x] **Create KarateExecutionStack** - Stack frame management:
+  - Parses DAP stackTrace responses
+  - Creates KarateStackFrame instances
+
+- [x] **Create KarateStackFrame** - Frame representation:
+  - Maps DAP frames to XSourcePosition
+  - Customized presentation with file:line
+  - Fetches scopes and displays variable groups
+
+- [x] **Create KarateVariableGroup** - Variable display:
+  - Groups variables by scope (Local, Global)
+  - KarateVariable for individual values
+  - Recursive expansion for objects/arrays
+  - Type-aware icons
+
+- [x] **Complete breakpoint support** - Already implemented:
+  - `KarateBreakpointType` for .feature files
+  - `KarateBreakpointHandler` wires to DAP client
+  - `KarateBreakpointProperties` for state
+
+#### Architecture
+
+```
+IntelliJ XDebugger <-> KarateDebugProcess <-> KarateDapClient <-> Socket <-> debug-server JAR
+                            |
+                            v
+                    KarateSuspendContext
+                            |
+                    KarateExecutionStack
+                            |
+                    KarateStackFrame[]
+                            |
+                    KarateVariableGroup[]
+                            |
+                    KarateVariable[]
+```
+
 #### Key Decision: Custom Language vs Gherkin Plugin
 
 Originally planned to depend on the Gherkin plugin for `.feature` file support. Discovered that:
@@ -668,9 +729,10 @@ intellij/
 
 #### Next Steps
 
-- [ ] Phase 1.3: Implement Karate project detection (Maven/Gradle)
-- [ ] Phase 1.4: Implement working gutter icons with run actions
-- [ ] Phase 1.5: Create DAP bridge for debugging
+- [ ] Phase 2.1: Test end-to-end debugging in IntelliJ
+- [ ] Phase 2.2: Implement variable modification (hot-swap)
+- [ ] Phase 2.3: Add conditional breakpoint support
+- [ ] Phase 3.1: Implement Feature Explorer tool window UI
 
 ---
 
@@ -700,3 +762,44 @@ intellij/
 3. Update IntelliJ plugin to consume debug-server as Gradle subproject
 4. Update VS Code build scripts to use Gradle instead of Maven
 5. Remove `pom.xml` after verification
+
+---
+
+## Progress Log
+
+### 2026-01-07: Phase 1 Complete
+
+**Milestone:** Basic debugging functionality is now working in IntelliJ!
+
+**Completed:**
+- Repository restructured to monorepo (shared/, vscode/, intellij/)
+- IntelliJ plugin skeleton with Gradle build
+- Custom Karate language support (lexer, parser, syntax highlighting)
+- Project detection for Maven/Gradle with Karate dependencies
+- Feature Explorer tool window with scenario tree view
+- Run/Debug gutter icons on Feature/Scenario lines
+- XDebugger integration with DAP protocol client
+- Breakpoint support - breakpoints hit and debugger pauses
+- Variable inspection in debug view
+- Stack frames display
+
+**Key Fixes Applied:**
+1. Fixed `ReadAction` requirement for file index operations in `KarateProjectService`
+2. Added `KarateEditorsProvider` for XVariablesView (was returning null)
+3. Fixed classpath generation removing `!/` suffixes from JAR paths
+4. Added breakpoint queuing for breakpoints set before DAP connection
+5. Added null checks in `KarateBreakpointHandler`
+
+**Test Results:**
+- Debug server starts correctly
+- DAP connection established
+- Breakpoints set and hit
+- Tests execute and pass (2 scenarios, 0 failed)
+- Debugger properly pauses at breakpoints
+
+**Next Steps (Phase 2):**
+- Variable modification (hot reload)
+- Expression evaluation
+- Step into/over/out improvements
+- Run without debugging
+- License integration
