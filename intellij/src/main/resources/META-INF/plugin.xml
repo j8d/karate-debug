@@ -1,0 +1,96 @@
+<idea-plugin>
+    <id>com.j8d.karate.intellij</id>
+    <name>Karate Debug</name>
+    <vendor email="ryan@karatedebug.com" url="https://karatedebug.com">j8d</vendor>
+
+    <!-- Plugin dependencies -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+    <depends>org.jetbrains.plugins.textmate</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Karate file type -->
+        <fileType
+            name="Karate Feature"
+            implementationClass="com.j8d.karate.intellij.lang.KarateFileType"
+            fieldName="INSTANCE"
+            language="Karate"
+            extensions="feature"/>
+
+        <!-- Karate language -->
+        <lang.parserDefinition
+            language="Karate"
+            implementationClass="com.j8d.karate.intellij.lang.KarateParserDefinition"/>
+
+        <!-- Syntax highlighter -->
+        <lang.syntaxHighlighterFactory
+            language="Karate"
+            implementationClass="com.j8d.karate.intellij.lang.KarateSyntaxHighlighterFactory"/>
+
+        <!-- Karate project detection -->
+        <projectService
+            serviceImplementation="com.j8d.karate.intellij.project.KarateProjectService"/>
+
+        <!-- Startup activity to detect Karate projects -->
+        <postStartupActivity
+            implementation="com.j8d.karate.intellij.project.KarateProjectStartupActivity"/>
+
+        <!-- Run line marker provider for gutter icons -->
+        <runLineMarkerContributor
+            language="Karate"
+            implementationClass="com.j8d.karate.intellij.run.KarateRunLineMarkerContributor"/>
+
+        <!-- Run configuration type -->
+        <configurationType
+            implementation="com.j8d.karate.intellij.run.KarateConfigurationType"/>
+
+        <!-- Run configuration producer (auto-generate configs) -->
+        <runConfigurationProducer
+            implementation="com.j8d.karate.intellij.run.KarateRunConfigurationProducer"/>
+
+        <!-- Debug program runner -->
+        <programRunner
+            implementation="com.j8d.karate.intellij.debug.KarateDebugProgramRunner"/>
+
+        <!-- XDebugger support -->
+        <xdebugger.breakpointType
+            implementation="com.j8d.karate.intellij.debug.KarateBreakpointType"/>
+
+        <!-- Tool window for Karate features -->
+        <toolWindow
+            id="Karate"
+            anchor="left"
+            secondary="true"
+            icon="/icons/karate-13.svg"
+            factoryClass="com.j8d.karate.intellij.ui.KarateToolWindowFactory"/>
+
+        <!-- Notifications -->
+        <notificationGroup
+            id="Karate Debug"
+            displayType="BALLOON"/>
+    </extensions>
+
+    <actions>
+        <!-- Run/Debug actions for Karate features -->
+        <group id="KarateDebug.FeatureActions" 
+               text="Karate" 
+               description="Karate Debug actions">
+            
+            <action id="KarateDebug.RunFeature"
+                    class="com.j8d.karate.intellij.actions.RunFeatureAction"
+                    text="Run Karate Feature"
+                    description="Run the current Karate feature file"
+                    icon="AllIcons.Actions.Execute"/>
+            
+            <action id="KarateDebug.DebugFeature"
+                    class="com.j8d.karate.intellij.actions.DebugFeatureAction"
+                    text="Debug Karate Feature"
+                    description="Debug the current Karate feature file"
+                    icon="AllIcons.Actions.StartDebugger"/>
+            
+            <add-to-group group-id="RunMenu" anchor="after" relative-to-action="RunClass"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+        </group>
+    </actions>
+</idea-plugin>
+

@@ -173,13 +173,19 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
             return jarPath;
         }
 
-        // Also check in debug-server/target for development
-        const devJarPath = path.join(extensionPath, 'debug-server', 'target', 'karate-debug-server-1.0.0.jar');
+        // Also check in shared/debug-server/target for development (monorepo structure)
+        const devJarPath = path.join(extensionPath, '..', 'shared', 'debug-server', 'target', 'karate-debug-server-1.0.0.jar');
         if (fs.existsSync(devJarPath)) {
             return devJarPath;
         }
 
-        this.log(`Could not find karate-debug-server.jar. Checked: ${jarPath}, ${devJarPath}`);
+        // Legacy path for backwards compatibility
+        const legacyDevJarPath = path.join(extensionPath, 'debug-server', 'target', 'karate-debug-server-1.0.0.jar');
+        if (fs.existsSync(legacyDevJarPath)) {
+            return legacyDevJarPath;
+        }
+
+        this.log(`Could not find karate-debug-server.jar. Checked: ${jarPath}, ${devJarPath}, ${legacyDevJarPath}`);
         return null;
     }
 
