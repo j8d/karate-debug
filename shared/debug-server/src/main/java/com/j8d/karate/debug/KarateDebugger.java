@@ -238,61 +238,7 @@ public class KarateDebugger implements RuntimeHook {
         running = true;
         logger.debug("Starting execution thread");
         executionThread = new Thread(() -> {
-            // Capture stdout/stderr BEFORE redirect so we can restore them later
-            java.io.PrintStream originalOut = System.out;
-            java.io.PrintStream originalErr = System.err;
-
             try {
-                // Redirect stdout to send via DAP output events (with JSON formatting)
-                System.setOut(new java.io.PrintStream(new java.io.OutputStream() {
-                    private StringBuilder buffer = new StringBuilder();
-
-                    @Override
-                    public void write(int b) {
-                        originalOut.write(b);  // Write to process stdout for IDE capture
-                        if (b == '\n') {
-                            sendOutputEvent("stdout", buffer.toString());
-                            buffer.setLength(0);
-                        } else {
-                            buffer.append((char) b);
-                        }
-                    }
-
-                    @Override
-                    public void flush() {
-                        originalOut.flush();
-                        if (buffer.length() > 0) {
-                            sendOutputEvent("stdout", buffer.toString());
-                            buffer.setLength(0);
-                        }
-                    }
-                }, true));
-
-                // Redirect stderr to send via DAP output events
-                System.setErr(new java.io.PrintStream(new java.io.OutputStream() {
-                    private StringBuilder buffer = new StringBuilder();
-
-                    @Override
-                    public void write(int b) {
-                        originalErr.write(b);  // Write to process stderr for IDE capture
-                        if (b == '\n') {
-                            sendOutputEvent("stderr", buffer.toString());
-                            buffer.setLength(0);
-                        } else {
-                            buffer.append((char) b);
-                        }
-                    }
-
-                    @Override
-                    public void flush() {
-                        originalErr.flush();
-                        if (buffer.length() > 0) {
-                            sendOutputEvent("stderr", buffer.toString());
-                            buffer.setLength(0);
-                        }
-                    }
-                }, true));
-
                 // Convert absolute path to classpath-relative path for Karate
                 String classpathPath = toClasspathPath(featurePath);
                 logger.debug("Classpath path: {}", classpathPath);
@@ -302,7 +248,7 @@ public class KarateDebugger implements RuntimeHook {
                 if (featureLine > 0) {
                     pathSpec = classpathPath + ":" + featureLine;
                 }
-                logger.info("Starting Karate execution: {}", pathSpec);
+                logger.debug("Starting Karate execution: {}", pathSpec);
 
                 // Configure and run Karate
                 Results results = Runner.path(pathSpec)
@@ -311,7 +257,7 @@ public class KarateDebugger implements RuntimeHook {
                     .backupReportDir(false)
                     .parallel(1);
 
-                logger.info("Karate execution completed. Passed: {}, Failed: {}",
+                logger.debug("Karate execution completed. Passed: {}, Failed: {}",
                     results.getScenariosPassed(), results.getScenariosFailed());
 
             } catch (Exception e) {
@@ -321,10 +267,6 @@ public class KarateDebugger implements RuntimeHook {
                 logger.error("Unexpected error in execution thread", t);
                 sendOutputEvent("console", "Unexpected error: " + t.getMessage());
             } finally {
-                // Restore original streams
-                System.setOut(originalOut);
-                System.setErr(originalErr);
-
                 running = false;
                 sendTerminatedEvent();
             }
@@ -443,7 +385,7 @@ public class KarateDebugger implements RuntimeHook {
         paused = true;
         pauseLatch = new CountDownLatch(1);
 
-        // Send stopped event to VS Code
+        // Send stopped event to IDE
         JsonObject body = new JsonObject();
         body.addProperty("reason", reason);
         body.addProperty("threadId", 1);

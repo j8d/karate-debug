@@ -105,13 +105,13 @@ public class KarateDapClient {
         pb.redirectErrorStream(true);
         serverProcess = pb.start();
 
-        // Consume server stdout in background to prevent buffer blocking
-        // All output is received via DAP output events with JSON formatting
+        // Log server stdout in background (print statements, HTTP traffic, etc.)
         new Thread(() -> {
             try (BufferedReader br = new BufferedReader(
                     new InputStreamReader(serverProcess.getInputStream()))) {
-                while (br.readLine() != null) {
-                    // Consumed but not logged - output comes via DAP events
+                String line;
+                while ((line = br.readLine()) != null) {
+                    debugProcess.log(line);
                 }
             } catch (IOException e) {
                 // Server closed

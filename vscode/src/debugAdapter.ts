@@ -18,6 +18,11 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         this.outputChannel.appendLine(`[Karate Debug] ${message}`);
     }
 
+    /** Log raw output without prefix (for stdout from debug server) */
+    private logRaw(message: string): void {
+        this.outputChannel.appendLine(message);
+    }
+
     async createDebugAdapterDescriptor(
         session: vscode.DebugSession,
         _executable: vscode.DebugAdapterExecutable | undefined
@@ -144,10 +149,15 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
             env: { ...process.env }
         });
 
+        // Log stdout for debugging - raw output without prefix for clean JSON display
         serverProcess.stdout?.on('data', (data) => {
-            this.log(`${data.toString().trim()}`);
+            const lines = data.toString().split('\n').filter((l: string) => l.trim());
+            lines.forEach((line: string) => {
+                this.logRaw(line);
+            });
         });
 
+        // Log stderr for errors
         serverProcess.stderr?.on('data', (data) => {
             this.log(`[stderr] ${data.toString().trim()}`);
         });

@@ -63,14 +63,18 @@ public class KarateProjectStartupActivity implements ProjectActivity {
             if (settings.showDetectionNotification) {
                 ApplicationManager.getApplication().invokeLater(() -> {
                     String message = buildNotificationMessage(service);
-                    NotificationGroupManager.getInstance()
+                    com.intellij.notification.Notification notification = NotificationGroupManager.getInstance()
                         .getNotificationGroup("Karate Debug")
                         .createNotification(
                             "Karate Debug",
                             message,
                             NotificationType.INFORMATION
-                        )
-                        .notify(project);
+                        );
+                    notification.notify(project);
+
+                    // Auto-expire after 5 seconds
+                    com.intellij.util.Alarm alarm = new com.intellij.util.Alarm(com.intellij.util.Alarm.ThreadToUse.SWING_THREAD);
+                    alarm.addRequest(() -> notification.expire(), 5000);
                 });
             }
         } else {

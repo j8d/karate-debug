@@ -827,11 +827,16 @@ intellij/
 - HTTP request/response traffic now visible at DEBUG level in both VS Code and IntelliJ
 - Removed duplicate "Stopped at breakpoint" messages in IntelliJ console
 - Fixed stdout/stderr redirect in debug server to properly send output via DAP events
+- Enabled custom `KarateLogEncoder` in logback.xml to add `[karate.log]` prefix to `karate.log()` output
+- Run configuration editor now uses `EditorTextField` instead of deprecated `EditorTextFieldWithBrowseButton`
 
 **Key Fixes Applied:**
 1. Added ROOT logger level setting in `setLogLevel()` - was only setting specific package loggers, not the root
 2. Removed duplicate log statements for breakpoint stops (was logging in both `handleStoppedEvent` and `onStopped`)
 3. Restored `originalOut.write(b)` in stdout redirect for process stdout capture while also sending DAP events
+4. Updated logback.xml to use `KarateLogEncoder` class for console appender - adds `[karate.log]` prefix to `karate.log()` calls while leaving `[print]` and HTTP logging unchanged
+5. Removed dead code from `KarateToolWindowContent` (unused `executeInBackground` method)
+6. Replaced deprecated `EditorTextFieldWithBrowseButton` with `EditorTextField` in `KarateRunConfigurationEditor`
 
 **Next Steps (Phase 2):**
 - Variable modification (hot reload)

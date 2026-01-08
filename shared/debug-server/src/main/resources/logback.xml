@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} -- %msg%n</pattern>
+    <!-- Console appender - VS Code/IntelliJ captures stdout -->
+    <!-- Uses custom encoder to add [karate.log] prefix to karate.log() output -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="com.j8d.karate.debug.KarateLogEncoder">
+            <pattern>%msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- Our debug server classes - DEBUG level to see breakpoint matching -->
+    <!-- Our debug server classes - DEBUG level to see debugging details -->
     <logger name="com.j8d.karate.debug" level="DEBUG"/>
 
-    <!-- Karate framework - INFO to reduce noise -->
-    <logger name="com.intuit.karate" level="INFO"/>
+    <!-- Karate framework - DEBUG to see HTTP traffic and print statements -->
+    <logger name="com.intuit.karate" level="DEBUG"/>
+
+    <!-- JSON Path - WARN to reduce noise from path evaluation -->
+    <logger name="com.jayway.jsonpath" level="WARN"/>
 
     <!-- HTTP client - WARN to reduce noise -->
     <logger name="org.apache.http" level="WARN"/>
@@ -18,8 +23,11 @@
     <!-- Thymeleaf - WARN to reduce noise -->
     <logger name="org.thymeleaf" level="WARN"/>
 
+    <!-- GraalVM - WARN to reduce noise -->
+    <logger name="org.graalvm" level="WARN"/>
+
     <root level="INFO">
-        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="CONSOLE"/>
     </root>
 </configuration>
 

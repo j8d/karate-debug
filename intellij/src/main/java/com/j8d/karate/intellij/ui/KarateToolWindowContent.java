@@ -319,14 +319,6 @@ public class KarateToolWindowContent {
         ((DefaultTreeModel) tree.getModel()).reload();
     }
 
-    /**
-     * @deprecated Use collectFeatureNodes + populateTreeFromNodes instead
-     */
-    private void populateTree(DefaultMutableTreeNode root) {
-        List<FeatureFileNode> nodes = collectFeatureNodes();
-        populateTreeFromNodes(root, nodes);
-    }
-
     private List<ScenarioNode> parseFeatureFile(VirtualFile file) {
         List<ScenarioNode> scenarios = new ArrayList<>();
         String currentFeature = file.getNameWithoutExtension();

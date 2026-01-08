@@ -23,10 +23,10 @@ public class KarateRunConfigurationEditor extends SettingsEditor<KarateRunConfig
     public KarateRunConfigurationEditor(Project project) {
         featureFileField = new TextFieldWithBrowseButton();
         featureFileField.addBrowseFolderListener(
-            "Select Feature File",
-            "Select the Karate feature file to run",
             project,
             FileChooserDescriptorFactory.createSingleFileDescriptor("feature")
+                .withTitle("Select Feature File")
+                .withDescription("Select the Karate feature file to run")
         );
         
         scenarioNameField = new JBTextField();
