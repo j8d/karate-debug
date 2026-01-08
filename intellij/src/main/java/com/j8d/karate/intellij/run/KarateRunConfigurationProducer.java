@@ -59,17 +59,32 @@ public class KarateRunConfigurationProducer extends LazyRunConfigurationProducer
         // Set up the configuration
         configuration.setFeatureFile(file.getPath());
 
-        // Check if we're on a specific scenario
-        String scenarioName = findScenarioName(element, psiFile);
-        if (scenarioName != null) {
-            configuration.setScenarioName(scenarioName);
-            configuration.setName("Karate: " + scenarioName);
+        // Check if we're on a specific scenario - get both name and line number
+        ScenarioInfo scenarioInfo = findScenarioInfo(element, psiFile);
+        if (scenarioInfo != null) {
+            configuration.setScenarioName(scenarioInfo.name);
+            configuration.setScenarioLine(scenarioInfo.lineNumber);
+            configuration.setName("Karate: " + scenarioInfo.name);
         } else {
+            configuration.setScenarioLine(0); // 0 means run entire feature
             configuration.setName("Karate: " + file.getNameWithoutExtension());
         }
 
         sourceElement.set(element);
         return true;
+    }
+
+    /**
+     * Holds scenario name and line number.
+     */
+    private static class ScenarioInfo {
+        final String name;
+        final int lineNumber; // 1-based line number
+
+        ScenarioInfo(String name, int lineNumber) {
+            this.name = name;
+            this.lineNumber = lineNumber;
+        }
     }
 
     @Override
@@ -95,14 +110,14 @@ public class KarateRunConfigurationProducer extends LazyRunConfigurationProducer
             return false;
         }
 
-        // Check if the scenario name matches
-        String scenarioName = findScenarioName(element, psiFile);
-        String configScenarioName = configuration.getScenarioName();
+        // Check if the scenario line matches
+        ScenarioInfo scenarioInfo = findScenarioInfo(element, psiFile);
+        int configLine = configuration.getScenarioLine();
 
-        if (scenarioName == null && (configScenarioName == null || configScenarioName.isEmpty())) {
-            return true;
+        if (scenarioInfo == null && configLine <= 0) {
+            return true; // Both are "run entire feature"
         }
-        if (scenarioName != null && scenarioName.equals(configScenarioName)) {
+        if (scenarioInfo != null && scenarioInfo.lineNumber == configLine) {
             return true;
         }
 
@@ -110,11 +125,13 @@ public class KarateRunConfigurationProducer extends LazyRunConfigurationProducer
     }
 
     /**
-     * Find the scenario name by looking at the text content around the element.
-     * Walks backwards through lines to find the nearest Scenario: or Scenario Outline: line.
+     * Find the scenario info by looking at the text content around the element.
+     * First checks the current line, then walks backwards to find the nearest Scenario line.
+     * If the element IS on a Scenario line, returns that scenario's info.
+     * If the element IS on a Feature line, returns null (run whole feature).
      */
     @Nullable
-    private String findScenarioName(PsiElement element, PsiFile psiFile) {
+    private ScenarioInfo findScenarioInfo(PsiElement element, PsiFile psiFile) {
         Document document = PsiDocumentManager.getInstance(element.getProject())
             .getDocument(psiFile);
         if (document == null) {
@@ -124,29 +141,41 @@ public class KarateRunConfigurationProducer extends LazyRunConfigurationProducer
         int offset = element.getTextOffset();
         int lineNumber = document.getLineNumber(offset);
 
-        // Walk backwards from current line to find scenario
+        // First check the current line - if we're on a Feature line, return null (run whole feature)
+        String currentLineText = getLineText(document, lineNumber);
+        if (currentLineText.trim().startsWith("Feature:")) {
+            return null;
+        }
+
+        // Walk backwards from current line to find scenario (including current line)
         for (int line = lineNumber; line >= 0; line--) {
-            int lineStart = document.getLineStartOffset(line);
-            int lineEnd = document.getLineEndOffset(line);
-            String lineText = document.getText().substring(lineStart, lineEnd);
+            String lineText = getLineText(document, line);
 
             Matcher scenarioMatcher = SCENARIO_PATTERN.matcher(lineText);
             if (scenarioMatcher.matches()) {
-                return scenarioMatcher.group(1).trim();
+                // Return 1-based line number (line is 0-based from document)
+                return new ScenarioInfo(scenarioMatcher.group(1).trim(), line + 1);
             }
 
             Matcher outlineMatcher = SCENARIO_OUTLINE_PATTERN.matcher(lineText);
             if (outlineMatcher.matches()) {
-                return outlineMatcher.group(1).trim();
+                // Return 1-based line number
+                return new ScenarioInfo(outlineMatcher.group(1).trim(), line + 1);
             }
 
-            // Stop if we hit a Feature line (we're not in a scenario)
+            // Stop if we hit a Feature line (we're between Feature and first Scenario)
             if (lineText.trim().startsWith("Feature:")) {
                 return null;
             }
         }
 
         return null;
+    }
+
+    private String getLineText(Document document, int lineNumber) {
+        int lineStart = document.getLineStartOffset(lineNumber);
+        int lineEnd = document.getLineEndOffset(lineNumber);
+        return document.getText().substring(lineStart, lineEnd);
     }
 }
 

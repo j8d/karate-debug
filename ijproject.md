@@ -797,6 +797,10 @@ intellij/
    - Updated tool window to populate tree in background thread
    - Made `KarateToolWindowFactory` implement `DumbAware` and always be available
 9. Updated Gradle regex to support `io.karatelabs` group ID (newer Karate releases)
+10. Fixed scenario-level debugging (was running entire feature):
+    - Updated `KarateDapClient.sendLaunch()` to append line number to feature path (e.g., `/path/feature.feature:23`)
+    - Updated `KarateRunConfigurationProducer` to detect scenario line number (not just name)
+    - Implemented sidebar run/debug actions in `KarateToolWindowContent.runSelected()`
 
 **Test Results:**
 - Debug server starts correctly
@@ -807,6 +811,7 @@ intellij/
 - No more EDT slow operation warnings
 - Tool window displays correctly with feature files
 - Karate version detected correctly (1.5.2)
+- Scenario-level debugging works from both gutter icons and sidebar
 
 **Next Steps (Phase 2):**
 - Variable modification (hot reload)

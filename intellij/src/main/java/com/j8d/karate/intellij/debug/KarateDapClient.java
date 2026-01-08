@@ -247,14 +247,19 @@ public class KarateDapClient {
     private void sendLaunch() {
         KarateRunConfiguration config = debugProcess.getConfiguration();
 
+        // Build feature path with optional line number suffix (like VS Code does)
+        // Line number > 0 means run specific scenario at that line
+        // Line number <= 0 means run entire feature
+        String featurePath = config.getFeatureFile();
+        int scenarioLine = config.getScenarioLine();
+        if (scenarioLine > 0) {
+            featurePath = featurePath + ":" + scenarioLine;
+        }
+
         JsonObject args = new JsonObject();
-        args.addProperty("feature", config.getFeatureFile());
-        if (config.getScenarioName() != null && !config.getScenarioName().isEmpty()) {
-            args.addProperty("scenario", config.getScenarioName());
-        }
-        if (config.getScenarioLine() > 0) {
-            args.addProperty("line", config.getScenarioLine());
-        }
+        args.addProperty("feature", featurePath);
+
+        debugProcess.log("Launching with feature: " + featurePath);
 
         sendRequest("launch", args).thenAccept(response -> {
             debugProcess.log("Launch response received - debug session started");

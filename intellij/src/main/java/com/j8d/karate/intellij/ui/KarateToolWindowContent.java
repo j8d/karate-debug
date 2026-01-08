@@ -1,5 +1,12 @@
 package com.j8d.karate.intellij.ui;
 
+import com.intellij.execution.ExecutionManager;
+import com.intellij.execution.Executor;
+import com.intellij.execution.ProgramRunnerUtil;
+import com.intellij.execution.RunManager;
+import com.intellij.execution.RunnerAndConfigurationSettings;
+import com.intellij.execution.executors.DefaultDebugExecutor;
+import com.intellij.execution.executors.DefaultRunExecutor;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.fileEditor.FileEditorManager;
@@ -13,6 +20,8 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.Tree;
 import com.j8d.karate.intellij.project.KarateProjectService;
 import com.j8d.karate.intellij.project.KarateProjectSettings;
+import com.j8d.karate.intellij.run.KarateConfigurationType;
+import com.j8d.karate.intellij.run.KarateRunConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -183,8 +192,66 @@ public class KarateToolWindowContent {
     }
 
     private void runSelected(boolean debug) {
-        // TODO: Implement run/debug action integration
-        // This will create a run configuration and execute it
+        TreePath selectionPath = tree.getSelectionPath();
+        if (selectionPath == null) {
+            return;
+        }
+
+        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        Object userObject = selectedNode.getUserObject();
+
+        String featureFilePath = null;
+        String scenarioName = null;
+        int scenarioLine = 0; // 0 means run entire feature
+        String configName = null;
+
+        if (userObject instanceof FeatureFileNode) {
+            FeatureFileNode featureNode = (FeatureFileNode) userObject;
+            featureFilePath = featureNode.getFile().getPath();
+            configName = "Karate: " + featureNode.getFile().getNameWithoutExtension();
+        } else if (userObject instanceof ScenarioNode) {
+            ScenarioNode scenarioNode = (ScenarioNode) userObject;
+            scenarioName = scenarioNode.getName();
+            // Convert from 0-based to 1-based line number
+            scenarioLine = scenarioNode.getLine() + 1;
+            configName = "Karate: " + scenarioName;
+
+            // Get the parent feature file
+            DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) selectedNode.getParent();
+            if (parentNode != null && parentNode.getUserObject() instanceof FeatureFileNode) {
+                featureFilePath = ((FeatureFileNode) parentNode.getUserObject()).getFile().getPath();
+            }
+        }
+
+        if (featureFilePath == null) {
+            return;
+        }
+
+        // Create a temporary run configuration
+        RunManager runManager = RunManager.getInstance(project);
+        RunnerAndConfigurationSettings settings = runManager.createConfiguration(
+            configName,
+            KarateConfigurationType.getInstance().getConfigurationFactories()[0]
+        );
+
+        KarateRunConfiguration configuration = (KarateRunConfiguration) settings.getConfiguration();
+        configuration.setFeatureFile(featureFilePath);
+        if (scenarioName != null) {
+            configuration.setScenarioName(scenarioName);
+        }
+        configuration.setScenarioLine(scenarioLine);
+
+        // Set as temporary and select it
+        settings.setTemporary(true);
+        runManager.addConfiguration(settings);
+        runManager.setSelectedConfiguration(settings);
+
+        // Execute with appropriate executor
+        Executor executor = debug
+            ? DefaultDebugExecutor.getDebugExecutorInstance()
+            : DefaultRunExecutor.getRunExecutorInstance();
+
+        ProgramRunnerUtil.executeConfiguration(settings, executor);
     }
 
     /**
