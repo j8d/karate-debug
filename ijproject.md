@@ -812,6 +812,12 @@ intellij/
 - Tool window displays correctly with feature files
 - Karate version detected correctly (1.5.2)
 - Scenario-level debugging works from both gutter icons and sidebar
+11. Added settings UI and status bar widgets:
+    - Created `KarateSettingsConfigurable` for Preferences > Tools > Karate Debug
+    - Added all VS Code extension settings: environments, logLevel, matchDiagnostics options
+    - Created `KarateEnvironmentWidget` status bar widget to switch environments
+    - Created `KarateLogLevelWidget` status bar widget to switch log levels
+    - Wired log level and environment from settings to debug server launch args
 
 **Next Steps (Phase 2):**
 - Variable modification (hot reload)

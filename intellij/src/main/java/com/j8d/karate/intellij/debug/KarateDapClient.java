@@ -5,6 +5,7 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.j8d.karate.intellij.project.KarateProjectService;
+import com.j8d.karate.intellij.project.KarateProjectSettings;
 import com.j8d.karate.intellij.run.KarateRunConfiguration;
 
 import java.io.*;
@@ -66,10 +67,19 @@ public class KarateDapClient {
 
         // Get workspace root
         String workspaceRoot = getWorkspaceRoot(configuration);
+
+        // Get settings from project
+        KarateProjectSettings settings = KarateProjectSettings.getInstance(
+            debugProcess.getSession().getProject());
+
+        // Environment: use config override, or fall back to settings
         String karateEnv = configuration.getKarateEnv();
         if (karateEnv == null || karateEnv.isEmpty()) {
-            karateEnv = "dev";
+            karateEnv = settings.getEffectiveEnvironment();
         }
+
+        // Log level from settings
+        String logLevel = settings.getEffectiveLogLevel();
 
         // Start the debug server
         List<String> command = new ArrayList<>();
@@ -83,7 +93,11 @@ public class KarateDapClient {
         command.add(workspaceRoot);
         command.add("-e");
         command.add(karateEnv);
+        command.add("-l");
+        command.add(logLevel);
 
+        debugProcess.log("Environment: " + karateEnv);
+        debugProcess.log("Log level: " + logLevel);
         debugProcess.log("Command: " + String.join(" ", command));
 
         ProcessBuilder pb = new ProcessBuilder(command);

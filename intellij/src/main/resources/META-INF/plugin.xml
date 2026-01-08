@@ -76,6 +76,24 @@
         <notificationGroup
             id="Karate Debug"
             displayType="BALLOON"/>
+
+        <!-- Settings page under Tools -->
+        <projectConfigurable
+            parentId="tools"
+            instance="com.j8d.karate.intellij.settings.KarateSettingsConfigurable"
+            id="com.j8d.karate.intellij.settings"
+            displayName="Karate Debug"
+            nonDefaultProject="true"/>
+
+        <!-- Status bar widgets -->
+        <statusBarWidgetFactory
+            id="KarateEnvironment"
+            implementation="com.j8d.karate.intellij.ui.KarateStatusBarWidgetFactory"
+            order="after encodingWidget"/>
+        <statusBarWidgetFactory
+            id="KarateLogLevel"
+            implementation="com.j8d.karate.intellij.ui.KarateLogLevelWidgetFactory"
+            order="after KarateEnvironment"/>
     </extensions>
 
     <actions>
