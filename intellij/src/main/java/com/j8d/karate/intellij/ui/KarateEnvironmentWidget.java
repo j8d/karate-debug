@@ -9,6 +9,7 @@ import com.intellij.openapi.wm.StatusBar;
 import com.intellij.openapi.wm.StatusBarWidget;
 import com.intellij.openapi.wm.impl.status.EditorBasedWidget;
 import com.intellij.util.Consumer;
+import com.j8d.karate.intellij.project.KarateProjectService;
 import com.j8d.karate.intellij.project.KarateProjectSettings;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
@@ -20,13 +21,26 @@ import java.util.List;
 /**
  * Status bar widget for switching Karate environments.
  * Displays the current environment and allows clicking to switch.
+ * Only shows for Karate projects.
  */
 public class KarateEnvironmentWidget extends EditorBasedWidget implements StatusBarWidget.MultipleTextValuesPresentation {
-    
+
     public static final String ID = "KarateEnvironment";
-    
+    private final Runnable updateListener;
+
     public KarateEnvironmentWidget(@NotNull Project project) {
         super(project);
+        // Listen for project detection and settings changes to update widget
+        updateListener = this::updateWidget;
+        KarateProjectService.getInstance(project).addDetectionListener(updateListener);
+        KarateProjectSettings.getInstance(project).addChangeListener(updateListener);
+    }
+
+    @Override
+    public void dispose() {
+        KarateProjectService.getInstance(myProject).removeDetectionListener(updateListener);
+        KarateProjectSettings.getInstance(myProject).removeChangeListener(updateListener);
+        super.dispose();
     }
     
     @Override
@@ -78,6 +92,13 @@ public class KarateEnvironmentWidget extends EditorBasedWidget implements Status
     @Override
     public @Nullable @NonNls String getSelectedValue() {
         if (myProject.isDisposed()) return null;
+
+        // Only show for Karate projects
+        KarateProjectService service = KarateProjectService.getInstance(myProject);
+        if (!service.isKarateProject()) {
+            return null; // Hides the widget
+        }
+
         KarateProjectSettings settings = KarateProjectSettings.getInstance(myProject);
         return "Env: " + settings.getEffectiveEnvironment();
     }

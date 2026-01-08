@@ -12,8 +12,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.intuit.karate.Match;
 import com.intuit.karate.Results;
 import com.intuit.karate.Runner;
@@ -29,6 +33,7 @@ import com.intuit.karate.core.Variable;
  */
 public class KarateDebugger implements RuntimeHook {
     private static final Logger logger = LoggerFactory.getLogger(KarateDebugger.class);
+    private static final Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
 
     /** Result of a setVariable operation */
     public record SetVariableResult(String displayValue, String type) {}
@@ -238,13 +243,13 @@ public class KarateDebugger implements RuntimeHook {
             java.io.PrintStream originalErr = System.err;
 
             try {
-                // Redirect stdout to Debug Console AND original stdout (for Output panel)
+                // Redirect stdout to send via DAP output events (with JSON formatting)
                 System.setOut(new java.io.PrintStream(new java.io.OutputStream() {
                     private StringBuilder buffer = new StringBuilder();
 
                     @Override
                     public void write(int b) {
-                        originalOut.write(b);  // Also write to original stdout
+                        originalOut.write(b);  // Write to process stdout for IDE capture
                         if (b == '\n') {
                             sendOutputEvent("stdout", buffer.toString());
                             buffer.setLength(0);
@@ -263,13 +268,13 @@ public class KarateDebugger implements RuntimeHook {
                     }
                 }, true));
 
-                // Redirect stderr to Debug Console AND original stderr (for Output panel)
+                // Redirect stderr to send via DAP output events
                 System.setErr(new java.io.PrintStream(new java.io.OutputStream() {
                     private StringBuilder buffer = new StringBuilder();
 
                     @Override
                     public void write(int b) {
-                        originalErr.write(b);  // Also write to original stderr
+                        originalErr.write(b);  // Write to process stderr for IDE capture
                         if (b == '\n') {
                             sendOutputEvent("stderr", buffer.toString());
                             buffer.setLength(0);
@@ -737,8 +742,25 @@ public class KarateDebugger implements RuntimeHook {
     private void sendOutputEvent(String category, String output) {
         JsonObject body = new JsonObject();
         body.addProperty("category", category);
-        body.addProperty("output", output + "\n");
+        body.addProperty("output", formatOutputLine(output) + "\n");
         session.sendEvent("output", body);
+    }
+
+    /**
+     * Formats an output line, pretty-printing JSON if detected.
+     */
+    private String formatOutputLine(String line) {
+        String trimmed = line.trim();
+        // Check if the line looks like it might be JSON (starts with { or [)
+        if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            try {
+                var jsonElement = JsonParser.parseString(trimmed);
+                return prettyGson.toJson(jsonElement);
+            } catch (JsonSyntaxException e) {
+                // Not valid JSON, return as-is
+            }
+        }
+        return line;
     }
 
     private void sendTerminatedEvent() {

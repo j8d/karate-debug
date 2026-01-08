@@ -38,16 +38,47 @@ public final class KarateProjectService {
     );
 
     private final Project project;
-    private boolean isKarateProject = false;
-    private boolean initialized = false;
-    private String karateVersion = null;
-    private String projectType = null; // "maven" or "gradle"
-    private List<VirtualFile> karateConfigFiles = new ArrayList<>();
-    private Set<String> detectedEnvironments = new HashSet<>();
-    private List<VirtualFile> featureFiles = new ArrayList<>();
+    private volatile boolean isKarateProject = false;
+    private volatile boolean initialized = false;
+    private volatile String karateVersion = null;
+    private volatile String projectType = null; // "maven" or "gradle"
+    // Use thread-safe collections since detection runs on background thread
+    // while UI thread may read these concurrently
+    private final List<VirtualFile> karateConfigFiles = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final Set<String> detectedEnvironments = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final List<VirtualFile> featureFiles = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final List<Runnable> detectionListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     public KarateProjectService(@NotNull Project project) {
         this.project = project;
+    }
+
+    /**
+     * Add a listener to be notified when detection completes.
+     * The listener is called on the EDT.
+     */
+    public void addDetectionListener(Runnable listener) {
+        detectionListeners.add(listener);
+        // If already initialized, notify immediately
+        if (initialized) {
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(listener);
+        }
+    }
+
+    /**
+     * Remove a detection listener.
+     */
+    public void removeDetectionListener(Runnable listener) {
+        detectionListeners.remove(listener);
+    }
+
+    private void notifyDetectionListeners() {
+        // CopyOnWriteArrayList is safe to iterate directly
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+            for (Runnable listener : detectionListeners) {
+                listener.run();
+            }
+        });
     }
 
     public static KarateProjectService getInstance(@NotNull Project project) {
@@ -259,6 +290,9 @@ public final class KarateProjectService {
                     ", environments=" + detectedEnvironments);
             }
         });
+
+        // Notify listeners that detection is complete
+        notifyDetectionListeners();
     }
 
     private boolean checkMavenForKarate() {

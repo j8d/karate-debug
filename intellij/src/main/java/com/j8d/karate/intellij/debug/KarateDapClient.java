@@ -105,13 +105,13 @@ public class KarateDapClient {
         pb.redirectErrorStream(true);
         serverProcess = pb.start();
 
-        // Log server output in background
+        // Consume server stdout in background to prevent buffer blocking
+        // All output is received via DAP output events with JSON formatting
         new Thread(() -> {
             try (BufferedReader br = new BufferedReader(
                     new InputStreamReader(serverProcess.getInputStream()))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    debugProcess.log("[Server] " + line);
+                while (br.readLine() != null) {
+                    // Consumed but not logged - output comes via DAP events
                 }
             } catch (IOException e) {
                 // Server closed
@@ -429,8 +429,6 @@ public class KarateDapClient {
     private void handleStoppedEvent(JsonObject body) {
         String reason = body != null && body.has("reason") ? body.get("reason").getAsString() : "unknown";
         currentThreadId = body != null && body.has("threadId") ? body.get("threadId").getAsInt() : 1;
-
-        debugProcess.log("Stopped: " + reason);
 
         // Request stack trace to update UI
         ApplicationManager.getApplication().invokeLater(() -> {

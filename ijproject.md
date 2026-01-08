@@ -819,6 +819,20 @@ intellij/
     - Created `KarateLogLevelWidget` status bar widget to switch log levels
     - Wired log level and environment from settings to debug server launch args
 
+### 2026-01-08: Log Level Configuration Fixed
+
+**Completed:**
+- Fixed log level configuration not affecting Karate HTTP traffic logging
+- Root logger level now set programmatically to ensure all child loggers respect the configured level
+- HTTP request/response traffic now visible at DEBUG level in both VS Code and IntelliJ
+- Removed duplicate "Stopped at breakpoint" messages in IntelliJ console
+- Fixed stdout/stderr redirect in debug server to properly send output via DAP events
+
+**Key Fixes Applied:**
+1. Added ROOT logger level setting in `setLogLevel()` - was only setting specific package loggers, not the root
+2. Removed duplicate log statements for breakpoint stops (was logging in both `handleStoppedEvent` and `onStopped`)
+3. Restored `originalOut.write(b)` in stdout redirect for process stdout capture while also sending DAP events
+
 **Next Steps (Phase 2):**
 - Variable modification (hot reload)
 - Expression evaluation

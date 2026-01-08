@@ -147,10 +147,20 @@ public class DebugServer {
             default -> Level.INFO;
         };
 
+        // Set ROOT logger level first - this affects all loggers
+        ch.qos.logback.classic.Logger rootLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        rootLogger.setLevel(level);
+
         // Set log level for our debug server classes
         ch.qos.logback.classic.Logger debugLogger =
             (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.j8d.karate.debug");
         debugLogger.setLevel(level);
+
+        // Set log level for Karate framework (HTTP request/response logs)
+        ch.qos.logback.classic.Logger karateLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.intuit.karate");
+        karateLogger.setLevel(level);
     }
 
     private static void printUsage() {

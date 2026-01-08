@@ -1,14 +1,17 @@
 package com.j8d.karate.intellij.project;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.*;
 import com.intellij.openapi.project.Project;
 import com.intellij.util.xmlb.XmlSerializerUtil;
+import com.intellij.util.xmlb.annotations.Transient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Persistent project-level settings for Karate Debug.
@@ -59,9 +62,40 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
 
     // Working directory for running tests (empty = project root)
     public String workingDirectory = "";
-    
+
+    // Listeners for settings changes (not serialized)
+    @Transient
+    private final List<Runnable> changeListeners = new CopyOnWriteArrayList<>();
+
     public static KarateProjectSettings getInstance(@NotNull Project project) {
         return project.getService(KarateProjectSettings.class);
+    }
+
+    /**
+     * Add a listener to be notified when settings change.
+     * The listener is called on the EDT.
+     */
+    public void addChangeListener(Runnable listener) {
+        changeListeners.add(listener);
+    }
+
+    /**
+     * Remove a settings change listener.
+     */
+    public void removeChangeListener(Runnable listener) {
+        changeListeners.remove(listener);
+    }
+
+    /**
+     * Notify all listeners that settings have changed.
+     * Should be called after modifying settings programmatically.
+     */
+    public void fireSettingsChanged() {
+        ApplicationManager.getApplication().invokeLater(() -> {
+            for (Runnable listener : changeListeners) {
+                listener.run();
+            }
+        });
     }
     
     @Nullable

@@ -107,10 +107,17 @@ public class KarateToolWindowContent {
         panel.add(statusLabel, BorderLayout.SOUTH);
 
         updateStatus();
+
+        // Listen for project detection completion to update UI
+        // Note: This should NOT call refresh() as that would cause an infinite loop
+        // (refresh triggers detection, detection notifies listeners, listener calls refresh...)
+        KarateProjectService.getInstance(project).addDetectionListener(this::rebuildTree);
     }
 
     private JPanel createToolbar() {
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        JPanel toolbar = new JPanel(new BorderLayout());
+        JPanel leftButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
 
         JButton refreshButton = new JButton(AllIcons.Actions.Refresh);
         refreshButton.setToolTipText("Refresh feature files");
@@ -124,11 +131,24 @@ public class KarateToolWindowContent {
         collapseAllButton.setToolTipText("Collapse all");
         collapseAllButton.addActionListener(e -> collapseAll());
 
-        toolbar.add(refreshButton);
-        toolbar.add(expandAllButton);
-        toolbar.add(collapseAllButton);
+        JButton settingsButton = new JButton(AllIcons.General.Settings);
+        settingsButton.setToolTipText("Karate Debug Settings");
+        settingsButton.addActionListener(e -> openSettings());
+
+        leftButtons.add(refreshButton);
+        leftButtons.add(expandAllButton);
+        leftButtons.add(collapseAllButton);
+        rightButtons.add(settingsButton);
+
+        toolbar.add(leftButtons, BorderLayout.WEST);
+        toolbar.add(rightButtons, BorderLayout.EAST);
 
         return toolbar;
+    }
+
+    private void openSettings() {
+        com.intellij.openapi.options.ShowSettingsUtil.getInstance()
+            .showSettingsDialog(project, "Karate Debug");
     }
 
     private void handleDoubleClick() {
@@ -261,7 +281,9 @@ public class KarateToolWindowContent {
         List<FeatureFileNode> nodes = new ArrayList<>();
 
         KarateProjectService projectService = KarateProjectService.getInstance(project);
-        List<VirtualFile> featureFiles = projectService.getFeatureFiles();
+        // Make a defensive copy to avoid ConcurrentModificationException
+        // since detection may be updating the list on another thread
+        List<VirtualFile> featureFiles = new ArrayList<>(projectService.getFeatureFiles());
 
         for (VirtualFile file : featureFiles) {
             FeatureFileNode fileNode = new FeatureFileNode(file);
@@ -351,13 +373,26 @@ public class KarateToolWindowContent {
         }
     }
 
+    /**
+     * Full refresh: triggers project re-detection and rebuilds the tree.
+     * Called by the refresh button.
+     */
     public void refresh() {
         // Run refresh in background to avoid slow operations on EDT
         com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread(() -> {
             KarateProjectService projectService = KarateProjectService.getInstance(project);
             projectService.refresh();
+            // Note: rebuildTree() will be called by the detection listener
+        });
+    }
 
-            // Collect feature data in background
+    /**
+     * Rebuild the tree with cached data. Does NOT trigger detection.
+     * Called by the detection listener when detection completes.
+     */
+    private void rebuildTree() {
+        // Collect feature data in background (uses cached data from KarateProjectService)
+        com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread(() -> {
             List<FeatureFileNode> featureNodes = collectFeatureNodes();
 
             // Update UI on EDT

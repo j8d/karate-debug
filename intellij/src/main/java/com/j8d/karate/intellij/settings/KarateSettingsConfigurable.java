@@ -141,7 +141,7 @@ public class KarateSettingsConfigurable implements Configurable {
     @Override
     public void apply() throws ConfigurationException {
         KarateProjectSettings settings = KarateProjectSettings.getInstance(project);
-        
+
         settings.environments = environmentsField.getText();
         settings.defaultEnvironment = String.valueOf(defaultEnvironmentCombo.getSelectedItem());
         settings.logLevel = String.valueOf(logLevelCombo.getSelectedItem());
@@ -155,6 +155,9 @@ public class KarateSettingsConfigurable implements Configurable {
         settings.matchDiagnosticsShowFailing = matchShowFailingCheckbox.isSelected();
         settings.matchDiagnosticsShowActualValues = matchShowActualValuesCheckbox.isSelected();
         settings.autoDiscoverEnvironments = autoDiscoverEnvironmentsCheckbox.isSelected();
+
+        // Notify listeners (e.g., status bar widgets) that settings have changed
+        settings.fireSettingsChanged();
     }
     
     @Override
