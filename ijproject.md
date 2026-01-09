@@ -838,6 +838,35 @@ intellij/
 5. Removed dead code from `KarateToolWindowContent` (unused `executeInBackground` method)
 6. Replaced deprecated `EditorTextFieldWithBrowseButton` with `EditorTextField` in `KarateRunConfigurationEditor`
 
+### 2026-01-09: Syntax Highlighting Parity with VS Code
+
+**Completed:**
+- Implemented comprehensive syntax highlighting for both VS Code and IntelliJ
+- Both platforms now highlight: Gherkin keywords, Karate keywords, HTTP methods, strings, numbers, variables, JSON, docstrings, Java classes, and method calls
+
+**Key Fixes Applied:**
+1. Fixed docstring (`"""..."""`) handling in both platforms:
+   - VS Code: Simplified to treat docstrings as plain strings with only `#(...)` embedded expressions highlighted
+   - IntelliJ: Same approach - no XML/JSON sub-parsing within docstrings to avoid inconsistent highlighting
+2. Fixed placeholder pattern `<name>` to not match XML tags:
+   - Changed from `<[a-zA-Z_][^>\n]*>` to `<[a-zA-Z_][a-zA-Z0-9_]*>` (only simple identifiers)
+3. Fixed Java class highlighting in IntelliJ:
+   - Issue: `DefaultLanguageHighlighterColors.CLASS_NAME` appears white in default theme
+   - Solution: Map JAVA_CLASS to STRING_KEYS (green) to match VS Code
+   - Pattern: `java(?:\.[a-z][a-zA-Z0-9]*)+\.[A-Z][a-zA-Z0-9]*(?:\.[A-Z][A-Z0-9_]*)?`
+   - Handles: `java.time.Instant`, `java.util.UUID`, `java.time.ZoneOffset.UTC`
+4. Fixed method call highlighting in IntelliJ:
+   - Issue: `DefaultLanguageHighlighterColors.FUNCTION_CALL` appears white
+   - Solution: Map METHOD_CALL to STATIC_METHOD (yellow/italic)
+   - Pattern: `\.[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()`
+   - Handles: `.now()`, `.toString()`, `.randomUUID()`
+
+**IntelliJ Lexer Key Learnings:**
+- Don't use leading `\b` in patterns - the `tryMatch()` already checks `matcher.start() == 0`
+- IntelliJ's default color scheme has many "semantic" colors that appear white/invisible
+- Test highlighting by temporarily mapping to known-visible colors (like STRING)
+- Pattern order matters - more specific patterns must come before generic WORD pattern
+
 **Next Steps (Phase 2):**
 - Variable modification (hot reload)
 - Expression evaluation

@@ -3,25 +3,64 @@
   "name": "Karate",
   "scopeName": "source.karate",
   "patterns": [
-    { "include": "#variables" },
-    { "include": "#comments" },
+    { "include": "#docstrings" },
     { "include": "#feature" },
     { "include": "#background" },
     { "include": "#scenario" },
     { "include": "#tags" },
     { "include": "#steps" },
+    { "include": "#match-markers" },
+    { "include": "#variables" },
+    { "include": "#comments" },
     { "include": "#strings" },
     { "include": "#numbers" },
     { "include": "#json" },
-    { "include": "#xml" },
     { "include": "#operators" }
   ],
   "repository": {
+    "docstrings": {
+      "patterns": [
+        {
+          "name": "string.quoted.triple.karate",
+          "begin": "\"\"\"",
+          "end": "\"\"\"",
+          "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.karate" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.string.end.karate" } },
+          "patterns": [
+            { "include": "#docstring-content" }
+          ]
+        }
+      ]
+    },
+    "docstring-content": {
+      "patterns": [
+        {
+          "name": "variable.other.embedded.karate",
+          "match": "#\\([^)]+\\)"
+        }
+      ]
+    },
     "comments": {
       "patterns": [
         {
           "name": "comment.line.number-sign.karate",
-          "match": "#(?!\\().*$"
+          "match": "^\\s*#(?!\\(|ignore|notnull|null|present|notpresent|array|object|boolean|number|string|uuid|regex|\\?|\\[).*$"
+        },
+        {
+          "name": "comment.line.number-sign.karate",
+          "match": "\\s+#(?!\\(|ignore|notnull|null|present|notpresent|array|object|boolean|number|string|uuid|regex|\\?|\\[)[^'\"]*$"
+        }
+      ]
+    },
+    "match-markers": {
+      "patterns": [
+        {
+          "name": "constant.language.marker.karate",
+          "match": "#(ignore|notnull|null|present|notpresent|array|object|boolean|number|string|uuid|regex|\\?)(?![a-zA-Z0-9_])"
+        },
+        {
+          "name": "constant.language.marker.array.karate",
+          "match": "#\\[[^\\]]*\\]"
         }
       ]
     },
@@ -88,19 +127,43 @@
         },
         {
           "name": "keyword.other.karate",
-          "match": "\\b(def|set|print|assert|match|contains|read|call|callonce|karate|configure|url|path|request|method|status|response|param|params|header|headers|cookie|cookies|eval|listen|doc|table|text|replace|yaml|csv|bytes|copy|remove|get|json|xml|xmlstring|string|typeOf|sleep)\\b"
+          "match": "\\b(def|set|print|assert|match|contains|read|call|callonce|configure|url|path|request|method|status|response|param|params|header|headers|cookie|cookies|eval|listen|doc|table|text|replace|yaml|csv|bytes|copy|remove|get|json|xml|xmlstring|string|typeOf|sleep|if|new|retry|until|var|return|let|const)\\b"
+        },
+        {
+          "name": "support.function.karate.karate",
+          "match": "\\bkarate\\.(get|set|log|env|read|merge|filter|map|match|forEach|repeat|range|sort|keys|keysOf|valuesOf|appendTo|remove|toJson|fromJson|toXml|fromXml|pretty|prettyXml|call|callSingle|exec|eval|listen|signal|stop|abort|embed|tags|tagValues|scenario|feature|info|properties|configure|lowerCase|trim|toString|toInt|toDouble|toBoolean)\\b"
+        },
+        {
+          "name": "support.function.java.karate",
+          "match": "\\bJava\\.type\\b"
         },
         {
           "name": "support.function.http.karate",
           "match": "\\b(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|CONNECT|TRACE)\\b"
+        },
+        {
+          "name": "entity.name.type.class.java.karate",
+          "match": "\\bjava\\.[a-z][a-zA-Z0-9.]*[A-Z][a-zA-Z0-9]*\\b"
+        },
+        {
+          "name": "entity.name.function.method.karate",
+          "match": "\\.[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\()"
+        },
+        {
+          "name": "storage.type.function.karate",
+          "match": "\\bfunction\\b"
+        },
+        {
+          "name": "keyword.operator.arrow.karate",
+          "match": "=>"
         }
       ]
     },
     "variables": {
       "patterns": [
         {
-          "name": "variable.other.karate",
-          "match": "<[^>]+>"
+          "name": "variable.other.placeholder.karate",
+          "match": "<[a-zA-Z_][a-zA-Z0-9_]*>"
         },
         {
           "name": "variable.other.embedded.karate",
@@ -110,15 +173,6 @@
     },
     "strings": {
       "patterns": [
-        {
-          "name": "string.quoted.triple.karate",
-          "begin": "\"\"\"",
-          "end": "\"\"\"",
-          "patterns": [
-            { "include": "#variables" },
-            { "include": "#json-embedded" }
-          ]
-        },
         {
           "name": "string.quoted.single.karate",
           "begin": "'",
@@ -145,7 +199,7 @@
         },
         {
           "name": "constant.numeric.json.karate",
-          "match": "\\b\\d+(\\.\\d+)?\\b"
+          "match": "-?\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
         }
       ]
     },
@@ -153,27 +207,47 @@
       "patterns": [
         {
           "name": "constant.numeric.karate",
-          "match": "\\b\\d+(\\.\\d+)?\\b"
+          "match": "-?\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
         }
       ]
     },
     "json": {
       "patterns": [
         {
-          "name": "punctuation.definition.dictionary.karate",
-          "match": "[{}\\[\\]]"
+          "name": "punctuation.definition.dictionary.begin.karate",
+          "match": "\\{"
+        },
+        {
+          "name": "punctuation.definition.dictionary.end.karate",
+          "match": "\\}"
+        },
+        {
+          "name": "punctuation.definition.array.begin.karate",
+          "match": "\\["
+        },
+        {
+          "name": "punctuation.definition.array.end.karate",
+          "match": "\\]"
         }
       ]
     },
     "operators": {
       "patterns": [
         {
-          "name": "keyword.operator.karate",
-          "match": "(==|!=|&&|\\|\\||!|\\?|:)"
+          "name": "keyword.operator.comparison.karate",
+          "match": "(==|!=|>=|<=|>|<)"
+        },
+        {
+          "name": "keyword.operator.logical.karate",
+          "match": "(&&|\\|\\||!)"
+        },
+        {
+          "name": "keyword.operator.ternary.karate",
+          "match": "[\\?:]"
         },
         {
           "name": "keyword.operator.match.karate",
-          "match": "\\b(only|any|each|deep|contains|not|null|present|notpresent|\\#ignore|\\#notnull|\\#present|\\#notpresent|\\#array|\\#object|\\#boolean|\\#number|\\#string|\\#uuid|\\#regex|\\#\\?)\\b"
+          "match": "\\b(only|any|each|deep|contains|not)\\b"
         }
       ]
     }
