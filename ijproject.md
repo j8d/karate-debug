@@ -207,9 +207,17 @@ public class KarateDebugProcess extends XDebugProcess {
 - [ ] Thread management for Karate scenarios
 - [ ] Error handling and recovery
 
+**2.4: Match Expression Diagnostics**
+- [ ] Research VS Code match diagnostics implementation
+- [ ] Implement `LocalInspectionTool` for match validation
+- [ ] Real-time error highlighting and quick fixes
+- [ ] Integration with IntelliJ's inspection framework
+- [ ] Performance optimization for large files
+
 **Deliverables:**
 - Fully functional debugging with breakpoints and variable inspection
 - Feature parity with VS Code debugging capabilities
+- Match expression validation with inline error highlighting
 - Comprehensive test suite for debug functionality
 
 ### Phase 3: UI and User Experience
@@ -240,19 +248,13 @@ public class KarateDebugProcess extends XDebugProcess {
 
 ### Phase 4: Advanced Features and Polish
 
-**4.1: Match Expression Diagnostics**
-- [ ] Implement `LocalInspectionTool` for match validation
-- [ ] Real-time error highlighting and quick fixes
-- [ ] Integration with IntelliJ's inspection framework
-- [ ] Performance optimization for large files
-
-**4.2: Licensing Integration**
+**4.1: Licensing Integration**
 - [ ] Cross-platform license management
 - [ ] Trial flow and GitHub OAuth integration
 - [ ] Status bar license indicator
 - [ ] Purchase flow and subscription management
 
-**4.3: Testing and Bug Fixes**
+**4.2: Testing and Bug Fixes**
 - [ ] Comprehensive testing across IntelliJ versions
 - [ ] Performance testing and optimization
 - [ ] Bug fixes and stability improvements
@@ -867,7 +869,62 @@ intellij/
 - Test highlighting by temporarily mapping to known-visible colors (like STRING)
 - Pattern order matters - more specific patterns must come before generic WORD pattern
 
-**Next Steps (Phase 2):**
+### 2026-01-13: Phase 2 Match Diagnostics Complete
+
+**Completed:**
+- Implemented real-time match expression validation during debug sessions
+- Green/red background highlights on match lines based on pass/fail status
+- Inlay hints showing actual values inline at end of failed match lines
+- Clickable [Fix] button in inlay hints to replace expected with actual values
+- RangeMarker tracking for document changes (fixes survive typing)
+- Type-aware replacements (e.g., `#array` -> `#string` for type mismatches)
+- Error message handling (syntax errors, type cast errors) without "actual:" prefix
+- Settings UI integration (showPassing, showFailing, showActualValues toggles)
+- Automatic re-evaluation on step/resume during debugging
+
+**Key Components:**
+- `MatchDiagnosticsService` - Core service managing highlights, inlays, and failures
+- `MatchFailureRegistry` - Stores failure info per file:line for quick access
+- `MatchFailureInfo` - Data class with expected/actual values, ranges, type info
+- `KarateInlayRenderer` - Custom EditorCustomElementRenderer for inlay hints with [Fix] button
+
+**Architecture:**
+```
+Debug Session Started
+        |
+        v
+XDebugSessionListener.sessionPaused()
+        |
+        v
+evaluateMatchDiagnostics() - Finds all match lines in open editors
+        |
+        v
+For each match line: DAP evaluate request
+        |
+        v
+Parse result -> PASS/FAIL
+        |
+        v
+Add highlight (green/red) + Parse failure message
+        |
+        v
+Store in MatchFailureRegistry + Add inlay hint
+        |
+        v
+User clicks [Fix] -> Apply replacement using RangeMarker
+        |
+        v
+Update highlight to green, dispose old inlay
+```
+
+**Key Fixes Applied:**
+1. Added `isErrorMessage` flag to `MatchFailureInfo` to distinguish syntax/type errors from value mismatches
+2. Error messages display directly without "actual:" prefix (e.g., "invalid syntax: js failed...")
+3. Error messages don't show [Fix] button since there's nothing to auto-fix
+4. `SimplifiedMessage` helper class returned from `simplifyErrorMessage()` includes both message and error flag
+5. RangeMarkers properly disposed when failures are cleared to prevent memory leaks
+
+**Next Steps (Phase 3):**
 - Variable modification (hot reload)
 - Expression evaluation
 - Step into/over/out improvements

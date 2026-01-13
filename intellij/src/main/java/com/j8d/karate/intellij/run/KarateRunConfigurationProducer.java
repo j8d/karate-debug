@@ -1,9 +1,13 @@
 package com.j8d.karate.intellij.run;
 
+import com.intellij.execution.BeforeRunTask;
+import com.intellij.execution.BeforeRunTaskProvider;
 import com.intellij.execution.actions.ConfigurationContext;
 import com.intellij.execution.actions.LazyRunConfigurationProducer;
 import com.intellij.execution.configurations.ConfigurationFactory;
+import com.intellij.execution.configurations.RunConfigurationBase;
 import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
@@ -14,6 +18,8 @@ import com.j8d.karate.intellij.project.KarateProjectService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -70,8 +76,41 @@ public class KarateRunConfigurationProducer extends LazyRunConfigurationProducer
             configuration.setName("Karate: " + file.getNameWithoutExtension());
         }
 
+        // Add Build before-run task
+        addMakeBeforeRunTask(context.getProject(), configuration);
+
         sourceElement.set(element);
         return true;
+    }
+
+    /**
+     * Add the "Build" (Make) task as a default before-run task.
+     * This ensures feature files are copied to the classpath before debugging.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void addMakeBeforeRunTask(@NotNull Project project, @NotNull RunConfigurationBase<?> config) {
+        // Check if already has a Make task
+        for (BeforeRunTask<?> existingTask : config.getBeforeRunTasks()) {
+            String taskId = existingTask.getProviderId().toString();
+            if ("Make".equals(taskId) || taskId.contains("CompileStepBeforeRun")) {
+                return; // Already has Make task
+            }
+        }
+
+        // Find the Make before run task provider and add it
+        for (BeforeRunTaskProvider provider : BeforeRunTaskProvider.EP_NAME.getExtensions(project)) {
+            String providerId = provider.getId().toString();
+            if ("Make".equals(providerId) || providerId.contains("CompileStepBeforeRun")) {
+                BeforeRunTask task = provider.createTask(config);
+                if (task != null) {
+                    task.setEnabled(true);
+                    List<BeforeRunTask<?>> tasks = new ArrayList<>(config.getBeforeRunTasks());
+                    tasks.add(task);
+                    config.setBeforeRunTasks(tasks);
+                    return;
+                }
+            }
+        }
     }
 
     /**

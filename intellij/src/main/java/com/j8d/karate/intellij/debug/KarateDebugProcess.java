@@ -30,6 +30,7 @@ public class KarateDebugProcess extends XDebugProcess {
     private final KarateRunConfiguration configuration;
     private final ExecutionEnvironment environment;
     private final KarateDapClient dapClient;
+    private final MatchDiagnosticsService matchDiagnosticsService;
     private ConsoleView consoleView;
 
     public KarateDebugProcess(@NotNull XDebugSession session,
@@ -39,6 +40,10 @@ public class KarateDebugProcess extends XDebugProcess {
         this.configuration = configuration;
         this.environment = environment;
         this.dapClient = new KarateDapClient(this);
+        this.matchDiagnosticsService = new MatchDiagnosticsService(session.getProject(), dapClient);
+
+        // Register match diagnostics as a session listener
+        session.addSessionListener(matchDiagnosticsService);
     }
 
     @Override
@@ -65,6 +70,7 @@ public class KarateDebugProcess extends XDebugProcess {
     @Override
     public void stop() {
         dapClient.stop();
+        matchDiagnosticsService.dispose();
     }
 
     @Override

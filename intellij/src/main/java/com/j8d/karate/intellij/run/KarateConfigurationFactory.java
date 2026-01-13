@@ -13,21 +13,21 @@ import org.jetbrains.annotations.Nullable;
  * Factory for creating Karate run configurations.
  */
 public class KarateConfigurationFactory extends ConfigurationFactory {
-    
+
     public KarateConfigurationFactory(@NotNull ConfigurationType type) {
         super(type);
     }
-    
+
     @Override
     public @NotNull @NonNls String getId() {
         return KarateConfigurationType.ID;
     }
-    
+
     @Override
     public @NotNull RunConfiguration createTemplateConfiguration(@NotNull Project project) {
         return new KarateRunConfiguration(project, this, "Karate Debug");
     }
-    
+
     @Override
     public @Nullable Class<? extends BaseState> getOptionsClass() {
         return KarateRunConfigurationOptions.class;

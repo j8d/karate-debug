@@ -551,6 +551,30 @@ public class KarateDapClient {
         return sendRequest("variables", args);
     }
 
+    /**
+     * Evaluate an expression in the debug context.
+     * For match expressions, prefix with "match " (e.g., "match response.name == 'pikachu'")
+     * @param expression The expression to evaluate
+     * @param context The evaluation context: "repl", "watch", or "hover"
+     * @return A future containing the result with "result" and "type" properties
+     */
+    public CompletableFuture<JsonObject> evaluate(String expression, String context) {
+        JsonObject args = new JsonObject();
+        args.addProperty("expression", expression);
+        args.addProperty("context", context);
+        return sendRequest("evaluate", args);
+    }
+
+    /**
+     * Evaluate a match expression (e.g., "response.name == 'pikachu'").
+     * Automatically prefixes with "match ".
+     * @param matchExpression The match expression without "match " prefix
+     * @return A future containing the result
+     */
+    public CompletableFuture<JsonObject> evaluateMatch(String matchExpression) {
+        return evaluate("match " + matchExpression, "repl");
+    }
+
     public void stop() {
         running.set(false);
 

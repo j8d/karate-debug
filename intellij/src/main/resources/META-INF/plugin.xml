@@ -39,6 +39,10 @@
         <projectService
             serviceImplementation="com.j8d.karate.intellij.project.KarateBuildFileListener"/>
 
+        <!-- Match diagnostics registry for storing failure info -->
+        <projectService
+            serviceImplementation="com.j8d.karate.intellij.debug.MatchDiagnosticsRegistry"/>
+
         <!-- Startup activity to detect Karate projects -->
         <postStartupActivity
             implementation="com.j8d.karate.intellij.project.KarateProjectStartupActivity"/>
@@ -94,6 +98,14 @@
             id="KarateLogLevel"
             implementation="com.j8d.karate.intellij.ui.KarateLogLevelWidgetFactory"
             order="after KarateEnvironment"/>
+
+        <!--
+        Inlay hints for match actual values - DISABLED
+        We now use direct inlay creation in MatchDiagnosticsService which supports clickable [Fix] buttons.
+        <codeInsight.inlayProvider
+            language="Karate"
+            implementationClass="com.j8d.karate.intellij.debug.KarateInlayHintsProvider"/>
+        -->
     </extensions>
 
     <actions>
@@ -118,5 +130,14 @@
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
         </group>
     </actions>
+
+    <!-- Intention actions (quick fixes) -->
+    <extensions defaultExtensionNs="com.intellij">
+        <intentionAction>
+            <language>Karate</language>
+            <className>com.j8d.karate.intellij.debug.MatchQuickFixIntention</className>
+            <category>Karate</category>
+        </intentionAction>
+    </extensions>
 </idea-plugin>
 

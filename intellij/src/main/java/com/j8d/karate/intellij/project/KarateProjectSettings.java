@@ -166,5 +166,35 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
      * Valid log levels.
      */
     public static final String[] LOG_LEVELS = {"error", "warn", "info", "debug", "trace"};
+
+    // ========== Match Diagnostics Getters ==========
+
+    /**
+     * Check if match diagnostics are enabled.
+     */
+    public boolean isMatchDiagnosticsEnabled() {
+        return enableMatchDiagnostics;
+    }
+
+    /**
+     * Check if passing matches should be highlighted.
+     */
+    public boolean isMatchDiagnosticsShowPassing() {
+        return matchDiagnosticsShowPassing;
+    }
+
+    /**
+     * Check if failing matches should be highlighted.
+     */
+    public boolean isMatchDiagnosticsShowFailing() {
+        return matchDiagnosticsShowFailing;
+    }
+
+    /**
+     * Check if actual values should be shown for failing matches.
+     */
+    public boolean isMatchDiagnosticsShowActualValues() {
+        return matchDiagnosticsShowActualValues;
+    }
 }
 

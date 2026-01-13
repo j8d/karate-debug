@@ -3,6 +3,7 @@ package com.j8d.karate.intellij.run;
 import com.intellij.execution.Executor;
 import com.intellij.execution.configurations.*;
 import com.intellij.execution.runners.ExecutionEnvironment;
+import com.intellij.openapi.module.Module;
 import com.intellij.openapi.options.SettingsEditor;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
@@ -10,14 +11,18 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Run configuration for Karate debug sessions.
+ * Implements RunProfileWithCompileBeforeLaunchOption to enable the "Build" before-run task.
  */
-public class KarateRunConfiguration extends RunConfigurationBase<KarateRunConfigurationOptions> {
-    
+public class KarateRunConfiguration extends RunConfigurationBase<KarateRunConfigurationOptions>
+        implements RunProfileWithCompileBeforeLaunchOption {
+
     protected KarateRunConfiguration(@NotNull Project project,
                                       @NotNull ConfigurationFactory factory,
                                       @Nullable String name) {
         super(project, factory, name);
     }
+
+
     
     @Override
     protected @NotNull KarateRunConfigurationOptions getOptions() {
@@ -65,6 +70,20 @@ public class KarateRunConfiguration extends RunConfigurationBase<KarateRunConfig
     public @Nullable RunProfileState getState(@NotNull Executor executor,
                                                @NotNull ExecutionEnvironment environment) {
         return new KarateRunProfileState(this, environment);
+    }
+
+    // RunProfileWithCompileBeforeLaunchOption implementation
+
+    @Override
+    public Module @NotNull [] getModules() {
+        // Return empty array to build the whole project
+        return Module.EMPTY_ARRAY;
+    }
+
+    @Override
+    public boolean isBuildBeforeLaunchAddedByDefault() {
+        // Enable "Build" before-run task by default for Karate configurations
+        return true;
     }
 }
 
