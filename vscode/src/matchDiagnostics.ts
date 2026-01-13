@@ -9,6 +9,7 @@ interface MatchFailureInfo {
     lineNumber: number;
     isQuoted: boolean;  // Whether the value is a quoted string
     isTypeMatcher: boolean;  // Whether the expected value is a type matcher like #array
+    isErrorMessage: boolean;  // True if this is an error (syntax/type) not a value mismatch
 }
 
 // Map of document URI + line number to failure info
@@ -100,7 +101,10 @@ export class MatchDiagnosticsProvider {
     private static readonly FAILURE_VALUE_REGEX = /not equal \([^)]+\)\n\s+'([^']+)'\n\s+'([^']+)'/;
     private static readonly FAILURE_VALUE_UNQUOTED_REGEX = /not equal \(([^)]+)\)\n\s*(\S+)\n\s*(\S+)/;
     // Regex for type mismatch failures (e.g., "not an array or list", "not a string")
+    // Handles quoted values: not a string (STRING:STRING)\n'actual'\n'#string'
     private static readonly FAILURE_TYPE_MISMATCH_REGEX = /not (?:an? )?([^(]+) \([^)]+\)\n\s+'([^']+)'\n\s+'([^']+)'/;
+    // Handles unquoted actual values (arrays, objects): not a string (LIST:STRING)\n[...]\n'#string'
+    private static readonly FAILURE_TYPE_MISMATCH_UNQUOTED_REGEX = /not (?:an? )?([^(]+) \([^)]+\)\n\s*(\[.+\]|\{.+\})\n\s*'(#\w+)'/;
 
     constructor(private context: vscode.ExtensionContext) {
         // Create decoration types with visible styling
@@ -273,26 +277,41 @@ export class MatchDiagnosticsProvider {
                         range: new vscode.Range(i, line.firstNonWhitespaceCharacterIndex, i, line.text.length),
                         hoverMessage: 'Match PASSED'
                     });
-                } else if (result.status === 'fail' && (showFailing || showActualValues)) {
+                } else if ((result.status === 'fail' || result.status === 'error') && (showFailing || showActualValues)) {
                     const lineRange = new vscode.Range(i, line.firstNonWhitespaceCharacterIndex, i, line.text.length);
-                    let hoverMessage = `Match FAILED: ${result.message}`;
+                    const isError = result.status === 'error';
+                    let hoverMessage = isError ? `Match ERROR: ${result.message}` : `Match FAILED: ${result.message}`;
 
-                    // Try to parse the failure message to extract actual and expected values
-                    const failureInfo = this.parseFailureMessage(result.message, line.text, i, docUri);
+                    if (isError) {
+                        // For errors, store directly without parsing (no [Fix] available)
+                        const key = `${docUri}:${i}`;
+                        matchFailures.set(key, {
+                            actualValue: result.message,
+                            expectedValue: '',
+                            expectedRange: lineRange,
+                            lineNumber: i,
+                            isQuoted: false,
+                            isTypeMatcher: false,
+                            isErrorMessage: true
+                        });
+                    } else {
+                        // Try to parse the failure message to extract actual and expected values
+                        const failureInfo = this.parseFailureMessage(result.message, line.text, i, docUri);
 
-                    if (failureInfo) {
-                        matchFailures.set(failureInfo.key, failureInfo.info);
-                        hoverMessage = failureInfo.hoverMessage;
+                        if (failureInfo) {
+                            matchFailures.set(failureInfo.key, failureInfo.info);
+                            hoverMessage = failureInfo.hoverMessage;
 
-                        // Create diagnostic for Code Actions (use Hint severity to avoid duplicate squiggly underline)
-                        const diagnostic = new vscode.Diagnostic(
-                            lineRange,
-                            hoverMessage,
-                            vscode.DiagnosticSeverity.Hint
-                        );
-                        diagnostic.source = 'Karate Debug';
-                        diagnostic.code = 'match-failed';
-                        diagnostics.push(diagnostic);
+                            // Create diagnostic for Code Actions (use Hint severity to avoid duplicate squiggly underline)
+                            const diagnostic = new vscode.Diagnostic(
+                                lineRange,
+                                hoverMessage,
+                                vscode.DiagnosticSeverity.Hint
+                            );
+                            diagnostic.source = 'Karate Debug';
+                            diagnostic.code = 'match-failed';
+                            diagnostics.push(diagnostic);
+                        }
                     }
 
                     // Only add decoration if showFailing is enabled
@@ -350,7 +369,8 @@ export class MatchDiagnosticsProvider {
                         ),
                         lineNumber,
                         isQuoted: true,
-                        isTypeMatcher: false
+                        isTypeMatcher: false,
+                        isErrorMessage: false
                     },
                     hoverMessage: `Match FAILED: Expected '${expectedValue}' but got '${actualValue}'`
                 };
@@ -381,6 +401,22 @@ export class MatchDiagnosticsProvider {
             const actualValue = typeMismatchMatch[2];
             const expectedValue = typeMismatchMatch[3]; // e.g., "#array"
             console.log(`[parseFailureMessage] Type mismatch: type='${mismatchType}', actual='${actualValue}', expected='${expectedValue}'`);
+
+            const result = this.findExpectedInLine(lineText, expectedValue, actualValue, lineNumber, docUri, mismatchType);
+            if (result) {
+                return result;
+            }
+        }
+
+        // Try unquoted type mismatch format (for arrays/objects): not a string (ARRAY)\n[...]\n#string
+        const typeMismatchUnquotedMatch = MatchDiagnosticsProvider.FAILURE_TYPE_MISMATCH_UNQUOTED_REGEX.exec(message);
+        console.log(`[parseFailureMessage] Type mismatch unquoted regex result: ${JSON.stringify(typeMismatchUnquotedMatch)}`);
+
+        if (typeMismatchUnquotedMatch) {
+            const mismatchType = typeMismatchUnquotedMatch[1].trim(); // e.g., "string", "number"
+            const actualValue = typeMismatchUnquotedMatch[2].trim();
+            const expectedValue = typeMismatchUnquotedMatch[3]; // e.g., "#string"
+            console.log(`[parseFailureMessage] Type mismatch unquoted: type='${mismatchType}', actual='${actualValue}', expected='${expectedValue}'`);
 
             const result = this.findExpectedInLine(lineText, expectedValue, actualValue, lineNumber, docUri, mismatchType);
             if (result) {
@@ -435,7 +471,8 @@ export class MatchDiagnosticsProvider {
                         ),
                         lineNumber,
                         isQuoted,
-                        isTypeMatcher
+                        isTypeMatcher,
+                        isErrorMessage: false
                     },
                     hoverMessage
                 };
@@ -477,7 +514,7 @@ export class MatchDiagnosticsProvider {
         return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    private async evaluateMatch(expression: string): Promise<{ status: 'pass' | 'fail' | 'unavailable'; message: string }> {
+    private async evaluateMatch(expression: string): Promise<{ status: 'pass' | 'fail' | 'error' | 'unavailable'; message: string }> {
         if (!this.activeSession) {
             return { status: 'unavailable', message: 'No active debug session' };
         }
@@ -501,8 +538,8 @@ export class MatchDiagnosticsProvider {
             } else if (result.startsWith('FAIL:')) {
                 return { status: 'fail', message: result.substring(6).trim() };
             } else if (result.startsWith('Error:') || result.startsWith('Match error:')) {
-                // Treat evaluation errors as unavailable (e.g., null reference)
-                return { status: 'unavailable', message: result };
+                // Evaluation errors (syntax errors, type errors, unknown matchers) - show as error
+                return { status: 'error', message: this.simplifyErrorMessage(result) };
             } else {
                 return { status: 'fail', message: result };
             }
@@ -510,6 +547,37 @@ export class MatchDiagnosticsProvider {
             // Network or debug session errors - treat as unavailable
             return { status: 'unavailable', message: String(error) };
         }
+    }
+
+    /**
+     * Simplify error messages by adding a friendly prefix for known error patterns.
+     */
+    private simplifyErrorMessage(message: string): string {
+        // Strip existing "Match error: " or "Error: " prefix
+        let cleanMessage = message;
+        if (cleanMessage.startsWith('Match error: ')) {
+            cleanMessage = cleanMessage.substring('Match error: '.length);
+        } else if (cleanMessage.startsWith('Error: ')) {
+            cleanMessage = cleanMessage.substring('Error: '.length);
+        }
+
+        // Syntax errors - JS parsing failures
+        if (cleanMessage.includes('js failed') || cleanMessage.includes('SyntaxError') ||
+            cleanMessage.includes('PolyglotException')) {
+            return 'invalid syntax: ' + cleanMessage;
+        }
+
+        // Type cast errors
+        if (cleanMessage.includes('cannot be cast to') || cleanMessage.includes('ClassCastException')) {
+            return 'invalid type: ' + cleanMessage;
+        }
+
+        // Unknown matcher type
+        if (cleanMessage.includes('unknown validator')) {
+            return 'unknown matcher: ' + cleanMessage;
+        }
+
+        return cleanMessage;
     }
 
     private clearDecorations(): void {
@@ -639,6 +707,18 @@ class MatchInlayHintsProvider implements vscode.InlayHintsProvider {
 
             const line = document.lineAt(info.lineNumber);
             const position = new vscode.Position(info.lineNumber, line.text.length);
+
+            // Handle error messages differently - no "actual:" prefix, no [Fix] button
+            if (info.isErrorMessage) {
+                const errorPart = new vscode.InlayHintLabelPart(`  ${info.actualValue}`);
+                errorPart.tooltip = new vscode.MarkdownString(`Match error - cannot auto-fix`);
+
+                const hint = new vscode.InlayHint(position, [errorPart]);
+                hint.paddingLeft = true;
+                hints.push(hint);
+                console.log(`[InlayHints] Added error hint for line ${info.lineNumber}`);
+                continue;
+            }
 
             // Format values based on whether they're quoted strings or type matchers
             let displayActual: string;

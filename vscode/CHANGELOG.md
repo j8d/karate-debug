@@ -5,6 +5,16 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.8] - 2026-01-13
+
+### Added
+- Error message inlay hints for match expressions with syntax errors, unknown matchers, or type errors
+- Support for type mismatch detection when actual value is an array/object (e.g., matching array against #string)
+
+### Changed
+- Error messages now display without "actual:" prefix and without [Fix] button since they cannot be auto-fixed
+- Simplified error message prefixes for better readability (e.g., "invalid syntax:", "unknown matcher:")
+
 ## [0.6.7] - 2026-01-05
 
 ### Changed
