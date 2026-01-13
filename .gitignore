@@ -70,5 +70,4 @@ out/
 *.vsix
 .vscode-test/
 
-### Augment ###
-.augment-guidelines
+

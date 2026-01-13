@@ -9,6 +9,14 @@
     <depends>org.jetbrains.plugins.textmate</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <!-- License manager (application-level) -->
+        <applicationService
+            serviceImplementation="com.j8d.karate.intellij.licensing.LicenseManager"/>
+
+        <!-- REST service for OAuth callback (uses built-in IDE HTTP server) -->
+        <httpRequestHandler
+            implementation="com.j8d.karate.intellij.licensing.KarateAuthRestService"/>
+
         <!-- Karate file type -->
         <fileType
             name="Karate Feature"
@@ -102,6 +110,10 @@
             id="KarateLogLevel"
             implementation="com.j8d.karate.intellij.ui.KarateLogLevelWidgetFactory"
             order="after KarateEnvironment"/>
+        <statusBarWidgetFactory
+            id="KarateLicense"
+            implementation="com.j8d.karate.intellij.ui.KarateLicenseWidgetFactory"
+            order="after KarateLogLevel"/>
 
         <!--
         Inlay hints for match actual values - DISABLED

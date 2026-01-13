@@ -10,6 +10,7 @@ import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.ProjectActivity;
+import com.j8d.karate.intellij.licensing.LicenseManager;
 import kotlin.Unit;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
@@ -17,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Startup activity that detects Karate projects when the IDE opens.
- * Initializes project services and shows notification if Karate is detected.
+ * Initializes project services, license manager, and shows notification if Karate is detected.
  */
 public class KarateProjectStartupActivity implements ProjectActivity {
 
@@ -27,6 +28,10 @@ public class KarateProjectStartupActivity implements ProjectActivity {
     @Override
     public Object execute(@NotNull Project project, @NotNull Continuation<? super Unit> continuation) {
         LOG.info("Karate Debug: Starting project detection for " + project.getName());
+
+        // Initialize license manager (application-level, only needs to happen once)
+        LicenseManager.getInstance().initialize()
+                .thenAccept(status -> LOG.info("License status: " + status));
 
         // Initialize build file listener for auto-refresh
         KarateBuildFileListener.getInstance(project);

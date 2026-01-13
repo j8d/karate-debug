@@ -1,0 +1,306 @@
+# Karate Debug - Monorepo
+
+## Overview
+A debugging solution for Karate API tests supporting both VS Code and IntelliJ IDEA. Provides breakpoints, step-through debugging, variable inspection, and IDE-specific UI features.
+
+## Tech Stack
+- **VS Code Extension**: TypeScript
+- **IntelliJ Plugin**: Java (Kotlin Gradle DSL)
+- **Shared Debug Server**: Java DAP server
+- **Build**: npm + Gradle + Maven
+
+## Project Structure (Monorepo)
+```
+├── shared/
+│   └── debug-server/           # Java DAP server (shared by both IDEs)
+│       ├── pom.xml
+│       └── src/main/java/com/j8d/karate/debug/
+│           ├── DebugServer.java
+│           ├── DapSession.java
+│           ├── KarateDebugger.java
+│           └── KarateLogEncoder.java   # Custom logback encoder for [karate.log] prefix
+├── vscode/                     # VS Code extension
+│   ├── src/
+│   │   ├── extension.ts        # Main entry point, CodeLens, Feature Explorer
+│   │   └── debugAdapter.ts     # Spawns debug server, handles DAP
+│   ├── resources/              # Extension assets (icons, JAR copy)
+│   ├── syntaxes/               # Karate syntax highlighting
+│   └── package.json
+├── intellij/                   # IntelliJ plugin
+│   ├── src/main/java/com/j8d/karate/intellij/
+│   │   ├── lang/               # Custom Karate language (lexer, parser, highlighting)
+│   │   ├── run/                # Run configurations, gutter icons
+│   │   ├── debug/              # XDebugger integration, DAP client
+│   │   ├── ui/                 # Tool windows, settings
+│   │   └── project/            # Project detection
+│   ├── src/main/resources/
+│   │   ├── META-INF/plugin.xml
+│   │   └── karate-debug-server-1.0.0.jar  # Bundled JAR
+│   └── build.gradle.kts
+├── test-fixtures/              # Sample Karate project for testing
+├── ijproject.md                # IntelliJ plugin project plan and progress
+└── .github/workflows/          # CI/CD (release on tag push)
+```
+
+## Build Commands
+
+### Full build (both platforms)
+```bash
+# Build shared debug server
+cd shared/debug-server && mvn clean package -q
+
+# Copy JAR to both extensions
+cp shared/debug-server/target/karate-debug-server-1.0.0.jar vscode/resources/
+cp shared/debug-server/target/karate-debug-server-1.0.0.jar intellij/src/main/resources/
+
+# Build VS Code extension
+cd vscode && npm install && npm run compile && npm run package
+
+# Build IntelliJ plugin
+cd intellij && ./gradlew buildPlugin
+```
+
+### Quick rebuild (shared debug server)
+```bash
+cd shared/debug-server && mvn clean package -q && \
+  cp target/karate-debug-server-1.0.0.jar ../intellij/src/main/resources/ && \
+  cp target/karate-debug-server-1.0.0.jar ../../vscode/resources/
+```
+**Important**: The JAR must be named `karate-debug-server-1.0.0.jar`. Both extensions look for this specific filename.
+
+### Quick rebuild (VS Code only)
+```bash
+cd vscode && npm run compile
+```
+
+### Quick rebuild (IntelliJ only)
+```bash
+cd intellij && ./gradlew buildPlugin
+```
+
+### Run IntelliJ sandbox
+```bash
+cd intellij && ./gradlew runIde
+```
+
+## Releasing
+
+### Version Bump and Release
+1. Update version in `package.json` and `CHANGELOG.md`
+2. Commit changes: `git add -A && git commit -m "v0.x.x: Description"`
+3. Push and tag: `git push origin main && git tag v0.x.x && git push origin v0.x.x`
+4. GitHub Actions will build and create a release with the .vsix
+
+### VS Code Marketplace Publishing
+- **Publisher**: `j8d` (must match `package.json` publisher field)
+- **Marketplace URL**: https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug
+- **Publisher Management**: https://marketplace.visualstudio.com/manage/publishers/j8d
+
+#### CLI Publishing (preferred)
+```bash
+# Login (uses AZUREPAT env var)
+echo $AZUREPAT | npx vsce login j8d
+
+# Publish current version
+npx vsce publish
+
+# Bump version and publish in one step
+npx vsce publish patch   # 0.3.1 -> 0.3.2
+npx vsce publish minor   # 0.3.1 -> 0.4.0
+npx vsce publish major   # 0.3.1 -> 1.0.0
+```
+
+#### Manual Publishing (alternative)
+1. Download .vsix from GitHub release
+2. Go to https://marketplace.visualstudio.com/manage/publishers/j8d
+3. Click extension -> Update -> Upload .vsix
+
+#### PAT Requirements
+- Azure DevOps PAT with **Marketplace (Manage)** scope
+- Organization: "All accessible organizations"
+- Stored in env var: `AZUREPAT`
+
+## Key Files
+- `package.json` - Extension manifest, version, contributions
+- `src/extension.ts` - CodeLens, Feature Explorer, commands
+- `src/debugAdapter.ts` - Spawns Java debug server, handles DAP
+- `src/licensing.ts` - License management, trial flow, GitHub auth
+- `src/config.ts` - Build-time configuration (API URL, GitHub client ID)
+- `debug-server/pom.xml` - Java dependencies (Karate, logging)
+- `.github/workflows/release.yml` - Automated release workflow
+
+## Git Remote
+Uses SSH alias `github-j8d` for the j8d GitHub account:
+```
+origin  git@github-j8d:j8d/karate-debug.git
+```
+
+## Requirements
+- Node.js 20+
+- Java 17+
+- Maven 3.6+
+
+## Documentation Guidelines
+- Never use emojis in documentation (README, CHANGELOG, etc.)
+- Keep documentation professional and clean
+
+## Karate Runtime Architecture
+- **Thread-local JS engine**: Karate's `JsEngine` uses `JsEngine.local()` which creates thread-local bindings. Variable changes must be applied on the Karate execution thread, not the DAP main thread.
+- **Variable modification**: Use `engine.setVariable(name, value)` instead of directly modifying `engine.vars` - this updates both the vars map AND the JS engine bindings.
+- **ScenarioEngine**: Has a `ThreadLocal<ScenarioEngine>` for thread context. Be aware of which thread you're on when interacting with the engine.
+
+## VS Code Extension Patterns
+
+### State Management
+- When updating state that affects both UI and internal tracking (e.g., `logout()`), always update `this.currentStatus` before calling `updateStatusBar()`. Otherwise `getStatus()` returns stale data.
+
+### Decorations vs Diagnostics
+- **Decorations** (`TextEditorDecorationType`): Visual styling only (underlines, background colors). Use for pass/fail indicators.
+- **Diagnostics** (`DiagnosticCollection`): Integrates with Problems panel and enables Code Actions. Use `DiagnosticSeverity.Hint` to avoid duplicate squiggly underlines when decorations already provide visual feedback.
+- **Inlay Hints**: Inline text/buttons at end of lines. Independent from decorations - must check own settings and populate data structures even when decorations are disabled.
+
+### Match Diagnostics Architecture
+- `matchFailures` Map stores failure info for inlay hints
+- Must be populated when EITHER `showFailing` OR `showActualValues` is enabled
+- Decorations only added when `showFailing` is enabled
+- Inlay hints check `showActualValues` setting independently
+
+## Licensing Architecture
+
+### Trial Flow
+1. **Anonymous Trial** (no login required):
+   - Extension generates stable `machineId` from hostname + username hash
+   - Calls `POST /api/trial/start` with `machineId` and `machineName`
+   - Server creates trial in `anonymous_trials` table (30 days)
+   - Extension stores nothing locally - trial state lives on server
+
+2. **Trial Linking** (when user later signs in):
+   - During GitHub OAuth callback, server links anonymous trial to user account
+   - Remaining trial days transfer to the authenticated user
+   - Original `anonymous_trials` record marked as converted
+
+3. **Purchase Flow**:
+   - If not logged in, `startCheckout()` triggers GitHub auth first
+   - After auth, redirects to Stripe checkout
+   - Subscription stored in `subscriptions` table
+
+### Key Classes
+- `LicenseManager` - Singleton managing license state, status bar, commands
+- `LicenseStatus` - Current license state: `active`, `trialing`, `expired`, `none`
+- `AnonymousTrialResponse` - API response from `/api/trial/start` and `/api/trial/status`
+
+### API Endpoints (karate-debug-api)
+- `POST /api/trial/start` - Start anonymous machine trial
+- `GET /api/trial/status` - Check trial status by machineId
+- `GET /api/auth/github` - Initiate GitHub OAuth
+- `GET /api/auth/callback` - Handle OAuth callback, link trials
+- `POST /api/subscription/checkout` - Create Stripe checkout session
+- `GET /api/license/status` - Get license status for authenticated user
+
+### Build Environments
+- **Dev** (`npm run package:dev`): Points to `localhost:3000`, dev GitHub OAuth app
+- **Prod** (`npm run package:prod`): Points to `karate-debug-api.vercel.app`, prod OAuth app
+- Config injected at build time via `scripts/set-build-env.js`
+
+## IntelliJ Plugin Patterns
+
+### Lexer Pattern Design
+- Don't use leading `\b` word boundaries in patterns - `tryMatch()` already uses `matcher.start() == 0` to ensure match at current position
+- IntelliJ's default color scheme has many "semantic" colors that appear white/invisible (e.g., `CLASS_NAME`, `FUNCTION_CALL`)
+- When a color doesn't appear visible, try mapping to known-visible colors like `STRING` (green) or `STATIC_METHOD` (yellow/italic)
+- Pattern order in lexer matters - more specific patterns must come before generic patterns (e.g., HTTP methods before WORD)
+
+### Default Color Visibility Issues
+The following `DefaultLanguageHighlighterColors` keys may appear white/invisible in default themes:
+- `CLASS_NAME` - Use `STRING` for green or `KEYWORD` for other options
+- `FUNCTION_CALL` - Use `STATIC_METHOD` for yellow/italic
+- `INSTANCE_FIELD`, `INSTANCE_METHOD` - May also be invisible
+
+### TextAttributesKey Fallbacks
+When creating custom token highlighting:
+```java
+// Good - use visible fallbacks
+TextAttributesKey JAVA_CLASS = createTextAttributesKey(
+    "KARATE_JAVA_CLASS", DefaultLanguageHighlighterColors.STRING);  // Green
+
+// Bad - may be invisible in default theme
+TextAttributesKey JAVA_CLASS = createTextAttributesKey(
+    "KARATE_JAVA_CLASS", DefaultLanguageHighlighterColors.CLASS_NAME);  // White!
+```
+
+### Match Diagnostics Architecture (IntelliJ)
+- `MatchDiagnosticsService` - Singleton service managing highlights and inlay hints
+- `MatchFailureRegistry` - Stores `MatchFailureInfo` per file:line key
+- Uses `XDebugSessionListener` to react to debug session events (paused, resumed, stopped)
+- Evaluates match expressions via DAP `evaluate` request during debug pause
+- `RangeMarker` used to track document changes (auto-adjusts when user types)
+
+### Inlay Hints Pattern
+IntelliJ's built-in `InlayHintsProvider` has limitations for dynamic debug content. Instead:
+1. Use `EditorCustomElementRenderer` for custom inlay rendering
+2. Add inlays via `editor.getInlayModel().addAfterLineEndElement()`
+3. For clickable elements, install `EditorMouseListener` and calculate hit regions
+4. Store metadata (like `MatchFailureInfo`) in the renderer for click handlers
+
+### RangeMarker Usage
+```java
+// Create RangeMarker to track text position across edits
+RangeMarker marker = document.createRangeMarker(startOffset, endOffset);
+marker.setGreedyToLeft(false);  // Don't expand when text inserted at start
+marker.setGreedyToRight(false); // Don't expand when text inserted at end
+
+// Later, get current position (survives document edits)
+if (marker.isValid()) {
+    int start = marker.getStartOffset();
+    int end = marker.getEndOffset();
+}
+
+// Always dispose when done
+marker.dispose();
+```
+
+### Error Message Handling
+When displaying failure info, distinguish between:
+1. **Value mismatches** - Show "actual: <value> [Fix]"
+2. **Syntax/type errors** - Show error message directly without "actual:" prefix and no [Fix] button
+Use `isErrorMessage` flag in `MatchFailureInfo` to track this.
+
+### Licensing Architecture (IntelliJ)
+- `LicenseManager` - Singleton service via `ApplicationManager.getService()`
+- `LicenseApiClient` - Async HTTP client using `HttpClient` with `CompletableFuture`
+- `LicenseStatusBarWidget` - Implements `StatusBarWidget` with `MultipleTextValuesPresentation`
+- `KarateAuthRestService` - Extends `RestService` for OAuth callback handling
+
+### GitHub OAuth Flow (IntelliJ)
+IntelliJ uses its built-in REST server for OAuth callbacks:
+1. Get port via `BuiltInServerManager.getInstance().getPort()`
+2. Build callback URL: `http://localhost:<port>/api/karate-debug/auth/callback`
+3. Pass callback in OAuth state: `state=intellij:<url_encoded_callback>`
+4. API server parses state and redirects to localhost callback
+5. `KarateAuthRestService.execute()` receives callback with `?code=xxx`
+
+### Auto-Expiring Notifications
+```java
+// Create notification with auto-expire
+Notification notification = NotificationGroupManager.getInstance()
+    .getNotificationGroup("Karate Debug")
+    .createNotification("Title", "Message", NotificationType.INFORMATION);
+
+// Auto-expire after delay
+Alarm alarm = new Alarm();
+alarm.addRequest(() -> notification.expire(), 5000);
+
+notification.notify(project);
+```
+
+### Notifications with Actions
+When notification has clickable actions, expire on action click:
+```java
+notification.addAction(new AnAction("Button Text") {
+    @Override
+    public void actionPerformed(@NotNull AnActionEvent e) {
+        // Do action
+        notification.expire();  // Close notification after action
+    }
+});
+```

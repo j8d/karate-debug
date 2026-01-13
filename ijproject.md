@@ -943,5 +943,68 @@ Update highlight to green, dispose old inlay
   - Only Debug option shown in gutter icons and tool window
   - Matches VS Code extension behavior for consistency
 
-**Remaining Phase 3 Tasks:**
-- License integration (port trial/subscription system from VS Code)
+### 2026-01-13: Licensing Integration Complete
+
+**Completed:**
+- Full licensing system ported from VS Code to IntelliJ
+- Anonymous trial flow (30 days, no login required)
+- GitHub OAuth authentication via IntelliJ's built-in REST server
+- License status bar widget showing trial days remaining
+- Trial expired blocking - debug sessions blocked when trial expires
+- Upgrade to Pro flow with Stripe checkout
+- Cross-platform API support (API server now handles both VS Code and IntelliJ callbacks)
+
+**Key Components:**
+- `LicenseManager` - Singleton service managing license state, API calls, GitHub OAuth
+- `LicenseApiClient` - HTTP client for karate-debug-api endpoints
+- `LicenseStatus` - Data class with status (trialing/active/expired/none), days remaining
+- `LicenseStatusBarWidget` - Status bar widget with dropdown menu (Sign In, Upgrade, Manage Subscription)
+- `KarateAuthRestService` - IntelliJ REST service handler for OAuth callback (`/api/karate-debug/auth/callback`)
+
+**Architecture:**
+```
+User clicks "Sign In with GitHub"
+        |
+        v
+LicenseManager.startGitHubLogin()
+        |
+        v
+Opens browser: github.com/login/oauth/authorize
+  with state=intellij:<localhost_callback_url>
+        |
+        v
+User authorizes -> GitHub redirects to karate-debug-api.vercel.app/api/auth/callback
+        |
+        v
+API parses state, sees "intellij:" prefix
+        |
+        v
+API redirects browser to localhost:<port>/api/karate-debug/auth/callback?code=xxx
+        |
+        v
+KarateAuthRestService receives callback, extracts code
+        |
+        v
+LicenseManager.handleAuthCallback(code) -> exchanges code for user info
+        |
+        v
+License validated, status bar updated
+```
+
+**API Server Updates:**
+- Updated `/api/auth/callback` to handle IntelliJ callbacks
+- Parses `state` parameter for `intellij:` prefix
+- Validates callback URL is localhost for security
+- Redirects to IntelliJ's local REST server with auth code
+
+**Key Fixes Applied:**
+1. Notifications auto-expire after 5 seconds (info/warning) or 10 seconds (errors)
+2. Trial expired notification stays visible until action clicked or manually closed
+3. Clicking "Purchase License" expires the notification and opens checkout
+4. After logout, re-checks anonymous trial status instead of showing "none"
+5. "Upgrade to Pro" silently starts GitHub login without warning message
+
+**Remaining Tasks:**
+- [ ] JetBrains Marketplace publishing setup
+- [ ] Cross-platform testing (Windows, Linux)
+- [ ] Documentation and README updates

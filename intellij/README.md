@@ -40,7 +40,7 @@ Full syntax highlighting for the Karate DSL, including Gherkin keywords, JSON/XM
 ## Requirements
 
 - **IntelliJ IDEA 2024.1+** (Community or Ultimate)
-- **Java 17+** (Java 21 recommended)
+- **Java 21+**
 - **Maven** project with Karate dependencies
 - Tests in `src/test/java` or `src/test/resources`
 
@@ -54,7 +54,7 @@ Configure the plugin via Settings > Tools > Karate Debug:
 | Available Environments | Comma-separated list of environments | `dev,qa,stage` |
 | Show Passing Matches | Highlight passing match statements during debug | `true` |
 | Show Failing Matches | Highlight failing match statements during debug | `true` |
-| Show Actual Values | Display actual values next to failing matches | `true` |
+| Show Actual Values | Display actual values next to failing matches with a [Fix] button to replace the expected value | `true` |
 
 ## Run Configuration
 
