@@ -119,10 +119,9 @@ public class KarateDebugProcess extends XDebugProcess {
 
     /**
      * Called when the debugger stops (breakpoint hit, step complete, etc.)
+     * The debug server logs detailed stop info including line and condition.
      */
     public void onStopped(int threadId, String reason) {
-        log("Stopped: " + reason);
-
         // Fetch stack trace and create suspend context
         dapClient.getStackTrace().thenAccept(response -> {
             ApplicationManager.getApplication().invokeLater(() -> {

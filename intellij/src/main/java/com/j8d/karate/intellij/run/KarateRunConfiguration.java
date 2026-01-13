@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Run configuration for Karate debug sessions.
+ * Only supports Debug mode - Run mode is not available.
  * Implements RunProfileWithCompileBeforeLaunchOption to enable the "Build" before-run task.
  */
 public class KarateRunConfiguration extends RunConfigurationBase<KarateRunConfigurationOptions>
@@ -69,6 +70,7 @@ public class KarateRunConfiguration extends RunConfigurationBase<KarateRunConfig
     @Override
     public @Nullable RunProfileState getState(@NotNull Executor executor,
                                                @NotNull ExecutionEnvironment environment) {
+        // Always return state - both Run and Debug will work (Run redirects to Debug)
         return new KarateRunProfileState(this, environment);
     }
 

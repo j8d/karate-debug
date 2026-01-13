@@ -1,10 +1,8 @@
 package com.j8d.karate.debug;
 
 import java.io.File;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,8 +43,11 @@ public class KarateDebugger implements RuntimeHook {
     private final String workspaceRoot;
     private final String karateEnv;
 
-    // Breakpoint management
-    private final Map<String, Set<Integer>> breakpoints = new ConcurrentHashMap<>();
+    /** Breakpoint info including line and optional condition */
+    public record BreakpointInfo(int line, String condition) {}
+
+    // Breakpoint management: file path -> (line -> breakpoint info)
+    private final Map<String, Map<Integer, BreakpointInfo>> breakpoints = new ConcurrentHashMap<>();
 
     // Execution state
     private String featurePath;
@@ -153,25 +154,31 @@ public class KarateDebugger implements RuntimeHook {
     }
 
     public JsonArray setBreakpoints(String sourcePath, JsonArray breakpointsArray) {
-        Set<Integer> lines = new HashSet<>();
+        Map<Integer, BreakpointInfo> breakpointMap = new ConcurrentHashMap<>();
         JsonArray result = new JsonArray();
 
         for (int i = 0; i < breakpointsArray.size(); i++) {
             JsonObject bp = breakpointsArray.get(i).getAsJsonObject();
             int line = bp.get("line").getAsInt();
-            lines.add(line);
+            String condition = bp.has("condition") ? bp.get("condition").getAsString() : null;
+
+            breakpointMap.put(line, new BreakpointInfo(line, condition));
 
             JsonObject verified = new JsonObject();
             verified.addProperty("verified", true);
             verified.addProperty("line", line);
             result.add(verified);
 
-            logger.trace("Set breakpoint at {}:{}", sourcePath, line);
+            if (condition != null && !condition.isEmpty()) {
+                logger.trace("Set conditional breakpoint at {}:{} with condition: {}", sourcePath, line, condition);
+            } else {
+                logger.trace("Set breakpoint at {}:{}", sourcePath, line);
+            }
         }
 
         String normalizedPath = normalizeSourcePath(sourcePath);
         logger.trace("Storing breakpoint with key: {}", normalizedPath);
-        breakpoints.put(normalizedPath, lines);
+        breakpoints.put(normalizedPath, breakpointMap);
         return result;
     }
 
@@ -343,35 +350,102 @@ public class KarateDebugger implements RuntimeHook {
         logger.trace("beforeStep: {}:{}", sourcePath, line);
 
         boolean shouldPause = false;
+        String pauseReason = "breakpoint";
+        String matchedCondition = null;
 
-        // Check for breakpoint
-        Set<Integer> fileBreakpoints = breakpoints.get(sourcePath);
-        if (fileBreakpoints != null && fileBreakpoints.contains(line)) {
-            logger.trace("Hit breakpoint at {}:{}", sourcePath, line);
-            shouldPause = true;
+        // Check for breakpoint (with optional condition)
+        Map<Integer, BreakpointInfo> fileBreakpoints = breakpoints.get(sourcePath);
+        if (fileBreakpoints != null) {
+            BreakpointInfo bp = fileBreakpoints.get(line);
+            if (bp != null) {
+                // Check if there's a condition
+                if (bp.condition() != null && !bp.condition().isEmpty()) {
+                    // Evaluate the condition
+                    if (evaluateBreakpointCondition(bp.condition())) {
+                        logger.trace("Conditional breakpoint at {}:{} evaluated to true", sourcePath, line);
+                        shouldPause = true;
+                        matchedCondition = bp.condition();
+                    } else {
+                        logger.trace("Conditional breakpoint at {}:{} evaluated to false, skipping", sourcePath, line);
+                    }
+                } else {
+                    // Unconditional breakpoint
+                    logger.trace("Hit breakpoint at {}:{}", sourcePath, line);
+                    shouldPause = true;
+                }
+            }
         }
 
         // Check step mode
         switch (stepMode) {
-            case STEP_IN -> shouldPause = true;
+            case STEP_IN -> {
+                shouldPause = true;
+                pauseReason = "step";
+            }
             case STEP_OVER -> {
                 if (getCallDepth() <= stepDepth) {
                     shouldPause = true;
+                    pauseReason = "step";
                 }
             }
             case STEP_OUT -> {
                 if (getCallDepth() < stepDepth) {
                     shouldPause = true;
+                    pauseReason = "step";
                 }
             }
             default -> { }
         }
 
         if (shouldPause && running) {
-            pauseExecution(step, "breakpoint");
+            pauseExecution(step, pauseReason, line, matchedCondition);
         }
 
         return true;
+    }
+
+    /**
+     * Evaluates a breakpoint condition expression.
+     * Returns true if the condition is met (breakpoint should trigger).
+     */
+    private boolean evaluateBreakpointCondition(String condition) {
+        if (currentRuntime == null) {
+            return true; // If no runtime, trigger the breakpoint
+        }
+
+        try {
+            // Evaluate the condition as a Karate expression
+            Variable result = currentRuntime.engine.evalKarateExpression(condition);
+
+            if (result == null || result.isNull()) {
+                return false;
+            }
+
+            Object value = result.getValue();
+
+            // Handle boolean results
+            if (value instanceof Boolean) {
+                return (Boolean) value;
+            }
+
+            // Handle numeric results (non-zero = true)
+            if (value instanceof Number) {
+                return ((Number) value).doubleValue() != 0;
+            }
+
+            // Handle string results (non-empty = true)
+            if (value instanceof String) {
+                return !((String) value).isEmpty();
+            }
+
+            // Any other non-null value is truthy
+            return true;
+
+        } catch (Exception e) {
+            logger.warn("Error evaluating breakpoint condition '{}': {}", condition, e.getMessage());
+            // On error, trigger the breakpoint so user can investigate
+            return true;
+        }
     }
 
     @Override
@@ -381,9 +455,18 @@ public class KarateDebugger implements RuntimeHook {
         }
     }
 
-    private void pauseExecution(Step step, String reason) {
+    private void pauseExecution(Step step, String reason, int line, String condition) {
         paused = true;
         pauseLatch = new CountDownLatch(1);
+
+        // Log informative message about why we stopped
+        if (condition != null && !condition.isEmpty()) {
+            logger.info("Stopped: breakpoint at line {}, condition: {} is true", line, condition);
+        } else if ("breakpoint".equals(reason)) {
+            logger.info("Stopped: breakpoint at line {}", line);
+        } else {
+            logger.info("Stopped: {} at line {}", reason, line);
+        }
 
         // Send stopped event to IDE
         JsonObject body = new JsonObject();

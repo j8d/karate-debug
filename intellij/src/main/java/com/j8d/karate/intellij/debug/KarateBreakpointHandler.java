@@ -1,6 +1,7 @@
 package com.j8d.karate.intellij.debug;
 
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.xdebugger.XExpression;
 import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.breakpoints.XBreakpointHandler;
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint;
@@ -9,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Handler for Karate breakpoints.
  * Manages adding/removing breakpoints in the DAP session.
+ * Supports conditional breakpoints via XExpression.
  */
 public class KarateBreakpointHandler extends XBreakpointHandler<XLineBreakpoint<KarateBreakpointProperties>> {
 
@@ -30,7 +32,14 @@ public class KarateBreakpointHandler extends XBreakpointHandler<XLineBreakpoint<
         String filePath = file.getPath();
         int line = breakpoint.getLine() + 1; // DAP uses 1-based lines
 
-        debugProcess.getDapClient().setBreakpoint(filePath, line);
+        // Get condition expression if set
+        String condition = null;
+        XExpression conditionExpression = breakpoint.getConditionExpression();
+        if (conditionExpression != null) {
+            condition = conditionExpression.getExpression();
+        }
+
+        debugProcess.getDapClient().setBreakpoint(filePath, line, condition);
     }
 
     @Override

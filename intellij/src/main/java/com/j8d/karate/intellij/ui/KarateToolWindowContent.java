@@ -1,12 +1,10 @@
 package com.j8d.karate.intellij.ui;
 
-import com.intellij.execution.ExecutionManager;
 import com.intellij.execution.Executor;
 import com.intellij.execution.ProgramRunnerUtil;
 import com.intellij.execution.RunManager;
 import com.intellij.execution.RunnerAndConfigurationSettings;
 import com.intellij.execution.executors.DefaultDebugExecutor;
-import com.intellij.execution.executors.DefaultRunExecutor;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.fileEditor.FileEditorManager;
@@ -182,16 +180,11 @@ public class KarateToolWindowContent {
         DefaultActionGroup group = new DefaultActionGroup();
 
         if (userObject instanceof FeatureFileNode || userObject instanceof ScenarioNode) {
-            group.add(new AnAction("Run", "Run this feature/scenario", AllIcons.Actions.Execute) {
-                @Override
-                public void actionPerformed(@NotNull AnActionEvent e) {
-                    runSelected(false);
-                }
-            });
+            // Only show Debug option for consistency with VS Code extension
             group.add(new AnAction("Debug", "Debug this feature/scenario", AllIcons.Actions.StartDebugger) {
                 @Override
                 public void actionPerformed(@NotNull AnActionEvent e) {
-                    runSelected(true);
+                    debugSelected();
                 }
             });
             group.addSeparator();
@@ -211,7 +204,7 @@ public class KarateToolWindowContent {
         popupMenu.getComponent().show(tree, x, y);
     }
 
-    private void runSelected(boolean debug) {
+    private void debugSelected() {
         TreePath selectionPath = tree.getSelectionPath();
         if (selectionPath == null) {
             return;
@@ -266,11 +259,8 @@ public class KarateToolWindowContent {
         runManager.addConfiguration(settings);
         runManager.setSelectedConfiguration(settings);
 
-        // Execute with appropriate executor
-        Executor executor = debug
-            ? DefaultDebugExecutor.getDebugExecutorInstance()
-            : DefaultRunExecutor.getRunExecutorInstance();
-
+        // Execute with debug executor
+        Executor executor = DefaultDebugExecutor.getDebugExecutorInstance();
         ProgramRunnerUtil.executeConfiguration(settings, executor);
     }
 

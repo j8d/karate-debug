@@ -27,11 +27,14 @@ public class KarateDapClient {
     private static final Logger LOG = Logger.getInstance(KarateDapClient.class);
     private static final String CONTENT_LENGTH = "Content-Length: ";
 
+    /** Breakpoint info including line and optional condition */
+    public record BreakpointInfo(int line, String condition) {}
+
     private final KarateDebugProcess debugProcess;
     private final Gson gson = new GsonBuilder().create();
     private final AtomicInteger requestSeq = new AtomicInteger(1);
     private final Map<Integer, CompletableFuture<JsonObject>> pendingRequests = new ConcurrentHashMap<>();
-    private final Map<String, Set<Integer>> breakpointsByFile = new ConcurrentHashMap<>();
+    private final Map<String, Map<Integer, BreakpointInfo>> breakpointsByFile = new ConcurrentHashMap<>();
 
     private Process serverProcess;
     private Socket socket;
@@ -476,8 +479,15 @@ public class KarateDapClient {
         sendRequest("continue", args);
     }
 
-    public void setBreakpoint(String filePath, int line) {
-        breakpointsByFile.computeIfAbsent(filePath, k -> ConcurrentHashMap.newKeySet()).add(line);
+    /**
+     * Set a breakpoint with an optional condition.
+     * @param filePath The file path
+     * @param line The line number (1-based)
+     * @param condition Optional condition expression (null for unconditional)
+     */
+    public void setBreakpoint(String filePath, int line, String condition) {
+        breakpointsByFile.computeIfAbsent(filePath, k -> new ConcurrentHashMap<>())
+            .put(line, new BreakpointInfo(line, condition));
 
         if (initialized.get()) {
             sendBreakpointsForFile(filePath);
@@ -489,10 +499,17 @@ public class KarateDapClient {
         }
     }
 
+    /**
+     * Set a breakpoint without a condition.
+     */
+    public void setBreakpoint(String filePath, int line) {
+        setBreakpoint(filePath, line, null);
+    }
+
     public void removeBreakpoint(String filePath, int line) {
-        Set<Integer> lines = breakpointsByFile.get(filePath);
-        if (lines != null) {
-            lines.remove(line);
+        Map<Integer, BreakpointInfo> breakpoints = breakpointsByFile.get(filePath);
+        if (breakpoints != null) {
+            breakpoints.remove(line);
             if (initialized.get()) {
                 sendBreakpointsForFile(filePath);
             }
@@ -513,7 +530,7 @@ public class KarateDapClient {
             return;
         }
 
-        Set<Integer> lines = breakpointsByFile.getOrDefault(filePath, Collections.emptySet());
+        Map<Integer, BreakpointInfo> breakpointsMap = breakpointsByFile.getOrDefault(filePath, Collections.emptyMap());
 
         JsonObject args = new JsonObject();
         JsonObject source = new JsonObject();
@@ -521,9 +538,12 @@ public class KarateDapClient {
         args.add("source", source);
 
         JsonArray breakpoints = new JsonArray();
-        for (int line : lines) {
+        for (BreakpointInfo info : breakpointsMap.values()) {
             JsonObject bp = new JsonObject();
-            bp.addProperty("line", line);
+            bp.addProperty("line", info.line());
+            if (info.condition() != null && !info.condition().isEmpty()) {
+                bp.addProperty("condition", info.condition());
+            }
             breakpoints.add(bp);
         }
         args.add("breakpoints", breakpoints);
@@ -573,6 +593,21 @@ public class KarateDapClient {
      */
     public CompletableFuture<JsonObject> evaluateMatch(String matchExpression) {
         return evaluate("match " + matchExpression, "repl");
+    }
+
+    /**
+     * Set a variable value (hot-swap).
+     * @param variablesReference The variables reference (scope ID)
+     * @param name The variable name
+     * @param value The new value as a string
+     * @return A future containing the result with "value" and "type" properties
+     */
+    public CompletableFuture<JsonObject> setVariable(int variablesReference, String name, String value) {
+        JsonObject args = new JsonObject();
+        args.addProperty("variablesReference", variablesReference);
+        args.addProperty("name", name);
+        args.addProperty("value", value);
+        return sendRequest("setVariable", args);
     }
 
     public void stop() {

@@ -288,6 +288,115 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
         mouseListeners.clear();
     }
 
+    // Regex to identify scenario/scenario outline start lines
+    private static final Pattern SCENARIO_START_REGEX = Pattern.compile(
+        "^\\s*(Scenario|Scenario Outline):\\s*.*$"
+    );
+
+    // Regex to identify Background start lines
+    private static final Pattern BACKGROUND_START_REGEX = Pattern.compile(
+        "^\\s*Background:\\s*$"
+    );
+
+    /**
+     * Represents the line range of a scenario (start inclusive, end inclusive).
+     */
+    private static class ScenarioRange {
+        final int startLine;  // 0-based, inclusive
+        final int endLine;    // 0-based, inclusive
+
+        ScenarioRange(int startLine, int endLine) {
+            this.startLine = startLine;
+            this.endLine = endLine;
+        }
+
+        boolean contains(int line) {
+            return line >= startLine && line <= endLine;
+        }
+    }
+
+    /**
+     * Find all scenario ranges in the document.
+     * A scenario starts at "Scenario:" or "Scenario Outline:" and ends
+     * when the next scenario starts or the file ends.
+     * Background sections are not treated as scenarios.
+     */
+    private List<ScenarioRange> findScenarioRanges(Document document) {
+        List<ScenarioRange> ranges = new ArrayList<>();
+        int lineCount = document.getLineCount();
+        int currentScenarioStart = -1;
+
+        for (int lineNum = 0; lineNum < lineCount; lineNum++) {
+            int startOffset = document.getLineStartOffset(lineNum);
+            int endOffset = document.getLineEndOffset(lineNum);
+            String lineText = document.getText(new TextRange(startOffset, endOffset));
+
+            if (SCENARIO_START_REGEX.matcher(lineText).matches()) {
+                // Close previous scenario if any
+                if (currentScenarioStart >= 0) {
+                    ranges.add(new ScenarioRange(currentScenarioStart, lineNum - 1));
+                }
+                currentScenarioStart = lineNum;
+            }
+        }
+
+        // Close the last scenario
+        if (currentScenarioStart >= 0) {
+            ranges.add(new ScenarioRange(currentScenarioStart, lineCount - 1));
+        }
+
+        return ranges;
+    }
+
+    /**
+     * Find the scenario range that contains the given line.
+     */
+    private ScenarioRange findScenarioForLine(List<ScenarioRange> ranges, int line) {
+        for (ScenarioRange range : ranges) {
+            if (range.contains(line)) {
+                return range;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get the current line number from the debugger stack trace (0-based).
+     * Returns -1 if unable to determine.
+     */
+    private int getCurrentDebugLine() {
+        try {
+            JsonObject stackTrace = dapClient.getStackTrace().get();
+            LOG.info("getCurrentDebugLine: stackTrace response = " + stackTrace);
+
+            // DAP response might have stackFrames directly or nested in body
+            com.google.gson.JsonArray frames = null;
+
+            if (stackTrace.has("stackFrames")) {
+                frames = stackTrace.getAsJsonArray("stackFrames");
+            } else if (stackTrace.has("body")) {
+                JsonObject body = stackTrace.getAsJsonObject("body");
+                if (body.has("stackFrames")) {
+                    frames = body.getAsJsonArray("stackFrames");
+                }
+            }
+
+            if (frames != null && !frames.isEmpty()) {
+                JsonObject topFrame = frames.get(0).getAsJsonObject();
+                LOG.info("getCurrentDebugLine: topFrame = " + topFrame);
+                if (topFrame.has("line")) {
+                    // DAP uses 1-based lines, convert to 0-based
+                    int line = topFrame.get("line").getAsInt() - 1;
+                    LOG.info("getCurrentDebugLine: returning line " + line);
+                    return line;
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("Error getting stack trace: " + e.getMessage(), e);
+        }
+        return -1;
+    }
+
     private void evaluateMatchStatements() {
         LOG.info("evaluateMatchStatements called, isEnabled=" + isEnabled());
         if (!isEnabled()) return;
@@ -321,6 +430,27 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
             int lineCount = document.getLineCount();
             LOG.info("evaluateMatchStatements: processing " + filePath + " with " + lineCount + " lines");
 
+            // Get the current debug line and find which scenario we're in
+            int currentLine = getCurrentDebugLine();
+            LOG.info("evaluateMatchStatements: current debug line=" + currentLine);
+
+            List<ScenarioRange> scenarioRanges = ReadAction.compute(() -> findScenarioRanges(document));
+            ScenarioRange currentScenario = findScenarioForLine(scenarioRanges, currentLine);
+
+            if (currentScenario == null) {
+                LOG.info("evaluateMatchStatements: not in a scenario, skipping diagnostics");
+                // Clear any existing diagnostics since we're not in a scenario
+                clearHighlightsForFile(filePath);
+                if (registry != null) {
+                    registry.clearFailuresForFile(filePath);
+                }
+                ApplicationManager.getApplication().invokeLater(() -> clearKarateInlays(editor));
+                return;
+            }
+
+            LOG.info("evaluateMatchStatements: current scenario range [" +
+                     currentScenario.startLine + ", " + currentScenario.endLine + "]");
+
             // Clear previous highlights for this file
             clearHighlightsForFile(filePath);
 
@@ -333,7 +463,8 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
             boolean showPassing = settings.isMatchDiagnosticsShowPassing();
             boolean showFailing = settings.isMatchDiagnosticsShowFailing();
 
-            for (int lineNum = 0; lineNum < lineCount; lineNum++) {
+            // Only process lines within the current scenario
+            for (int lineNum = currentScenario.startLine; lineNum <= currentScenario.endLine && lineNum < lineCount; lineNum++) {
                 int startOffset = document.getLineStartOffset(lineNum);
                 int endOffset = document.getLineEndOffset(lineNum);
                 String lineText = document.getText(new TextRange(startOffset, endOffset));

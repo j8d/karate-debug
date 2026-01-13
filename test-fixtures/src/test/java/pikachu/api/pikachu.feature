@@ -20,4 +20,4 @@ Feature: Pokemon API
     When method GET
     Then status 200
     And match response.name == 'charizard'
-    And match response.abilities == '#string'
+    And match response.abilities == '#array'

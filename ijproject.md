@@ -924,9 +924,24 @@ Update highlight to green, dispose old inlay
 4. `SimplifiedMessage` helper class returned from `simplifyErrorMessage()` includes both message and error flag
 5. RangeMarkers properly disposed when failures are cleared to prevent memory leaks
 
-**Next Steps (Phase 3):**
-- Variable modification (hot reload)
-- Expression evaluation
-- Step into/over/out improvements
-- Run without debugging
-- License integration
+**Phase 3 Progress (Advanced Features):**
+
+- [x] **Variable Modification (Hot-Swap)** - Implemented via `XValueModifier`:
+  - Added `setVariable` method to `KarateDapClient`
+  - `KarateVariable` now returns `XValueModifier` for primitive types
+  - Users can double-click variables in the debugger to edit values
+  - Changes are queued and applied on the Karate execution thread
+
+- [x] **Conditional Breakpoints** - Full support:
+  - Added `BreakpointInfo` record to store line + condition
+  - `KarateBreakpointHandler` extracts condition from `XExpression`
+  - `KarateDapClient` sends conditions in setBreakpoints request
+  - `KarateDebugger.beforeStep()` evaluates conditions before stopping
+  - Supports boolean, numeric (non-zero = true), and string (non-empty = true) results
+
+- [x] **Run without Debugging** - Suppressed:
+  - Only Debug option shown in gutter icons and tool window
+  - Matches VS Code extension behavior for consistency
+
+**Remaining Phase 3 Tasks:**
+- License integration (port trial/subscription system from VS Code)

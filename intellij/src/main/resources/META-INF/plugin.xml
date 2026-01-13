@@ -64,6 +64,10 @@
         <programRunner
             implementation="com.j8d.karate.intellij.debug.KarateDebugProgramRunner"/>
 
+        <!-- Run program runner - redirects to debug (Karate Debug is debug-only) -->
+        <programRunner
+            implementation="com.j8d.karate.intellij.run.KarateRunProgramRunner"/>
+
         <!-- XDebugger support -->
         <xdebugger.breakpointType
             implementation="com.j8d.karate.intellij.debug.KarateBreakpointType"/>
@@ -109,23 +113,17 @@
     </extensions>
 
     <actions>
-        <!-- Run/Debug actions for Karate features -->
-        <group id="KarateDebug.FeatureActions" 
-               text="Karate" 
+        <!-- Debug action for Karate features (no Run - debug only for consistency with VS Code) -->
+        <group id="KarateDebug.FeatureActions"
+               text="Karate"
                description="Karate Debug actions">
-            
-            <action id="KarateDebug.RunFeature"
-                    class="com.j8d.karate.intellij.actions.RunFeatureAction"
-                    text="Run Karate Feature"
-                    description="Run the current Karate feature file"
-                    icon="AllIcons.Actions.Execute"/>
-            
+
             <action id="KarateDebug.DebugFeature"
                     class="com.j8d.karate.intellij.actions.DebugFeatureAction"
                     text="Debug Karate Feature"
                     description="Debug the current Karate feature file"
                     icon="AllIcons.Actions.StartDebugger"/>
-            
+
             <add-to-group group-id="RunMenu" anchor="after" relative-to-action="RunClass"/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
         </group>
