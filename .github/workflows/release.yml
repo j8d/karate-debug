@@ -9,9 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  release-vscode:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,17 +29,20 @@ jobs:
 
       - name: Build debug-server JAR
         run: |
-          cd debug-server
+          cd shared/debug-server
           mvn clean package -q
-          cp target/karate-debug-server-1.0.0.jar ../resources/
+          cp target/karate-debug-server-1.0.0.jar ../../vscode/resources/
 
       - name: Install dependencies
+        working-directory: vscode
         run: npm ci
 
       - name: Compile TypeScript
+        working-directory: vscode
         run: npm run compile
 
       - name: Package extension
+        working-directory: vscode
         run: npx vsce package --no-dependencies
 
       - name: Get version from tag
@@ -47,12 +50,13 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Publish to VS Code Marketplace
+        working-directory: vscode
         run: npx vsce publish --no-dependencies -p ${{ secrets.AZUREPAT }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: '*.vsix'
+          files: 'vscode/*.vsix'
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

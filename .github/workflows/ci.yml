@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  build-vscode:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,22 +27,27 @@ jobs:
 
       - name: Build debug-server JAR
         run: |
-          cd debug-server
+          cd shared/debug-server
           mvn clean package -q
-          cp target/karate-debug-server-1.0.0.jar ../resources/
+          cp target/karate-debug-server-1.0.0.jar ../../vscode/resources/
 
       - name: Install dependencies
+        working-directory: vscode
         run: npm ci
 
       - name: Lint TypeScript
+        working-directory: vscode
         run: npm run lint
 
       - name: Run tests
+        working-directory: vscode
         run: xvfb-run -a npm test
 
       - name: Compile TypeScript
+        working-directory: vscode
         run: npm run compile
 
       - name: Package extension
+        working-directory: vscode
         run: npx vsce package --no-dependencies
 
