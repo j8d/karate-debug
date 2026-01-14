@@ -5,7 +5,6 @@ Feature: Pokemon API
     * url 'https://pokeapi.co/api/v2'
 
   Scenario: Get pokemon by name
-    * def timestamp = java.time.Instant.now().toString()
     Given path '/pokemon/pikachu'
     * print 'after path'
     When method GET
