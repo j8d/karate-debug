@@ -1005,7 +1005,12 @@ License validated, status bar updated
 5. "Upgrade to Pro" silently starts GitHub login without warning message
 
 **Remaining Tasks:**
-- [ ] JetBrains Marketplace publishing setup (see below)
+- [x] Plugin metadata and Gradle configuration complete
+- [x] All deprecated APIs fixed, Plugin Verifier passing
+- [ ] JetBrains Account & Vendor setup (manual step)
+- [ ] Generate signing certificates
+- [ ] Prepare listing assets (icon, screenshots)
+- [ ] First manual upload to JetBrains Marketplace
 - [ ] Cross-platform testing (Windows, Linux)
 - [ ] Documentation and README updates
 
@@ -1029,29 +1034,21 @@ JetBrains Marketplace is more rigorous than VS Code Marketplace:
 
 #### 2. Plugin Metadata (plugin.xml)
 Required fields to verify:
-- [ ] `id` - Unique plugin ID (e.g., `com.j8d.karate-debug`)
-- [ ] `name` - Display name
-- [ ] `version` - Semantic version
-- [ ] `vendor` - With email and URL
-- [ ] `description` - HTML description (min 40 chars)
-- [ ] `idea-version` - `since-build` and `until-build` attributes
-- [ ] `change-notes` - Release notes for this version
+- [x] `id` - Unique plugin ID: `com.j8d.karate-debug`
+- [x] `name` - Display name: "Karate Debug"
+- [x] `version` - Semantic version: 0.1.0
+- [x] `vendor` - With email and URL
+- [x] `description` - HTML description with comprehensive feature list
+- [x] `idea-version` - `since-build="242"` (2024.2), `until-build="253.*"` (2025.3)
+- [x] `change-notes` - Release notes for v0.1.0
 
 #### 3. Plugin Signing
-JetBrains requires signed plugins. Two options:
-1. **Self-managed certificates** - Generate certificate chain, configure in Gradle
-2. **Marketplace signing** - Let JetBrains sign (simpler for first release)
+JetBrains requires signed plugins. Configured in Gradle:
+- [x] Gradle signing configuration supports both env vars (CI) and file-based (local)
+- [ ] Generate certificate chain and private key
+- [ ] Test signing locally
 
-For self-managed signing, add to `build.gradle.kts`:
-```kotlin
-signPlugin {
-    certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
-    privateKey.set(System.getenv("PRIVATE_KEY"))
-    password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
-}
-```
-
-Generate certificate:
+For self-managed signing:
 ```bash
 # Generate private key
 openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:4096
@@ -1064,26 +1061,19 @@ openssl x509 -req -days 365 -in request.csr -signkey private.pem -out certificat
 ```
 
 #### 4. Gradle Publishing Configuration
-Add to `build.gradle.kts`:
-```kotlin
-publishPlugin {
-    token.set(System.getenv("PUBLISH_TOKEN"))
-    // channels.set(listOf("stable"))  // or "eap", "beta"
-}
-```
+- [x] Publishing token configured: `JETBRAINS_PUBLISH_TOKEN`
+- [ ] Obtain publish token from https://plugins.jetbrains.com/author/me/tokens
 
 #### 5. Plugin Verifier
-Run before publishing to check API compatibility:
-```bash
-./gradlew runPluginVerifier
-```
+- [x] Configured to verify against IC-2024.2.4, IC-2024.3.4, IC-2025.1.1
+- [x] All deprecated APIs fixed (0 deprecated warnings)
+- [x] All scheduled-for-removal APIs fixed
+- [x] Only experimental API warnings remain (Inlay Hints - acceptable)
 
-Configure in `build.gradle.kts`:
-```kotlin
-runPluginVerifier {
-    ideVersions.set(listOf("IC-2023.3", "IC-2024.1", "IC-2024.2", "IC-2024.3"))
-}
-```
+Verification status:
+- IC-2024.2.4: Compatible. 39 usages of experimental API
+- IC-2024.3.4: Compatible. 39 usages of experimental API
+- IC-2025.1.1: Compatible. 35 usages of experimental API
 
 #### 6. Listing Assets
 Prepare for marketplace listing:
@@ -1155,9 +1145,9 @@ jobs:
 ### Publishing Status
 - [ ] Account created
 - [ ] Vendor/org set up
-- [ ] Plugin metadata complete
-- [ ] Signing configured
-- [ ] Verifier passing
+- [x] Plugin metadata complete
+- [x] Signing configured (in Gradle, needs certificates)
+- [x] Verifier passing (0 deprecated, only experimental warnings)
 - [ ] Listing assets prepared
 - [ ] First manual upload done
 - [ ] Review approved
