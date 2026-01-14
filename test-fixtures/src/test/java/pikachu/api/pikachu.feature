@@ -8,9 +8,9 @@ Feature: Pokemon API
     Given path '/pokemon/pikachu'
     When method GET
     Then status 200
-    And match response.name == 'pikachu'
-    And match response.id == 25
-    And match response.types == '#array'
+    And match response.name == 'charizard'
+    And match response.id == 67
+    And match response.types == '#string'
 
   Scenario: Get pokemon abilities
     Given path '/pokemon/charizard'
