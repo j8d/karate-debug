@@ -83,6 +83,15 @@ intellijPlatform {
             </ol>
 
             <p>Requires Java 17+ and a Karate project with Maven or Gradle.</p>
+
+            <h3>Resources</h3>
+            <ul>
+                <li><a href="https://karatedebug.com">Website</a> - Documentation and getting started guides</li>
+                <li><a href="https://karatedebug.com/?contact=bug">Report a Bug</a></li>
+                <li><a href="https://karatedebug.com/?contact=feature">Request a Feature</a></li>
+                <li><a href="https://karatedebug.com/?contact=general">Contact Us</a></li>
+                <li><a href="https://karatedebug.com/license">License</a> - End User License Agreement</li>
+            </ul>
         """.trimIndent()
 
         changeNotes = """

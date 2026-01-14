@@ -1,4 +1,4 @@
-<idea-plugin>
+<idea-plugin url="https://karatedebug.com">
     <id>com.j8d.karate-debug</id>
     <name>Karate Debug</name>
     <vendor email="ryan@karatedebug.com" url="https://karatedebug.com">j8d</vendor>
