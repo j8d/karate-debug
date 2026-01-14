@@ -57,7 +57,7 @@ intellijPlatform {
         }
 
         description = """
-            <p>Debug <a href="https://karatelabs.github.io/karate/">Karate</a> API tests with full breakpoint support,
+            <p>Debug Karate API tests with full breakpoint support,
             step-through debugging, variable inspection, and real-time match diagnostics.</p>
 
             <h3>Features</h3>
@@ -67,7 +67,7 @@ intellijPlatform {
                 <li><b>Match Diagnostics</b> - See pass/fail highlights on match statements with actual values inline</li>
                 <li><b>Quick Fixes</b> - One-click fixes to update expected values from actual results</li>
                 <li><b>Conditional Breakpoints</b> - Set conditions on breakpoints using JavaScript expressions</li>
-                <li><b>Gutter Icons</b> - Run/debug individual features or scenarios from the editor</li>
+                <li><b>Gutter Icons</b> - Debug individual features or scenarios from the editor</li>
                 <li><b>Feature Explorer</b> - Browse and run tests from the Karate tool window</li>
                 <li><b>Project Auto-Detection</b> - Automatically detects Maven/Gradle Karate projects</li>
                 <li><b>Environment Switching</b> - Quick switch between Karate environments</li>
@@ -106,7 +106,7 @@ intellijPlatform {
                 <li>Match diagnostics with pass/fail highlighting</li>
                 <li>Inlay hints showing actual values for failed matches</li>
                 <li>Quick fix buttons to update expected values</li>
-                <li>Gutter icons for running and debugging scenarios</li>
+                <li>Gutter icons for debugging scenarios</li>
                 <li>Karate tool window with feature explorer</li>
                 <li>Project auto-detection for Maven and Gradle</li>
                 <li>Environment and log level switching</li>
