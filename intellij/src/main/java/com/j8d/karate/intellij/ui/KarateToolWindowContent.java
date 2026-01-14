@@ -426,7 +426,8 @@ public class KarateToolWindowContent {
                 append(" - " + feature.getFile().getName(), SimpleTextAttributes.GRAYED_ATTRIBUTES);
             } else if (userObject instanceof ScenarioNode) {
                 ScenarioNode scenario = (ScenarioNode) userObject;
-                setIcon(scenario.isOutline() ? AllIcons.Nodes.TestGroup : AllIcons.Nodes.Test);
+                // Use green run icons instead of test icons (which can appear red/warning)
+                setIcon(scenario.isOutline() ? AllIcons.RunConfigurations.TestState.Run_run : AllIcons.RunConfigurations.TestState.Run);
                 append(scenario.getName(), SimpleTextAttributes.REGULAR_ATTRIBUTES);
                 append(" :" + (scenario.getLine() + 1), SimpleTextAttributes.GRAYED_ATTRIBUTES);
             } else {

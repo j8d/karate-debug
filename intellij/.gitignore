@@ -19,3 +19,7 @@ private.pem
 *.p12
 *.jks
 
+
+# Signing certificates
+private.pem
+chain.crt

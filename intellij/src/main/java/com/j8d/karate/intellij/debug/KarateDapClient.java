@@ -87,6 +87,11 @@ public class KarateDapClient {
         // Start the debug server
         List<String> command = new ArrayList<>();
         command.add(javaPath);
+        // Suppress GraalJS/Truffle deprecated Unsafe API warnings
+        command.add("--add-opens=java.base/java.nio=ALL-UNNAMED");
+        command.add("--add-opens=java.base/sun.nio.ch=ALL-UNNAMED");
+        command.add("-XX:+EnableDynamicAgentLoading");
+        command.add("-Dpolyglot.engine.WarnInterpreterOnly=false");
         command.add("-cp");
         command.add(classpath);
         command.add("com.j8d.karate.debug.DebugServer");
@@ -114,6 +119,13 @@ public class KarateDapClient {
                     new InputStreamReader(serverProcess.getInputStream()))) {
                 String line;
                 while ((line = br.readLine()) != null) {
+                    // Filter out GraalJS/Truffle deprecated API warnings
+                    if (line.startsWith("WARNING:") &&
+                        (line.contains("sun.misc.Unsafe") ||
+                         line.contains("terminally deprecated") ||
+                         line.contains("truffle"))) {
+                        continue;
+                    }
                     debugProcess.log(line);
                 }
             } catch (IOException e) {
