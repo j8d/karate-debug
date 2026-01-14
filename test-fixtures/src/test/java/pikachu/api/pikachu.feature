@@ -7,7 +7,6 @@ Feature: Pokemon API
   Scenario: Get pokemon by name
     Given path '/pokemon/pikachu'
     When method GET
-    * print 'after GET'
     Then status 200
     And match response.name == 'pikachu'
     And match response.id == 25
