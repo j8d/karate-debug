@@ -5,7 +5,8 @@ Feature: Pokemon API
     * url 'https://pokeapi.co/api/v2'
 
   Scenario: Get pokemon by name
-    Given path '/pokemon/pikachu'
+    Given url 'https://pokeapi.co/api/v2'
+    And path '/pokemon/pikachu'
     When method GET
     Then status 200
     And match response.name == 'charizard'
