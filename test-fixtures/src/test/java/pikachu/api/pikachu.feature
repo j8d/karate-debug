@@ -14,7 +14,8 @@ Feature: Pokemon API
     And match response.types == '#string'
 
   Scenario: Get pokemon abilities
-    Given path '/pokemon/charizard'
+    Given url 'https://pokeapi.co/api/v2'
+    And path '/pokemon/charizard'
     When method GET
     Then status 200
     And match response.name == 'charizard'
