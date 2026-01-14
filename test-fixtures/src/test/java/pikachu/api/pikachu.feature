@@ -6,7 +6,6 @@ Feature: Pokemon API
 
   Scenario: Get pokemon by name
     Given path '/pokemon/pikachu'
-    * print 'after path'
     When method GET
     * print 'after GET'
     Then status 200
