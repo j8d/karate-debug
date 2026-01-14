@@ -38,8 +38,11 @@ public class KarateEnvironmentWidget extends EditorBasedWidget implements Status
 
     @Override
     public void dispose() {
-        KarateProjectService.getInstance(myProject).removeDetectionListener(updateListener);
-        KarateProjectSettings.getInstance(myProject).removeChangeListener(updateListener);
+        Project project = getProject();
+        if (project != null && !project.isDisposed()) {
+            KarateProjectService.getInstance(project).removeDetectionListener(updateListener);
+            KarateProjectSettings.getInstance(project).removeChangeListener(updateListener);
+        }
         super.dispose();
     }
     
@@ -65,9 +68,10 @@ public class KarateEnvironmentWidget extends EditorBasedWidget implements Status
     
     @Override
     public @Nullable("null means the widget is unable to show the popup") ListPopup getPopup() {
-        if (myProject.isDisposed()) return null;
-        
-        KarateProjectSettings settings = KarateProjectSettings.getInstance(myProject);
+        Project project = getProject();
+        if (project == null || project.isDisposed()) return null;
+
+        KarateProjectSettings settings = KarateProjectSettings.getInstance(project);
         List<String> environments = settings.getEnvironmentsList();
         
         BaseListPopupStep<String> step = new BaseListPopupStep<>("Select Environment", environments) {
@@ -91,15 +95,16 @@ public class KarateEnvironmentWidget extends EditorBasedWidget implements Status
     
     @Override
     public @Nullable @NonNls String getSelectedValue() {
-        if (myProject.isDisposed()) return null;
+        Project project = getProject();
+        if (project == null || project.isDisposed()) return null;
 
         // Only show for Karate projects
-        KarateProjectService service = KarateProjectService.getInstance(myProject);
+        KarateProjectService service = KarateProjectService.getInstance(project);
         if (!service.isKarateProject()) {
             return null; // Hides the widget
         }
 
-        KarateProjectSettings settings = KarateProjectSettings.getInstance(myProject);
+        KarateProjectSettings settings = KarateProjectSettings.getInstance(project);
         return "Env: " + settings.getEffectiveEnvironment();
     }
     

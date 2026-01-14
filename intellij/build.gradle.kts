@@ -50,35 +50,62 @@ intellijPlatform {
     pluginConfiguration {
         name = providers.gradleProperty("pluginName")
         version = providers.gradleProperty("pluginVersion")
-        
+
         ideaVersion {
-            sinceBuild = "251"    // IntelliJ 2025.1 (minimum supported)
-            untilBuild = "253.*"  // IntelliJ 2025.3 (allow future versions)
+            sinceBuild = "242"    // IntelliJ 2024.2 (minimum supported)
+            untilBuild = "253.*"  // IntelliJ 2025.3 (allow future patch versions)
         }
-        
+
         description = """
-            Debug Karate API tests with breakpoints, step-through debugging, and an integrated test explorer.
-            
+            <p>Debug <a href="https://karatelabs.github.io/karate/">Karate</a> API tests with full breakpoint support,
+            step-through debugging, variable inspection, and real-time match diagnostics.</p>
+
             <h3>Features</h3>
             <ul>
-                <li>Breakpoint debugging for .feature files</li>
-                <li>Step-through debugging (step over, step into, step out)</li>
-                <li>Variable inspection and modification</li>
-                <li>Gutter icons for running and debugging scenarios</li>
-                <li>Karate project auto-detection</li>
-                <li>Environment switching</li>
+                <li><b>Breakpoint Debugging</b> - Set breakpoints in .feature files and step through your tests</li>
+                <li><b>Variable Inspection</b> - View and modify variables during debug sessions</li>
+                <li><b>Match Diagnostics</b> - See pass/fail highlights on match statements with actual values inline</li>
+                <li><b>Quick Fixes</b> - One-click fixes to update expected values from actual results</li>
+                <li><b>Conditional Breakpoints</b> - Set conditions on breakpoints using JavaScript expressions</li>
+                <li><b>Gutter Icons</b> - Run/debug individual features or scenarios from the editor</li>
+                <li><b>Feature Explorer</b> - Browse and run tests from the Karate tool window</li>
+                <li><b>Project Auto-Detection</b> - Automatically detects Maven/Gradle Karate projects</li>
+                <li><b>Environment Switching</b> - Quick switch between Karate environments</li>
+                <li><b>Syntax Highlighting</b> - Full syntax highlighting for Karate feature files</li>
             </ul>
+
+            <h3>Getting Started</h3>
+            <ol>
+                <li>Open a project containing Karate tests</li>
+                <li>Open a .feature file</li>
+                <li>Set breakpoints by clicking in the gutter</li>
+                <li>Click the debug icon in the gutter or use the Karate tool window</li>
+            </ol>
+
+            <p>Requires Java 17+ and a Karate project with Maven or Gradle.</p>
         """.trimIndent()
-        
+
         changeNotes = """
             <h3>0.1.0</h3>
             <ul>
                 <li>Initial IntelliJ plugin release</li>
-                <li>Basic debugging support</li>
-                <li>Gutter icons for run/debug</li>
+                <li>Breakpoint debugging for Karate feature files</li>
+                <li>Step-through debugging (step over, step into, step out, continue)</li>
+                <li>Variable inspection with expandable tree view</li>
+                <li>Variable modification during debug sessions</li>
+                <li>Conditional breakpoints with JavaScript expressions</li>
+                <li>Match diagnostics with pass/fail highlighting</li>
+                <li>Inlay hints showing actual values for failed matches</li>
+                <li>Quick fix buttons to update expected values</li>
+                <li>Gutter icons for running and debugging scenarios</li>
+                <li>Karate tool window with feature explorer</li>
+                <li>Project auto-detection for Maven and Gradle</li>
+                <li>Environment and log level switching</li>
+                <li>Full syntax highlighting for Karate feature files</li>
+                <li>30-day trial with optional GitHub sign-in</li>
             </ul>
         """.trimIndent()
-        
+
         vendor {
             name = "j8d"
             email = "ryan@karatedebug.com"
@@ -87,19 +114,42 @@ intellijPlatform {
     }
     
     signing {
-        // Certificate and private key for plugin signing (optional, for marketplace)
-        // certificateChain = providers.fileContents(layout.projectDirectory.file("chain.crt")).asText
-        // privateKey = providers.fileContents(layout.projectDirectory.file("private.pem")).asText
-        // password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+        // Plugin signing for JetBrains Marketplace
+        // For CI: set CERTIFICATE_CHAIN, PRIVATE_KEY, PRIVATE_KEY_PASSWORD env vars
+        // For local: create chain.crt and private.pem files in intellij/ directory
+        val certChainEnv = providers.environmentVariable("CERTIFICATE_CHAIN")
+        val privateKeyEnv = providers.environmentVariable("PRIVATE_KEY")
+        val passwordEnv = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+
+        if (certChainEnv.isPresent && privateKeyEnv.isPresent) {
+            certificateChain.set(certChainEnv)
+            privateKey.set(privateKeyEnv)
+            password.set(passwordEnv)
+        } else {
+            // Try file-based signing for local development
+            val chainFile = layout.projectDirectory.file("chain.crt")
+            val keyFile = layout.projectDirectory.file("private.pem")
+            if (chainFile.asFile.exists() && keyFile.asFile.exists()) {
+                certificateChain.set(providers.fileContents(chainFile).asText)
+                privateKey.set(providers.fileContents(keyFile).asText)
+                password.set(passwordEnv)
+            }
+        }
     }
-    
+
     publishing {
-        token = providers.environmentVariable("JETBRAINS_TOKEN")
+        // Publish token from JetBrains Marketplace account
+        // Generate at: https://plugins.jetbrains.com/author/me/tokens
+        token.set(providers.environmentVariable("JETBRAINS_PUBLISH_TOKEN"))
     }
     
     pluginVerification {
         ides {
-            recommended()
+            // Verify against specific IDE versions we want to support
+            // 2024.2 (242), 2024.3 (243), 2025.1 (251)
+            ide("IC", "2024.2.4")
+            ide("IC", "2024.3.4")
+            ide("IC", "2025.1.1")
         }
     }
 }

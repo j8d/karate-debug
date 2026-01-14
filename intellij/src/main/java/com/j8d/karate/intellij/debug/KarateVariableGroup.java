@@ -3,6 +3,7 @@ package com.j8d.karate.intellij.debug;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.intellij.icons.AllIcons;
+import com.intellij.xdebugger.XExpression;
 import com.intellij.xdebugger.frame.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -156,7 +157,8 @@ class KarateVariable extends XNamedValue {
     private class KarateVariableModifier extends XValueModifier {
 
         @Override
-        public void setValue(@NotNull String newValue, @NotNull XModificationCallback callback) {
+        public void setValue(@NotNull XExpression expression, @NotNull XModificationCallback callback) {
+            String newValue = expression.getExpression();
             debugProcess.getDapClient()
                 .setVariable(parentVariablesReference, getName(), newValue)
                 .thenAccept(response -> {

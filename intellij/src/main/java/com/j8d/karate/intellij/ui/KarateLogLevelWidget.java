@@ -39,38 +39,42 @@ public class KarateLogLevelWidget extends EditorBasedWidget implements StatusBar
 
     @Override
     public void dispose() {
-        KarateProjectService.getInstance(myProject).removeDetectionListener(updateListener);
-        KarateProjectSettings.getInstance(myProject).removeChangeListener(updateListener);
+        Project project = getProject();
+        if (project != null && !project.isDisposed()) {
+            KarateProjectService.getInstance(project).removeDetectionListener(updateListener);
+            KarateProjectSettings.getInstance(project).removeChangeListener(updateListener);
+        }
         super.dispose();
     }
-    
+
     @Override
     public @NonNls @NotNull String ID() {
         return ID;
     }
-    
+
     @Override
     public @Nullable WidgetPresentation getPresentation() {
         return this;
     }
-    
+
     @Override
     public @Nullable String getTooltipText() {
         return "Karate log level (click to change)";
     }
-    
+
     @Override
     public @Nullable Consumer<MouseEvent> getClickConsumer() {
         return null; // Using popup instead
     }
-    
+
     @Override
     public @Nullable("null means the widget is unable to show the popup") ListPopup getPopup() {
-        if (myProject.isDisposed()) return null;
-        
-        KarateProjectSettings settings = KarateProjectSettings.getInstance(myProject);
+        Project project = getProject();
+        if (project == null || project.isDisposed()) return null;
+
+        KarateProjectSettings settings = KarateProjectSettings.getInstance(project);
         List<String> levels = Arrays.asList(KarateProjectSettings.LOG_LEVELS);
-        
+
         BaseListPopupStep<String> step = new BaseListPopupStep<>("Select Log Level", levels) {
             @Override
             public @Nullable PopupStep<?> onChosen(String selectedValue, boolean finalChoice) {
@@ -80,27 +84,28 @@ public class KarateLogLevelWidget extends EditorBasedWidget implements StatusBar
                 }
                 return FINAL_CHOICE;
             }
-            
+
             @Override
             public boolean isSpeedSearchEnabled() {
                 return true;
             }
         };
-        
+
         return JBPopupFactory.getInstance().createListPopup(step);
     }
-    
+
     @Override
     public @Nullable @NonNls String getSelectedValue() {
-        if (myProject.isDisposed()) return null;
+        Project project = getProject();
+        if (project == null || project.isDisposed()) return null;
 
         // Only show for Karate projects
-        KarateProjectService service = KarateProjectService.getInstance(myProject);
+        KarateProjectService service = KarateProjectService.getInstance(project);
         if (!service.isKarateProject()) {
             return null; // Hides the widget
         }
 
-        KarateProjectSettings settings = KarateProjectSettings.getInstance(myProject);
+        KarateProjectSettings settings = KarateProjectSettings.getInstance(project);
         return "Log: " + settings.getEffectiveLogLevel();
     }
     

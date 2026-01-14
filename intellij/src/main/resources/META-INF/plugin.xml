@@ -1,5 +1,5 @@
 <idea-plugin>
-    <id>com.j8d.karate.intellij</id>
+    <id>com.j8d.karate-debug</id>
     <name>Karate Debug</name>
     <vendor email="ryan@karatedebug.com" url="https://karatedebug.com">j8d</vendor>
 

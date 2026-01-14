@@ -1005,6 +1005,160 @@ License validated, status bar updated
 5. "Upgrade to Pro" silently starts GitHub login without warning message
 
 **Remaining Tasks:**
-- [ ] JetBrains Marketplace publishing setup
+- [ ] JetBrains Marketplace publishing setup (see below)
 - [ ] Cross-platform testing (Windows, Linux)
 - [ ] Documentation and README updates
+
+---
+
+## JetBrains Marketplace Publishing
+
+### Overview
+JetBrains Marketplace is more rigorous than VS Code Marketplace:
+- **Signing required** - Cryptographic signing of plugins is mandatory
+- **Manual first publish** - First upload must go through web UI + human review
+- **Compatibility verification** - Must run Plugin Verifier against target IDE versions
+- **Stricter metadata** - More complete listing expected (descriptions, screenshots, change notes)
+
+### Publishing Checklist
+
+#### 1. JetBrains Account & Vendor Setup
+- [ ] Create JetBrains Account at https://account.jetbrains.com
+- [ ] Set up vendor/organization at https://plugins.jetbrains.com/author/me
+- [ ] Decide: personal vendor vs organization (org recommended for paid plugins)
+
+#### 2. Plugin Metadata (plugin.xml)
+Required fields to verify:
+- [ ] `id` - Unique plugin ID (e.g., `com.j8d.karate-debug`)
+- [ ] `name` - Display name
+- [ ] `version` - Semantic version
+- [ ] `vendor` - With email and URL
+- [ ] `description` - HTML description (min 40 chars)
+- [ ] `idea-version` - `since-build` and `until-build` attributes
+- [ ] `change-notes` - Release notes for this version
+
+#### 3. Plugin Signing
+JetBrains requires signed plugins. Two options:
+1. **Self-managed certificates** - Generate certificate chain, configure in Gradle
+2. **Marketplace signing** - Let JetBrains sign (simpler for first release)
+
+For self-managed signing, add to `build.gradle.kts`:
+```kotlin
+signPlugin {
+    certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
+    privateKey.set(System.getenv("PRIVATE_KEY"))
+    password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
+}
+```
+
+Generate certificate:
+```bash
+# Generate private key
+openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:4096
+
+# Generate certificate signing request
+openssl req -new -key private.pem -out request.csr
+
+# Self-sign (or use JetBrains CA)
+openssl x509 -req -days 365 -in request.csr -signkey private.pem -out certificate.crt
+```
+
+#### 4. Gradle Publishing Configuration
+Add to `build.gradle.kts`:
+```kotlin
+publishPlugin {
+    token.set(System.getenv("PUBLISH_TOKEN"))
+    // channels.set(listOf("stable"))  // or "eap", "beta"
+}
+```
+
+#### 5. Plugin Verifier
+Run before publishing to check API compatibility:
+```bash
+./gradlew runPluginVerifier
+```
+
+Configure in `build.gradle.kts`:
+```kotlin
+runPluginVerifier {
+    ideVersions.set(listOf("IC-2023.3", "IC-2024.1", "IC-2024.2", "IC-2024.3"))
+}
+```
+
+#### 6. Listing Assets
+Prepare for marketplace listing:
+- [ ] Plugin icon (40x40 PNG, included in plugin.xml)
+- [ ] Screenshots/GIFs showing key features
+- [ ] Full description with feature list
+- [ ] Documentation link
+- [ ] Source repository link (optional)
+- [ ] License information
+- [ ] Privacy policy (if collecting data)
+- [ ] Support contact
+
+#### 7. Build & Publish Commands
+```bash
+# Build plugin ZIP
+./gradlew buildPlugin
+# Output: build/distributions/karate-debug-intellij-<version>.zip
+
+# Test locally
+./gradlew runIde
+
+# Run verifier
+./gradlew runPluginVerifier
+
+# Sign plugin (if configured)
+./gradlew signPlugin
+
+# Publish to marketplace (after first manual upload)
+export PUBLISH_TOKEN=<your-token>
+./gradlew publishPlugin
+```
+
+#### 8. First Publish (Manual)
+1. Go to https://plugins.jetbrains.com/plugin/add
+2. Upload the signed ZIP from `build/distributions/`
+3. Fill in listing details
+4. Submit for review
+5. Wait for JetBrains approval (can take 1-3 business days)
+
+#### 9. CI/CD Automation (GitHub Actions)
+After first manual publish, automate subsequent releases:
+```yaml
+# .github/workflows/intellij-release.yml
+name: IntelliJ Plugin Release
+on:
+  push:
+    tags:
+      - 'intellij-v*'
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Build and Publish
+        env:
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+          CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+        run: |
+          cd intellij
+          ./gradlew buildPlugin runPluginVerifier signPlugin publishPlugin
+```
+
+### Publishing Status
+- [ ] Account created
+- [ ] Vendor/org set up
+- [ ] Plugin metadata complete
+- [ ] Signing configured
+- [ ] Verifier passing
+- [ ] Listing assets prepared
+- [ ] First manual upload done
+- [ ] Review approved
+- [ ] CI/CD automation configured

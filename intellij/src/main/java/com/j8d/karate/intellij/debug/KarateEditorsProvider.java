@@ -5,6 +5,7 @@ import com.intellij.openapi.editor.EditorFactory;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.fileTypes.PlainTextFileType;
 import com.intellij.openapi.project.Project;
+import com.intellij.xdebugger.XExpression;
 import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.evaluation.EvaluationMode;
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
@@ -25,10 +26,10 @@ public class KarateEditorsProvider extends XDebuggerEditorsProvider {
 
     @Override
     public @NotNull Document createDocument(@NotNull Project project,
-                                             @NotNull String text,
+                                             @NotNull XExpression expression,
                                              @Nullable XSourcePosition sourcePosition,
                                              @NotNull EvaluationMode mode) {
-        return EditorFactory.getInstance().createDocument(text);
+        return EditorFactory.getInstance().createDocument(expression.getExpression());
     }
 }
 

@@ -1,8 +1,10 @@
 package com.j8d.karate.intellij.run;
 
+import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.options.SettingsEditor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.TextBrowseFolderListener;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.FormBuilder;
@@ -14,20 +16,18 @@ import javax.swing.*;
  * Settings editor for Karate run configurations.
  */
 public class KarateRunConfigurationEditor extends SettingsEditor<KarateRunConfiguration> {
-    
+
     private final JPanel panel;
     private final TextFieldWithBrowseButton featureFileField;
     private final JBTextField scenarioNameField;
     private final JBTextField karateEnvField;
-    
+
     public KarateRunConfigurationEditor(Project project) {
         featureFileField = new TextFieldWithBrowseButton();
-        featureFileField.addBrowseFolderListener(
-            project,
-            FileChooserDescriptorFactory.createSingleFileDescriptor("feature")
+        FileChooserDescriptor descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor("feature")
                 .withTitle("Select Feature File")
-                .withDescription("Select the Karate feature file to run")
-        );
+                .withDescription("Select the Karate feature file to run");
+        featureFileField.addBrowseFolderListener(new TextBrowseFolderListener(descriptor, project));
         
         scenarioNameField = new JBTextField();
         karateEnvField = new JBTextField();

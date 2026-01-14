@@ -416,8 +416,12 @@ public final class LicenseManager {
 
             // Auto-expire after 5 seconds for info/warning, 10 seconds for errors
             int expireMs = type == NotificationType.ERROR ? 10000 : 5000;
-            com.intellij.util.Alarm alarm = new com.intellij.util.Alarm();
-            alarm.addRequest(() -> notification.expire(), expireMs);
+            com.intellij.openapi.Disposable disposable = com.intellij.openapi.util.Disposer.newDisposable("notification-alarm");
+            com.intellij.util.Alarm alarm = new com.intellij.util.Alarm(disposable);
+            alarm.addRequest(() -> {
+                notification.expire();
+                com.intellij.openapi.util.Disposer.dispose(disposable);
+            }, expireMs);
 
             notification.notify(project);
         });

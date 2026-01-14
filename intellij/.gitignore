@@ -13,3 +13,9 @@ build/
 # Build outputs
 out/
 
+# Plugin signing (never commit these!)
+chain.crt
+private.pem
+*.p12
+*.jks
+

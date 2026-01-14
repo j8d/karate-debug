@@ -2,6 +2,7 @@ package com.j8d.karate.intellij.debug;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.xdebugger.breakpoints.XLineBreakpoint;
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType;
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +35,8 @@ public class KarateBreakpointType extends XLineBreakpointType<KarateBreakpointPr
     }
 
     @Override
-    public @Nullable XDebuggerEditorsProvider getEditorsProvider() {
+    public @Nullable XDebuggerEditorsProvider getEditorsProvider(@NotNull XLineBreakpoint<KarateBreakpointProperties> breakpoint,
+                                                                  @NotNull Project project) {
         // Return our editors provider to enable the condition field in the breakpoint dialog
         return new KarateEditorsProvider();
     }
