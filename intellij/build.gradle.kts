@@ -95,6 +95,13 @@ intellijPlatform {
         """.trimIndent()
 
         changeNotes = """
+            <h3>0.1.1</h3>
+            <ul>
+                <li>Fix deprecated API usage for better compatibility</li>
+                <li>Suppress GraalJS/Truffle warnings in debug console</li>
+                <li>Improve Feature Explorer icons</li>
+            </ul>
+
             <h3>0.1.0</h3>
             <ul>
                 <li>Initial IntelliJ plugin release</li>
