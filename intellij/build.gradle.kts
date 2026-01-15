@@ -95,6 +95,11 @@ intellijPlatform {
         """.trimIndent()
 
         changeNotes = """
+            <h3>0.1.2</h3>
+            <ul>
+                <li>Restrict plugin to IntelliJ IDEA only (exclude Android Studio, Aqua)</li>
+            </ul>
+
             <h3>0.1.1</h3>
             <ul>
                 <li>Fix deprecated API usage for better compatibility</li>
