@@ -100,6 +100,8 @@ intellijPlatform {
                 <li>Fix deprecated API usage for better compatibility</li>
                 <li>Suppress GraalJS/Truffle warnings in debug console</li>
                 <li>Improve Feature Explorer icons</li>
+                <li>Hide [Fix] button for undefined variable errors</li>
+                <li>Add one-time pro tip explaining fixes require re-run</li>
             </ul>
 
             <h3>0.1.0</h3>

@@ -2,7 +2,12 @@ package com.j8d.karate.intellij.debug;
 
 import com.google.gson.JsonObject;
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
+import com.intellij.ide.util.PropertiesComponent;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
 import com.intellij.openapi.Disposable;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.diagnostic.Logger;
@@ -70,6 +75,9 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
         new Color(255, 0, 0, 40),  // Light theme: red
         new Color(255, 0, 0, 60)   // Dark theme: red
     );
+
+    // Property key for "don't show again" pro tip
+    private static final String FIX_TIP_SHOWN_KEY = "karate.debug.fix.tip.shown";
 
     public MatchDiagnosticsService(Project project, KarateDapClient dapClient) {
         this.project = project;
@@ -845,6 +853,7 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
             // Update the line highlight to green (passing)
             if (service != null) {
                 service.updateLineHighlightToPassing(editor, lineNumber);
+                service.showFixProTipOnce();
             }
         }
 
@@ -1148,6 +1157,36 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
                 }
             }
         });
+    }
+
+    /**
+     * Show a one-time pro tip about fixes requiring a re-run.
+     * Only shows once per user (persisted across sessions).
+     */
+    void showFixProTipOnce() {
+        PropertiesComponent props = PropertiesComponent.getInstance();
+        if (props.getBoolean(FIX_TIP_SHOWN_KEY, false)) {
+            return;  // Already shown and dismissed
+        }
+
+        var notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup("Karate Debug")
+            .createNotification(
+                "Pro Tip",
+                "The fix has been applied to your file. Re-run the test to verify the change. " +
+                "The green highlight confirms the fix matches the actual value.",
+                NotificationType.INFORMATION
+            );
+
+        notification.addAction(new AnAction("Got it, don't show again") {
+            @Override
+            public void actionPerformed(@NotNull AnActionEvent e) {
+                props.setValue(FIX_TIP_SHOWN_KEY, true);
+                notification.expire();
+            }
+        });
+
+        notification.notify(project);
     }
 }
 
