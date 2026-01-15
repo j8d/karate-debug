@@ -1172,9 +1172,7 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
         var notification = NotificationGroupManager.getInstance()
             .getNotificationGroup("Karate Debug")
             .createNotification(
-                "Pro Tip",
-                "The fix has been applied to your file. Re-run the test to verify the change. " +
-                "The green highlight confirms the fix matches the actual value.",
+                "The fix has been applied. The previous value will remain in memory until you start a new debug session.",
                 NotificationType.INFORMATION
             );
 

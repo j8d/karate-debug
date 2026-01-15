@@ -14,5 +14,5 @@ Feature: Pokemon API
     And path '/pokemon/charizard'
     When method GET
     Then status 200
-    And match response.name == 'charizard'
+    And match response.name == 'pikachu'
     And match response.abilities == '#array'
