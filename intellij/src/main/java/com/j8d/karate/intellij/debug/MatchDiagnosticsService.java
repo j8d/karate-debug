@@ -555,6 +555,12 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
             cleanMessage = cleanMessage.substring("Match error: ".length());
         }
 
+        // Undefined variable errors - no actual value to fix with
+        if (cleanMessage.contains("Variable not defined") || cleanMessage.contains("not defined") ||
+            cleanMessage.contains("ReferenceError")) {
+            return new SimplifiedMessage(cleanMessage, true);
+        }
+
         // Syntax errors - JS parsing failures
         if (cleanMessage.contains("js failed") || cleanMessage.contains("SyntaxError") ||
             cleanMessage.contains("PolyglotException")) {
