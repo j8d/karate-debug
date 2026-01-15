@@ -210,7 +210,8 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
             }
         };
 
-        currentEditor.getDocument().addDocumentListener(documentListener);
+        // Use Disposable-aware listener to avoid deprecated API
+        currentEditor.getDocument().addDocumentListener(documentListener, this);
         LOG.info("Document listener started for real-time match updates");
     }
 
@@ -218,11 +219,9 @@ public class MatchDiagnosticsService implements XDebugSessionListener, Disposabl
      * Stop listening for document changes.
      */
     private void stopDocumentListener() {
-        if (documentListener != null && currentEditor != null) {
-            currentEditor.getDocument().removeDocumentListener(documentListener);
-            documentListener = null;
-            LOG.info("Document listener stopped");
-        }
+        // Listener is automatically removed when this Disposable is disposed
+        documentListener = null;
+        LOG.info("Document listener stopped");
         if (debounceTimer != null) {
             debounceTimer.stop();
             debounceTimer = null;
