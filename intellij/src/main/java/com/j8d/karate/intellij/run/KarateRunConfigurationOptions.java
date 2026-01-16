@@ -14,7 +14,7 @@ public class KarateRunConfigurationOptions extends RunConfigurationOptions {
     private final StoredProperty<String> scenarioName = string("")
         .provideDelegate(this, "scenarioName");
     
-    private final StoredProperty<String> karateEnv = string("dev")
+    private final StoredProperty<String> karateEnv = string("")
         .provideDelegate(this, "karateEnv");
     
     private final StoredProperty<String> karateOptions = string("")

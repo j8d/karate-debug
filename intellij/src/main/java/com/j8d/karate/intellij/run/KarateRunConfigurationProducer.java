@@ -15,6 +15,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.j8d.karate.intellij.lang.KarateFile;
 import com.j8d.karate.intellij.project.KarateProjectService;
+import com.j8d.karate.intellij.project.KarateProjectSettings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -64,6 +65,10 @@ public class KarateRunConfigurationProducer extends LazyRunConfigurationProducer
 
         // Set up the configuration
         configuration.setFeatureFile(file.getPath());
+
+        // Set environment from project settings
+        KarateProjectSettings settings = KarateProjectSettings.getInstance(context.getProject());
+        configuration.setKarateEnv(settings.getEffectiveEnvironment());
 
         // Check if we're on a specific scenario - get both name and line number
         ScenarioInfo scenarioInfo = findScenarioInfo(element, psiFile);

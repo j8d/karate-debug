@@ -95,6 +95,11 @@ intellijPlatform {
         """.trimIndent()
 
         changeNotes = """
+            <h3>0.1.3</h3>
+            <ul>
+                <li>Fix environment selection not being applied to debug sessions</li>
+            </ul>
+
             <h3>0.1.2</h3>
             <ul>
                 <li>Restrict plugin to IntelliJ IDEA only (exclude Android Studio, Aqua)</li>

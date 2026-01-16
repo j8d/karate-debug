@@ -5,9 +5,9 @@ Feature: Pokemon API
     And path '/pokemon/pikachu'
     When method GET
     Then status 200
-    And match response.name == 'charizard'
-    And match response.id == 67
-    And match response.types == '#string'
+    And match response.name == 'pikachu'
+    And match response.id == 25
+    And match response.types == '#array'
 
   Scenario: Get pokemon abilities
     Given url 'https://pokeapi.co/api/v2'
