@@ -3,16 +3,22 @@
   "extends": [
     "config:recommended"
   ],
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
       "description": "Group IntelliJ platform updates",
-      "matchPackagePatterns": ["org.jetbrains.*"],
-      "groupName": "JetBrains dependencies"
+      "groupName": "JetBrains dependencies",
+      "matchPackageNames": [
+        "/org.jetbrains.*/"
+      ]
     },
     {
       "description": "Group npm updates",
-      "matchManagers": ["npm"],
+      "matchManagers": [
+        "npm"
+      ],
       "groupName": "npm dependencies"
     }
   ],
@@ -23,4 +29,3 @@
     "enabled": true
   }
 }
-
