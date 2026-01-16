@@ -12,8 +12,13 @@ on:
           - intellij
           - both
         default: 'both'
-      version:
-        description: 'Version to release (leave empty for current version in package.json/gradle.properties)'
+      vscode_version:
+        description: 'VS Code version (leave empty for current version in package.json)'
+        required: false
+        type: string
+        default: ''
+      intellij_version:
+        description: 'IntelliJ version (leave empty for current version in gradle.properties)'
         required: false
         type: string
         default: ''
@@ -68,9 +73,9 @@ jobs:
           path: vscode/resources/
 
       - name: Update version (if specified)
-        if: ${{ github.event.inputs.version != '' }}
+        if: ${{ github.event.inputs.vscode_version != '' }}
         working-directory: vscode
-        run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+        run: npm version ${{ github.event.inputs.vscode_version }} --no-git-tag-version
 
       - name: Get version
         id: version
@@ -128,10 +133,10 @@ jobs:
         run: cp shared/debug-server/target/karate-debug-server-1.0.0.jar intellij/src/main/resources/
 
       - name: Update version (if specified)
-        if: ${{ github.event.inputs.version != '' }}
+        if: ${{ github.event.inputs.intellij_version != '' }}
         working-directory: intellij
         run: |
-          sed -i "s/pluginVersion = .*/pluginVersion = ${{ github.event.inputs.version }}/" gradle.properties
+          sed -i "s/pluginVersion = .*/pluginVersion = ${{ github.event.inputs.intellij_version }}/" gradle.properties
 
       - name: Get version
         id: version
@@ -169,43 +174,47 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
 
-  # Create GitHub Release with all artifacts
-  create-release:
-    needs: [release-vscode, release-intellij]
-    if: always() && (needs.release-vscode.result == 'success' || needs.release-intellij.result == 'success')
+  # Create GitHub Release for VS Code
+  create-vscode-release:
+    needs: [release-vscode]
+    if: ${{ needs.release-vscode.result == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Download VS Code artifact
-        if: ${{ needs.release-vscode.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
           name: vscode-extension
           path: artifacts/
 
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: vscode-v${{ needs.release-vscode.outputs.version }}
+          name: VS Code Extension v${{ needs.release-vscode.outputs.version }}
+          files: artifacts/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Create GitHub Release for IntelliJ
+  create-intellij-release:
+    needs: [release-intellij]
+    if: ${{ needs.release-intellij.result == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Download IntelliJ artifact
-        if: ${{ needs.release-intellij.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
           name: intellij-plugin
           path: artifacts/
 
-      - name: Determine release version
-        id: release-version
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          elif [ -n "${{ needs.release-vscode.outputs.version }}" ]; then
-            echo "VERSION=${{ needs.release-vscode.outputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "VERSION=${{ needs.release-intellij.outputs.version }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.release-version.outputs.VERSION }}
-          name: Release v${{ steps.release-version.outputs.VERSION }}
+          tag_name: intellij-v${{ needs.release-intellij.outputs.version }}
+          name: IntelliJ Plugin v${{ needs.release-intellij.outputs.version }}
           files: artifacts/*
           generate_release_notes: true
         env:
