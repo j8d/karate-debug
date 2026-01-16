@@ -7,8 +7,9 @@
     <depends>com.intellij.modules.java</depends>
     <depends>org.jetbrains.plugins.textmate</depends>
 
-    <!-- Explicitly exclude Aqua IDE (it has com.intellij.modules.java but we don't support it) -->
+    <!-- Explicitly exclude other IDEs that have com.intellij.modules.java -->
     <incompatible-with>com.intellij.modules.aqua</incompatible-with>
+    <incompatible-with>com.intellij.modules.androidstudio</incompatible-with>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- License manager (application-level) -->
