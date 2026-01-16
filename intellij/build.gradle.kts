@@ -6,6 +6,42 @@ plugins {
 group = providers.gradleProperty("pluginGroup").get()
 version = providers.gradleProperty("pluginVersion").get()
 
+// Read CHANGELOG.md and convert to HTML for plugin changeNotes
+fun parseChangelogToHtml(): String {
+    val changelog = file("CHANGELOG.md").readText()
+    val html = StringBuilder()
+
+    // Simple markdown to HTML conversion for changelog
+    changelog.lines().forEach { line ->
+        when {
+            line.startsWith("## [") -> {
+                // Version header: ## [0.1.3] - 2026-01-16
+                val version = line.substringAfter("[").substringBefore("]")
+                html.appendLine("<h3>$version</h3>")
+            }
+            line.startsWith("### ") -> {
+                // Section header: ### Fixed
+                // Skip these - JetBrains format doesn't need sub-headers
+            }
+            line.startsWith("- ") -> {
+                // List item
+                val item = line.removePrefix("- ")
+                html.appendLine("<li>$item</li>")
+            }
+            line.isBlank() && html.isNotEmpty() -> {
+                // Add ul tags around list items
+            }
+        }
+    }
+
+    // Wrap list items in <ul> tags
+    return html.toString()
+        .replace(Regex("(<h3>.*?</h3>)\n(<li>)"), "$1\n<ul>\n$2")
+        .replace(Regex("(</li>)\n(<h3>)"), "$1\n</ul>\n\n$2")
+        .replace(Regex("(</li>)\n*$"), "$1\n</ul>")
+        .trim()
+}
+
 repositories {
     mavenCentral()
     intellijPlatform {
@@ -94,50 +130,7 @@ intellijPlatform {
             </ul>
         """.trimIndent()
 
-        changeNotes = """
-            <h3>0.1.4</h3>
-            <ul>
-                <li>Always use project settings for environment selection</li>
-            </ul>
-
-            <h3>0.1.3</h3>
-            <ul>
-                <li>Fix environment selection not being applied to debug sessions</li>
-            </ul>
-
-            <h3>0.1.2</h3>
-            <ul>
-                <li>Restrict plugin to IntelliJ IDEA only (exclude Android Studio, Aqua)</li>
-            </ul>
-
-            <h3>0.1.1</h3>
-            <ul>
-                <li>Fix deprecated API usage for better compatibility</li>
-                <li>Suppress GraalJS/Truffle warnings in debug console</li>
-                <li>Improve Feature Explorer icons</li>
-                <li>Hide [Fix] button for undefined variable errors</li>
-                <li>Add one-time pro tip explaining fixes require re-run</li>
-            </ul>
-
-            <h3>0.1.0</h3>
-            <ul>
-                <li>Initial IntelliJ plugin release</li>
-                <li>Breakpoint debugging for Karate feature files</li>
-                <li>Step-through debugging (step over, step into, step out, continue)</li>
-                <li>Variable inspection with expandable tree view</li>
-                <li>Variable modification during debug sessions</li>
-                <li>Conditional breakpoints with JavaScript expressions</li>
-                <li>Match diagnostics with pass/fail highlighting</li>
-                <li>Inlay hints showing actual values for failed matches</li>
-                <li>Quick fix buttons to update expected values</li>
-                <li>Gutter icons for debugging scenarios</li>
-                <li>Karate tool window with feature explorer</li>
-                <li>Project auto-detection for Maven and Gradle</li>
-                <li>Environment and log level switching</li>
-                <li>Full syntax highlighting for Karate feature files</li>
-                <li>30-day trial with optional GitHub sign-in</li>
-            </ul>
-        """.trimIndent()
+        changeNotes = parseChangelogToHtml()
 
         vendor {
             name = "j8d"
