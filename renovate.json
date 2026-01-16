@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Group IntelliJ platform updates",
+      "matchPackagePatterns": ["org.jetbrains.*"],
+      "groupName": "JetBrains dependencies"
+    },
+    {
+      "description": "Group npm updates",
+      "matchManagers": ["npm"],
+      "groupName": "npm dependencies"
+    }
+  ],
+  "gradle": {
+    "enabled": true
+  },
+  "npm": {
+    "enabled": true
+  }
+}
+
