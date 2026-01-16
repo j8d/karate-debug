@@ -4,9 +4,11 @@
     <vendor email="ryan@karatedebug.com" url="https://karatedebug.com">j8d</vendor>
 
     <!-- Plugin dependencies -->
-    <depends>com.intellij.modules.platform</depends>
-    <depends>com.intellij.modules.idea</depends>
+    <depends>com.intellij.modules.java</depends>
     <depends>org.jetbrains.plugins.textmate</depends>
+
+    <!-- Explicitly exclude Aqua IDE (it has com.intellij.modules.java but we don't support it) -->
+    <incompatible-with>com.intellij.modules.aqua</incompatible-with>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- License manager (application-level) -->
