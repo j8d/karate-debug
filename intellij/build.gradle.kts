@@ -95,6 +95,11 @@ intellijPlatform {
         """.trimIndent()
 
         changeNotes = """
+            <h3>0.1.4</h3>
+            <ul>
+                <li>Always use project settings for environment selection</li>
+            </ul>
+
             <h3>0.1.3</h3>
             <ul>
                 <li>Fix environment selection not being applied to debug sessions</li>
