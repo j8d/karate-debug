@@ -1,25 +1,33 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to release'
+        required: true
+        type: choice
+        options:
+          - vscode
+          - intellij
+          - both
+        default: 'both'
+      version:
+        description: 'Version to release (leave empty for current version in package.json/gradle.properties)'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
 
 jobs:
-  release-vscode:
+  # Build the shared debug server JAR (used by both platforms)
+  build-debug-server:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -31,7 +39,43 @@ jobs:
         run: |
           cd shared/debug-server
           mvn clean package -q
-          cp target/karate-debug-server-1.0.0.jar ../../vscode/resources/
+
+      - name: Upload debug-server JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-server-jar
+          path: shared/debug-server/target/karate-debug-server-1.0.0.jar
+
+  # VS Code Extension Release
+  release-vscode:
+    needs: build-debug-server
+    if: ${{ github.event.inputs.platform == 'vscode' || github.event.inputs.platform == 'both' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download debug-server JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: debug-server-jar
+          path: vscode/resources/
+
+      - name: Update version (if specified)
+        if: ${{ github.event.inputs.version != '' }}
+        working-directory: vscode
+        run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+
+      - name: Get version
+        id: version
+        working-directory: vscode
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         working-directory: vscode
@@ -45,18 +89,124 @@ jobs:
         working-directory: vscode
         run: npx vsce package --no-dependencies
 
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
       - name: Publish to VS Code Marketplace
         working-directory: vscode
         run: npx vsce publish --no-dependencies -p ${{ secrets.AZUREPAT }}
 
+      - name: Upload VS Code artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension
+          path: vscode/*.vsix
+
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+  # IntelliJ Plugin Release
+  release-intellij:
+    needs: build-debug-server
+    if: ${{ github.event.inputs.platform == 'intellij' || github.event.inputs.platform == 'both' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Download debug-server JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: debug-server-jar
+          path: shared/debug-server/target/
+
+      - name: Copy JAR to IntelliJ resources
+        run: cp shared/debug-server/target/karate-debug-server-1.0.0.jar intellij/src/main/resources/
+
+      - name: Update version (if specified)
+        if: ${{ github.event.inputs.version != '' }}
+        working-directory: intellij
+        run: |
+          sed -i "s/pluginVersion = .*/pluginVersion = ${{ github.event.inputs.version }}/" gradle.properties
+
+      - name: Get version
+        id: version
+        working-directory: intellij
+        run: echo "VERSION=$(grep 'pluginVersion' gradle.properties | cut -d'=' -f2 | tr -d ' ')" >> $GITHUB_OUTPUT
+
+      - name: Build plugin
+        working-directory: intellij
+        run: ./gradlew buildPlugin
+
+      - name: Verify plugin
+        working-directory: intellij
+        run: ./gradlew verifyPlugin
+
+      - name: Sign plugin
+        working-directory: intellij
+        env:
+          CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+        run: ./gradlew signPlugin
+
+      - name: Publish to JetBrains Marketplace
+        working-directory: intellij
+        env:
+          JETBRAINS_PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+        run: ./gradlew publishPlugin
+
+      - name: Upload IntelliJ artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: intellij-plugin
+          path: intellij/build/distributions/*-signed.zip
+
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+  # Create GitHub Release with all artifacts
+  create-release:
+    needs: [release-vscode, release-intellij]
+    if: always() && (needs.release-vscode.result == 'success' || needs.release-intellij.result == 'success')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download VS Code artifact
+        if: ${{ needs.release-vscode.result == 'success' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: vscode-extension
+          path: artifacts/
+
+      - name: Download IntelliJ artifact
+        if: ${{ needs.release-intellij.result == 'success' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: intellij-plugin
+          path: artifacts/
+
+      - name: Determine release version
+        id: release-version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ needs.release-vscode.outputs.version }}" ]; then
+            echo "VERSION=${{ needs.release-vscode.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${{ needs.release-intellij.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: 'vscode/*.vsix'
+          tag_name: v${{ steps.release-version.outputs.VERSION }}
+          name: Release v${{ steps.release-version.outputs.VERSION }}
+          files: artifacts/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
