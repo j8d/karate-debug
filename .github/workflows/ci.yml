@@ -7,17 +7,12 @@ on:
     branches: [main]
 
 jobs:
-  build-vscode:
+  # Build the shared debug server JAR (used by both platforms)
+  build-debug-server:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -29,7 +24,32 @@ jobs:
         run: |
           cd shared/debug-server
           mvn clean package -q
-          cp target/karate-debug-server-1.0.0.jar ../../vscode/resources/
+
+      - name: Upload debug-server JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-server-jar
+          path: shared/debug-server/target/karate-debug-server-1.0.0.jar
+
+  # VS Code Extension Build
+  build-vscode:
+    needs: build-debug-server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download debug-server JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: debug-server-jar
+          path: vscode/resources/
 
       - name: Install dependencies
         working-directory: vscode
@@ -50,4 +70,36 @@ jobs:
       - name: Package extension
         working-directory: vscode
         run: npx vsce package --no-dependencies
+
+  # IntelliJ Plugin Build
+  build-intellij:
+    needs: build-debug-server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Download debug-server JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: debug-server-jar
+          path: shared/debug-server/target/
+
+      - name: Copy JAR to IntelliJ resources
+        run: cp shared/debug-server/target/karate-debug-server-1.0.0.jar intellij/src/main/resources/
+
+      - name: Build plugin
+        working-directory: intellij
+        run: ./gradlew buildPlugin
+
+      - name: Verify plugin
+        working-directory: intellij
+        run: ./gradlew verifyPlugin
 
