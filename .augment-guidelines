@@ -38,8 +38,7 @@ A debugging solution for Karate API tests supporting both VS Code and IntelliJ I
 │   │   └── karate-debug-server-1.0.0.jar  # Bundled JAR
 │   └── build.gradle.kts
 ├── test-fixtures/              # Sample Karate project for testing
-├── ijproject.md                # IntelliJ plugin project plan and progress
-└── .github/workflows/          # CI/CD (release on tag push)
+└── .github/workflows/          # CI/CD workflows
 ```
 
 ## Build Commands
@@ -85,11 +84,13 @@ cd intellij && ./gradlew runIde
 
 ## Releasing
 
-### Version Bump and Release
-1. Update version in `package.json` and `CHANGELOG.md`
-2. Commit changes: `git add -A && git commit -m "v0.x.x: Description"`
-3. Push and tag: `git push origin main && git tag v0.x.x && git push origin v0.x.x`
-4. GitHub Actions will build and create a release with the .vsix
+### Manual Release via GitHub Actions
+1. Update version in `vscode/package.json` or `intellij/gradle.properties`
+2. Update changelog in `vscode/CHANGELOG.md` or `intellij/CHANGELOG.md`
+3. Commit and push to main
+4. Go to **Actions > Release > Run workflow**
+5. Select platform (`vscode`, `intellij`, or `both`)
+6. Optionally specify version override
 
 ### VS Code Marketplace Publishing
 - **Publisher**: `j8d` (must match `package.json` publisher field)

@@ -70,4 +70,8 @@ out/
 *.vsix
 .vscode-test/
 
-
+### Secrets / Signing Keys ###
+*.pem
+*.crt
+*.key
+!*.key.example
