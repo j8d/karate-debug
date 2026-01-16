@@ -75,11 +75,8 @@ public class KarateDapClient {
         KarateProjectSettings settings = KarateProjectSettings.getInstance(
             debugProcess.getSession().getProject());
 
-        // Environment: use config override, or fall back to settings
-        String karateEnv = configuration.getKarateEnv();
-        if (karateEnv == null || karateEnv.isEmpty()) {
-            karateEnv = settings.getEffectiveEnvironment();
-        }
+        // Always use project settings for environment (status bar widget is the UI for this)
+        String karateEnv = settings.getEffectiveEnvironment();
 
         // Log level from settings
         String logLevel = settings.getEffectiveLogLevel();
