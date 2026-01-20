@@ -122,24 +122,24 @@ jobs:
 
       - name: Verify plugin
         working-directory: intellij
-        run: ./gradlew verifyPlugin
+        run: ./gradlew verifyPlugin 2>&1 | tee verify-output.txt
 
       - name: Add versions to summary
         working-directory: intellij
         run: |
           echo "## IntelliJ Plugin Build" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Versions Tested" >> $GITHUB_STEP_SUMMARY
+          echo "### Versions Verified" >> $GITHUB_STEP_SUMMARY
           echo "| IDE | Version |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|---------|" >> $GITHUB_STEP_SUMMARY
-          echo "| IntelliJ IDEA Community | 2023.1 |" >> $GITHUB_STEP_SUMMARY
-          echo "| IntelliJ IDEA Community | 2024.2 |" >> $GITHUB_STEP_SUMMARY
-          echo "| IntelliJ IDEA Community | 2024.3 |" >> $GITHUB_STEP_SUMMARY
-          echo "| IntelliJ IDEA Community | 2025.1 |" >> $GITHUB_STEP_SUMMARY
+          # Extract versions from verifyPlugin output (e.g., "ideaIC:2023.1, ideaIC:2024.2")
+          grep -oP 'ideaIC:\K[0-9.]+' verify-output.txt | sort -V | while read version; do
+            echo "| IntelliJ IDEA Community | $version |" >> $GITHUB_STEP_SUMMARY
+          done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Compatibility Range" >> $GITHUB_STEP_SUMMARY
           UNTIL_BUILD=$(unzip -p build/distributions/*.zip '*/plugin.xml' | grep -oP 'until-build="\K[^"]+')
           SINCE_BUILD=$(unzip -p build/distributions/*.zip '*/plugin.xml' | grep -oP 'since-build="\K[^"]+')
-          echo "- **Since Build:** $SINCE_BUILD (IntelliJ 2023.1+)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Since Build:** $SINCE_BUILD" >> $GITHUB_STEP_SUMMARY
           echo "- **Until Build:** $UNTIL_BUILD" >> $GITHUB_STEP_SUMMARY
 
