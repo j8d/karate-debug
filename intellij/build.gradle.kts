@@ -85,6 +85,7 @@ dependencies {
         bundledPlugin("org.jetbrains.plugins.textmate")
 
         pluginVerifier()
+        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
 
     // Gson for DAP JSON protocol
@@ -92,6 +93,9 @@ dependencies {
 
     // Add the shared debug-server JAR
     implementation(files("../shared/debug-server/target/karate-debug-server-1.0.0.jar"))
+
+    // Test dependencies
+    testImplementation("junit:junit:4.13.2")
 }
 
 intellijPlatform {
