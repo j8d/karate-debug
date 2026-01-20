@@ -130,11 +130,11 @@ jobs:
           echo "## IntelliJ Plugin Build" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Versions Verified" >> $GITHUB_STEP_SUMMARY
-          echo "| IDE | Version |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|---------|" >> $GITHUB_STEP_SUMMARY
-          # Extract versions from verifyPlugin output (e.g., "ideaIC:2023.1, ideaIC:2024.2")
-          grep -oP 'ideaIC:\K[0-9.]+' verify-output.txt | sort -V | while read version; do
-            echo "| IntelliJ IDEA Community | $version |" >> $GITHUB_STEP_SUMMARY
+          echo "| IDE | Build | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          # Extract versions from verifyPlugin output (e.g., "IC-231.8109.175 against ... Compatible")
+          grep -oP 'IC-\K[0-9.]+(?= against)' verify-output.txt | while read build; do
+            echo "| IntelliJ IDEA Community | $build | ✅ Compatible |" >> $GITHUB_STEP_SUMMARY
           done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Compatibility Range" >> $GITHUB_STEP_SUMMARY
