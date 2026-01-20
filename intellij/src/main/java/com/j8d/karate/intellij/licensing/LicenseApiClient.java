@@ -37,6 +37,7 @@ public class LicenseApiClient {
         JsonObject body = new JsonObject();
         body.addProperty("machineId", machineId);
         body.addProperty("machineName", machineName);
+        body.addProperty("platform", "intellij");
 
         return post("/trial/start", body)
                 .thenApply(response -> GSON.fromJson(response, TrialResponse.class))
@@ -58,6 +59,7 @@ public class LicenseApiClient {
         if (machineName != null) {
             body.addProperty("machineName", machineName);
         }
+        body.addProperty("platform", "intellij");
 
         return post("/license/validate", body)
                 .thenApply(response -> GSON.fromJson(response, ValidateResponse.class))
@@ -154,4 +156,3 @@ public class LicenseApiClient {
                 });
     }
 }
-

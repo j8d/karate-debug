@@ -203,7 +203,8 @@ export class LicenseManager {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     machineId: this.machineId,
-                    machineName: os.hostname()
+                    machineName: os.hostname(),
+                    platform: 'vscode'
                 })
             });
 
@@ -447,7 +448,8 @@ export class LicenseManager {
                 body: JSON.stringify({
                     userId,
                     machineId: this.machineId,
-                    machineName: os.hostname()
+                    machineName: os.hostname(),
+                    platform: 'vscode'
                 })
             });
 
