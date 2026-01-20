@@ -1,3 +1,5 @@
+import org.jetbrains.intellij.platform.gradle.models.ProductRelease
+
 plugins {
     id("java")
     id("org.jetbrains.intellij.platform") version "2.10.5"
@@ -88,7 +90,7 @@ intellijPlatform {
         version = providers.gradleProperty("pluginVersion")
 
         ideaVersion {
-            sinceBuild = "242"    // IntelliJ 2024.2 (minimum supported)
+            sinceBuild = "231"    // IntelliJ 2023.1 (minimum supported)
             untilBuild = "253.*"  // IntelliJ 2025.3 (allow future patch versions)
         }
 
@@ -171,9 +173,12 @@ intellijPlatform {
     
     pluginVerification {
         ides {
-            // Verify against specific IDE versions we want to support
-            // 2024.2 (242), 2024.3 (243), 2025.1 (251)
-            recommended()
+            // Verify against released IntelliJ IDEA versions in our compatibility range
+            select {
+                channels = listOf(ProductRelease.Channel.RELEASE)
+                sinceBuild = "231"
+                untilBuild = "253.*"
+            }
         }
     }
 }
