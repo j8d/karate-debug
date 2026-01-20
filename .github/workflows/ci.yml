@@ -124,3 +124,22 @@ jobs:
         working-directory: intellij
         run: ./gradlew verifyPlugin
 
+      - name: Add versions to summary
+        working-directory: intellij
+        run: |
+          echo "## IntelliJ Plugin Build" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Versions Tested" >> $GITHUB_STEP_SUMMARY
+          echo "| IDE | Version |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| IntelliJ IDEA Community | 2023.1 |" >> $GITHUB_STEP_SUMMARY
+          echo "| IntelliJ IDEA Community | 2024.2 |" >> $GITHUB_STEP_SUMMARY
+          echo "| IntelliJ IDEA Community | 2024.3 |" >> $GITHUB_STEP_SUMMARY
+          echo "| IntelliJ IDEA Community | 2025.1 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Compatibility Range" >> $GITHUB_STEP_SUMMARY
+          UNTIL_BUILD=$(unzip -p build/distributions/*.zip '*/plugin.xml' | grep -oP 'until-build="\K[^"]+')
+          SINCE_BUILD=$(unzip -p build/distributions/*.zip '*/plugin.xml' | grep -oP 'since-build="\K[^"]+')
+          echo "- **Since Build:** $SINCE_BUILD (IntelliJ 2023.1+)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Until Build:** $UNTIL_BUILD" >> $GITHUB_STEP_SUMMARY
+
