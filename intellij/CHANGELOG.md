@@ -4,9 +4,15 @@ All notable changes to the Karate Debug IntelliJ plugin will be documented in th
 
 ## [0.1.4] - 2026-01-20
 
+### Added
+- Basic plugin tests for core components (language, file type, run configuration)
+- Dynamic untilBuild calculation - automatically supports +1 year of future IntelliJ releases
+- Platform field in license API calls for usage tracking
+
 ### Changed
 - Extend support back to IntelliJ IDEA 2023.1
 - Properly exclude Android Studio and Aqua from marketplace
+- CI now shows verified IDE versions in job summary
 
 ### Fixed
 - Fix plugin verification to only test against released IDE versions
