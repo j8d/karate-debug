@@ -1,4 +1,4 @@
-import org.jetbrains.intellij.platform.gradle.models.ProductRelease
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 
 plugins {
     id("java")
@@ -173,12 +173,12 @@ intellijPlatform {
     
     pluginVerification {
         ides {
-            // Verify against released IntelliJ IDEA versions in our compatibility range
-            select {
-                channels = listOf(ProductRelease.Channel.RELEASE)
-                sinceBuild = "231"
-                untilBuild = "253.*"
-            }
+            // Verify against 4 key versions spanning our compatibility range
+            // 2023.1 (oldest), 2024.2 (LTS), 2024.3, 2025.1 (latest stable)
+            create(IntelliJPlatformType.IntellijIdeaCommunity, "2023.1.7")
+            create(IntelliJPlatformType.IntellijIdeaCommunity, "2024.2.6")
+            create(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3.7")
+            create(IntelliJPlatformType.IntellijIdeaCommunity, "2025.1.7")
         }
     }
 }
