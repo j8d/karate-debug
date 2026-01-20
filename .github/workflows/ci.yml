@@ -138,8 +138,8 @@ jobs:
           done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Compatibility Range" >> $GITHUB_STEP_SUMMARY
-          UNTIL_BUILD=$(unzip -p build/distributions/*.zip '*/plugin.xml' | grep -oP 'until-build="\K[^"]+')
-          SINCE_BUILD=$(unzip -p build/distributions/*.zip '*/plugin.xml' | grep -oP 'since-build="\K[^"]+')
+          SINCE_BUILD=$(grep -oP 'since-build="\K[^"]+' build/tmp/patchPluginXml/plugin.xml)
+          UNTIL_BUILD=$(grep -oP 'until-build="\K[^"]+' build/tmp/patchPluginXml/plugin.xml)
           echo "- **Since Build:** $SINCE_BUILD" >> $GITHUB_STEP_SUMMARY
           echo "- **Until Build:** $UNTIL_BUILD" >> $GITHUB_STEP_SUMMARY
 
