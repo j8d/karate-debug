@@ -39,7 +39,7 @@ Full syntax highlighting for the Karate DSL, including Gherkin keywords, JSON/XM
 
 ## Requirements
 
-- **IntelliJ IDEA 2024.1+** (Community or Ultimate)
+- **IntelliJ IDEA 2023.1+** (Community or Ultimate)
 - **Java 21+**
 - **Maven** project with Karate dependencies
 - Tests in `src/test/java` or `src/test/resources`
