@@ -8,6 +8,16 @@ plugins {
 group = providers.gradleProperty("pluginGroup").get()
 version = providers.gradleProperty("pluginVersion").get()
 
+// Calculate untilBuild dynamically from platformVersion
+// platformVersion "2025.1.1" -> untilBuild "263.*" (support +1 year, up to .3 release)
+fun calculateUntilBuild(): String {
+    val platformVersion = providers.gradleProperty("platformVersion").get()
+    val year = platformVersion.substringBefore(".").toInt()
+    val nextYear = year + 1
+    val buildPrefix = "${nextYear % 100}3"  // e.g., 2026 -> "263" (last release of next year)
+    return "$buildPrefix.*"
+}
+
 // Read CHANGELOG.md and convert to HTML for plugin changeNotes
 fun parseChangelogToHtml(): String {
     val changelog = file("CHANGELOG.md").readText()
@@ -91,7 +101,7 @@ intellijPlatform {
 
         ideaVersion {
             sinceBuild = "231"    // IntelliJ 2023.1 (minimum supported)
-            untilBuild = "253.*"  // IntelliJ 2025.3 (allow future patch versions)
+            untilBuild = calculateUntilBuild()  // Dynamically set to +1 year from platformVersion
         }
 
         description = """
