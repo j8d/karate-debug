@@ -173,12 +173,7 @@ intellijPlatform {
         ides {
             // Verify against specific IDE versions we want to support
             // 2024.2 (242), 2024.3 (243), 2025.1 (251)
-            @Suppress("DEPRECATION")
-            ide("IC", "2024.2.4")
-            @Suppress("DEPRECATION")
-            ide("IC", "2024.3.4")
-            @Suppress("DEPRECATION")
-            ide("IC", "2025.1.1")
+            recommended()
         }
     }
 }

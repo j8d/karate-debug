@@ -1,5 +1,10 @@
 # Karate Debug - Monorepo
 
+## Agent Rules
+- Do NOT make unilateral decisions to suppress warnings, skip fixes, or take shortcuts
+- Always ask the user before choosing workarounds over proper fixes
+- If a proper fix is unclear, ask for guidance instead of reverting to a quick fix
+
 ## Overview
 A debugging solution for Karate API tests supporting both VS Code and IntelliJ IDEA. Provides breakpoints, step-through debugging, variable inspection, and IDE-specific UI features.
 
