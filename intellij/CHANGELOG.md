@@ -13,6 +13,7 @@ All notable changes to the Karate Debug IntelliJ plugin will be documented in th
 - Extend support back to IntelliJ IDEA 2023.1
 - Properly exclude Android Studio and Aqua from marketplace
 - CI now shows verified IDE versions in job summary
+- Suppress deprecated API warnings with migration TODO for 2026.1+
 
 ### Fixed
 - Fix plugin verification to only test against released IDE versions

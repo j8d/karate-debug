@@ -59,6 +59,10 @@ public class KarateDebugProgramRunner extends GenericProgramRunner<RunnerSetting
         KarateRunProfileState karateState = (KarateRunProfileState) state;
         KarateRunConfiguration configuration = karateState.getConfiguration();
 
+        // TODO: Migrate to newSessionBuilder() API when minimum version is raised to 2026.1+
+        // See: https://plugins.jetbrains.com/docs/intellij/api-internal.html
+        // New API: XDebuggerManager.getInstance().newSessionBuilder(starter).environment(env).startSession()
+        @SuppressWarnings("deprecation")
         XDebugSession session = XDebuggerManager.getInstance(environment.getProject())
             .startSession(environment, new XDebugProcessStarter() {
                 @Override
@@ -68,7 +72,9 @@ public class KarateDebugProgramRunner extends GenericProgramRunner<RunnerSetting
                 }
             });
 
-        return session.getRunContentDescriptor();
+        @SuppressWarnings("deprecation")
+        RunContentDescriptor descriptor = session.getRunContentDescriptor();
+        return descriptor;
     }
 
     private void showTrialExpiredNotification(Project project) {
