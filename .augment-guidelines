@@ -305,3 +305,11 @@ notification.addAction(new AnAction("Button Text") {
     }
 });
 ```
+
+
+## GitHub API Access
+
+### Rules
+- Always use the `gh` CLI instead of the GitHub MCP for API access
+- The repo uses the `j8d` GitHub account - switch if needed: `gh auth switch -u j8d`
+- May need to unset GITHUB_TOKEN first: `unset GITHUB_TOKEN && gh auth switch -u j8d`
