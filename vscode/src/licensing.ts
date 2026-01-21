@@ -41,6 +41,7 @@ interface LocalLicenseData {
 export class LicenseManager {
     private context: vscode.ExtensionContext;
     private machineId: string;
+    private clientVersion: string;
     private statusBarItem: vscode.StatusBarItem;
     private currentStatus: LicenseStatus = { isValid: false, status: 'none' };
     private pendingAuthResolve: ((code: string | null) => void) | null = null;
@@ -48,6 +49,7 @@ export class LicenseManager {
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
         this.machineId = this.getMachineId();
+        this.clientVersion = context.extension.packageJSON.version || 'unknown';
 
         // Create status bar item
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
@@ -204,7 +206,8 @@ export class LicenseManager {
                 body: JSON.stringify({
                     machineId: this.machineId,
                     machineName: os.hostname(),
-                    platform: 'vscode'
+                    platform: 'vscode',
+                    clientVersion: this.clientVersion
                 })
             });
 
@@ -370,7 +373,13 @@ export class LicenseManager {
             const response = await fetch(`${API_BASE_URL}/license/validate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, machineId: this.machineId })
+                body: JSON.stringify({
+                    userId,
+                    machineId: this.machineId,
+                    machineName: os.hostname(),
+                    platform: 'vscode',
+                    clientVersion: this.clientVersion
+                })
             });
 
             if (!response.ok) {
@@ -449,7 +458,8 @@ export class LicenseManager {
                     userId,
                     machineId: this.machineId,
                     machineName: os.hostname(),
-                    platform: 'vscode'
+                    platform: 'vscode',
+                    clientVersion: this.clientVersion
                 })
             });
 

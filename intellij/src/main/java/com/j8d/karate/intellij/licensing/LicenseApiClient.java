@@ -23,11 +23,28 @@ public class LicenseApiClient {
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
 
     private final HttpClient httpClient;
+    private final String clientVersion;
 
     public LicenseApiClient() {
+        this(getPluginVersion());
+    }
+
+    public LicenseApiClient(@NotNull String clientVersion) {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
                 .build();
+        this.clientVersion = clientVersion;
+    }
+
+    private static String getPluginVersion() {
+        try {
+            var plugin = com.intellij.ide.plugins.PluginManagerCore.getPlugin(
+                    com.intellij.openapi.extensions.PluginId.getId("com.j8d.karate.intellij"));
+            return plugin != null ? plugin.getVersion() : "unknown";
+        } catch (Exception e) {
+            LOG.warn("Failed to get plugin version", e);
+            return "unknown";
+        }
     }
 
     /**
@@ -38,6 +55,7 @@ public class LicenseApiClient {
         body.addProperty("machineId", machineId);
         body.addProperty("machineName", machineName);
         body.addProperty("platform", "intellij");
+        body.addProperty("clientVersion", clientVersion);
 
         return post("/trial/start", body)
                 .thenApply(response -> GSON.fromJson(response, TrialResponse.class))
@@ -60,6 +78,7 @@ public class LicenseApiClient {
             body.addProperty("machineName", machineName);
         }
         body.addProperty("platform", "intellij");
+        body.addProperty("clientVersion", clientVersion);
 
         return post("/license/validate", body)
                 .thenApply(response -> GSON.fromJson(response, ValidateResponse.class))
