@@ -95,6 +95,9 @@ export class MatchDiagnosticsProvider {
     // Regex to match Karate match statements
     private static readonly MATCH_REGEX = /^\s*(\*|Given|When|Then|And|But)\s+match\s+(.+)$/;
 
+    // Regex to identify scenario/scenario outline start lines
+    private static readonly SCENARIO_START_REGEX = /^\s*(Scenario|Scenario Outline):\s*.*$/;
+
     // Regex to parse failure message - handles both quoted and unquoted values
     // Format: "  $ | not equal (type)\n  actual\n  expected" or with quoted values
     // Also handles type mismatch messages like "not an array or list", "not a string", etc.
@@ -257,9 +260,25 @@ export class MatchDiagnosticsProvider {
         }
 
         const document = editor.document;
-        const lineCount = document.lineCount;
 
-        for (let i = 0; i < lineCount; i++) {
+        // Get the current debug line and find which scenario we're in
+        const currentLine = await this.getCurrentDebugLine();
+        console.log(`[evaluateMatchStatements] current debug line=${currentLine}`);
+
+        const scenarioRanges = this.findScenarioRanges(document);
+        const currentScenario = this.findScenarioForLine(scenarioRanges, currentLine);
+
+        if (!currentScenario) {
+            console.log('[evaluateMatchStatements] not in a scenario, skipping diagnostics');
+            // Clear decorations since we're not in a scenario
+            this.clearDecorations();
+            return;
+        }
+
+        console.log(`[evaluateMatchStatements] current scenario range [${currentScenario.startLine}, ${currentScenario.endLine}]`);
+
+        // Only process lines within the current scenario
+        for (let i = currentScenario.startLine; i <= currentScenario.endLine; i++) {
             const line = document.lineAt(i);
             const match = MatchDiagnosticsProvider.MATCH_REGEX.exec(line.text);
 
@@ -620,6 +639,64 @@ export class MatchDiagnosticsProvider {
         } catch (error) {
             console.error(`[forceInlayHintsRefresh] Error: ${error}`);
         }
+    }
+
+    /**
+     * Get the current debug line from the active stack frame.
+     * Returns -1 if unable to determine.
+     */
+    private async getCurrentDebugLine(): Promise<number> {
+        if (!this.activeSession) return -1;
+
+        try {
+            // Get the stack trace for thread 1 (Karate is single-threaded)
+            const response = await this.activeSession.customRequest('stackTrace', { threadId: 1 });
+            if (response && response.stackFrames && response.stackFrames.length > 0) {
+                // DAP uses 1-based lines, convert to 0-based
+                return response.stackFrames[0].line - 1;
+            }
+        } catch (e) {
+            console.error('[getCurrentDebugLine] Error getting stack trace:', e);
+        }
+        return -1;
+    }
+
+    /**
+     * Find all scenario ranges in the document.
+     * A scenario starts at "Scenario:" or "Scenario Outline:" and ends
+     * when the next scenario starts or the file ends.
+     */
+    private findScenarioRanges(document: vscode.TextDocument): Array<{ startLine: number; endLine: number }> {
+        const ranges: Array<{ startLine: number; endLine: number }> = [];
+        let currentScenarioStart = -1;
+
+        for (let i = 0; i < document.lineCount; i++) {
+            const lineText = document.lineAt(i).text;
+            if (MatchDiagnosticsProvider.SCENARIO_START_REGEX.test(lineText)) {
+                // Close previous scenario if any
+                if (currentScenarioStart >= 0) {
+                    ranges.push({ startLine: currentScenarioStart, endLine: i - 1 });
+                }
+                currentScenarioStart = i;
+            }
+        }
+
+        // Close the last scenario
+        if (currentScenarioStart >= 0) {
+            ranges.push({ startLine: currentScenarioStart, endLine: document.lineCount - 1 });
+        }
+
+        return ranges;
+    }
+
+    /**
+     * Find the scenario range that contains the given line.
+     */
+    private findScenarioForLine(
+        ranges: Array<{ startLine: number; endLine: number }>,
+        line: number
+    ): { startLine: number; endLine: number } | undefined {
+        return ranges.find(r => line >= r.startLine && line <= r.endLine);
     }
 
     public dispose(): void {
