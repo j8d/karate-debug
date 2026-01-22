@@ -53,7 +53,13 @@ public class DapSession {
             writer = socket.getOutputStream();
             running = true;
 
+            // Register this session for DAP output events
+            DapOutputAppender.setSession(this);
+
             debugger = new KarateDebugger(this, workspaceRoot, karateEnv);
+
+            // Register debugger with log breakpoint appender
+            LogBreakpointAppender.setDebugger(debugger);
 
             while (running) {
                 JsonObject message = readMessage();
@@ -153,6 +159,18 @@ public class DapSession {
         sendMessage(message);
     }
 
+    /**
+     * Send an output event to the IDE. This appears in the Debug Console.
+     * @param category "stdout", "stderr", or "console"
+     * @param text The output text (can include ANSI color codes)
+     */
+    public void sendOutputEvent(String category, String text) {
+        JsonObject body = new JsonObject();
+        body.addProperty("category", category);
+        body.addProperty("output", text + "\n");
+        sendEvent("output", body);
+    }
+
     private void handleMessage(JsonObject message) {
         String type = message.get("type").getAsString();
 
@@ -215,6 +233,30 @@ public class DapSession {
         if (feature != null) {
             debugger.setFeaturePath(feature);
         }
+
+        // Parse log breakpoints if provided
+        logger.debug("Launch args: {}", args);
+        if (args.has("logBreakpoints")) {
+            logger.debug("logBreakpoints field found: {}", args.get("logBreakpoints"));
+            if (args.get("logBreakpoints").isJsonArray()) {
+                var logBreakpointsArray = args.getAsJsonArray("logBreakpoints");
+                java.util.List<String> patterns = new java.util.ArrayList<>();
+                for (var element : logBreakpointsArray) {
+                    if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
+                        String pattern = element.getAsString().trim();
+                        if (!pattern.isEmpty()) {
+                            patterns.add(pattern);
+                        }
+                    }
+                }
+                debugger.setLogBreakpoints(patterns);
+            } else {
+                logger.warn("logBreakpoints is not a JSON array: {}", args.get("logBreakpoints"));
+            }
+        } else {
+            logger.debug("No logBreakpoints in launch args");
+        }
+
         sendResponse(request, true, null);
     }
 
@@ -387,6 +429,13 @@ public class DapSession {
 
     private void cleanup() {
         running = false;
+
+        // Unregister debugger from log breakpoint appender
+        LogBreakpointAppender.clearDebugger();
+
+        // Unregister session from DAP output appender
+        DapOutputAppender.clearSession();
+
         try {
             if (socket != null) socket.close();
         } catch (IOException e) {

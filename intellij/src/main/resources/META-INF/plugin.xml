@@ -125,6 +125,19 @@
             language="Karate"
             implementationClass="com.j8d.karate.intellij.debug.KarateInlayHintsProvider"/>
         -->
+
+        <!-- Go to declaration handler for file references (Ctrl+Click navigation) -->
+        <gotoDeclarationHandler
+            implementation="com.j8d.karate.intellij.lang.KarateFileReferenceHandler"/>
+
+        <!-- PSI reference contributor for file references (enables underlines and tooltips) -->
+        <psi.referenceContributor
+            implementation="com.j8d.karate.intellij.lang.KarateReferenceContributor"/>
+
+        <!-- Annotator for file reference visual styling (permanent underlines) -->
+        <annotator
+            language="Karate"
+            implementationClass="com.j8d.karate.intellij.lang.KarateFileReferenceAnnotator"/>
     </extensions>
 
     <actions>

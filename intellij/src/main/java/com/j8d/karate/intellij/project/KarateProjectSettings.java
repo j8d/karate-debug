@@ -63,6 +63,12 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
     // Working directory for running tests (empty = project root)
     public String workingDirectory = "";
 
+    // Log filter: comma-separated list of strings to exclude from log output
+    public String logFilterExclude = "";
+
+    // Log breakpoints: comma-separated list of strings that trigger a pause when found in logs
+    public String logBreakpoints = "";
+
     // Listeners for settings changes (not serialized)
     @Transient
     private final List<Runnable> changeListeners = new CopyOnWriteArrayList<>();
@@ -195,6 +201,50 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
      */
     public boolean isMatchDiagnosticsShowActualValues() {
         return matchDiagnosticsShowActualValues;
+    }
+
+    // ========== Log Filter Getters ==========
+
+    /**
+     * Get the list of log filter exclude patterns.
+     * Returns an empty list if no patterns are configured.
+     */
+    @NotNull
+    public List<String> getLogFilterExcludePatterns() {
+        if (logFilterExclude == null || logFilterExclude.trim().isEmpty()) {
+            return List.of();
+        }
+        return Arrays.stream(logFilterExclude.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .toList();
+    }
+
+    /**
+     * Check if a log message should be filtered out (case-insensitive).
+     */
+    public boolean shouldFilterLog(@NotNull String message) {
+        List<String> patterns = getLogFilterExcludePatterns();
+        if (patterns.isEmpty()) {
+            return false;
+        }
+        String lowerMessage = message.toLowerCase();
+        return patterns.stream().anyMatch(p -> lowerMessage.contains(p.toLowerCase()));
+    }
+
+    /**
+     * Get the list of log breakpoint patterns.
+     * Returns an empty list if no patterns are configured.
+     */
+    @NotNull
+    public List<String> getLogBreakpointPatterns() {
+        if (logBreakpoints == null || logBreakpoints.trim().isEmpty()) {
+            return List.of();
+        }
+        return Arrays.stream(logBreakpoints.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .toList();
     }
 }
 

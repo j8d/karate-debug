@@ -34,6 +34,19 @@ Quickly switch between environments (`dev`, `qa`, `stage`, or your custom enviro
 ### Match Expression Diagnostics
 Real-time validation of Karate match expressions with inline error highlighting during debugging. Get instant feedback on match failures with actual vs expected values displayed as inlay hints.
 
+### File Navigation
+Clickable file references throughout your feature files. File paths appear as underlined links - Cmd+Click (Mac) or Ctrl+Click (Windows/Linux) to navigate directly to the referenced file or tag:
+- `classpath:path/to/file.feature` - Opens the referenced file
+- `read('path/to/file.json')` - Works with or without classpath: prefix
+- `read('@tagName')` - Jumps to a tag in the current file
+- `file.feature@tagName` - Opens the file and jumps to the specified tag
+
+### Log Filtering
+Hide noisy log output by configuring exclude patterns. Filter out verbose framework messages (like HikariPool, Thymeleaf) to focus on what matters during debugging.
+
+### Log Breakpoints
+Pause execution when specific strings appear in log output. Useful for catching exceptions or specific error messages without setting traditional breakpoints - just specify strings like "NullPointerException" or "ERROR" to break on.
+
 ### Syntax Highlighting
 Full syntax highlighting for the Karate DSL, including Gherkin keywords, JSON/XML payloads, JavaScript expressions, Java class references, and embedded variables.
 

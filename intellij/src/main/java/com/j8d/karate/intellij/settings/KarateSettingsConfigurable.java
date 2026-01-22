@@ -37,7 +37,9 @@ public class KarateSettingsConfigurable implements Configurable {
     private JBCheckBox matchShowFailingCheckbox;
     private JBCheckBox matchShowActualValuesCheckbox;
     private JBCheckBox autoDiscoverEnvironmentsCheckbox;
-    
+    private JBTextField logFilterExcludeField;
+    private JBTextField logBreakpointsField;
+
     public KarateSettingsConfigurable(Project project) {
         this.project = project;
     }
@@ -77,11 +79,13 @@ public class KarateSettingsConfigurable implements Configurable {
             settings.matchDiagnosticsShowPassing);
         matchShowFailingCheckbox = new JBCheckBox("Show failing matches", 
             settings.matchDiagnosticsShowFailing);
-        matchShowActualValuesCheckbox = new JBCheckBox("Show actual values for failing matches", 
+        matchShowActualValuesCheckbox = new JBCheckBox("Show actual values for failing matches",
             settings.matchDiagnosticsShowActualValues);
-        autoDiscoverEnvironmentsCheckbox = new JBCheckBox("Auto-discover environments from karate-config.js", 
+        autoDiscoverEnvironmentsCheckbox = new JBCheckBox("Auto-discover environments from karate-config.js",
             settings.autoDiscoverEnvironments);
-        
+        logFilterExcludeField = new JBTextField(settings.logFilterExclude);
+        logBreakpointsField = new JBTextField(settings.logBreakpoints);
+
         // Update environment combo when environments field changes
         environmentsField.addActionListener(e -> updateEnvironmentCombo());
         
@@ -102,6 +106,9 @@ public class KarateSettingsConfigurable implements Configurable {
             .addComponent(matchShowPassingCheckbox)
             .addComponent(matchShowFailingCheckbox)
             .addComponent(matchShowActualValuesCheckbox)
+            .addSeparator()
+            .addLabeledComponent(new JBLabel("Log filter (comma-separated strings to hide):"), logFilterExcludeField)
+            .addLabeledComponent(new JBLabel("Log breakpoints (comma-separated, pause when found in logs):"), logBreakpointsField)
             .addComponentFillVertically(new JPanel(), 0)
             .getPanel();
         
@@ -135,7 +142,9 @@ public class KarateSettingsConfigurable implements Configurable {
             matchShowPassingCheckbox.isSelected() != settings.matchDiagnosticsShowPassing ||
             matchShowFailingCheckbox.isSelected() != settings.matchDiagnosticsShowFailing ||
             matchShowActualValuesCheckbox.isSelected() != settings.matchDiagnosticsShowActualValues ||
-            autoDiscoverEnvironmentsCheckbox.isSelected() != settings.autoDiscoverEnvironments;
+            autoDiscoverEnvironmentsCheckbox.isSelected() != settings.autoDiscoverEnvironments ||
+            !logFilterExcludeField.getText().equals(settings.logFilterExclude) ||
+            !logBreakpointsField.getText().equals(settings.logBreakpoints);
     }
     
     @Override
@@ -155,6 +164,8 @@ public class KarateSettingsConfigurable implements Configurable {
         settings.matchDiagnosticsShowFailing = matchShowFailingCheckbox.isSelected();
         settings.matchDiagnosticsShowActualValues = matchShowActualValuesCheckbox.isSelected();
         settings.autoDiscoverEnvironments = autoDiscoverEnvironmentsCheckbox.isSelected();
+        settings.logFilterExclude = logFilterExcludeField.getText();
+        settings.logBreakpoints = logBreakpointsField.getText();
 
         // Notify listeners (e.g., status bar widgets) that settings have changed
         settings.fireSettingsChanged();
@@ -178,6 +189,8 @@ public class KarateSettingsConfigurable implements Configurable {
         matchShowFailingCheckbox.setSelected(settings.matchDiagnosticsShowFailing);
         matchShowActualValuesCheckbox.setSelected(settings.matchDiagnosticsShowActualValues);
         autoDiscoverEnvironmentsCheckbox.setSelected(settings.autoDiscoverEnvironments);
+        logFilterExcludeField.setText(settings.logFilterExclude);
+        logBreakpointsField.setText(settings.logBreakpoints);
     }
 }
 

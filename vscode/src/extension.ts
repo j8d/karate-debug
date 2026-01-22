@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { KarateDebugAdapterFactory } from './debugAdapter';
 import { MatchDiagnosticsProvider } from './matchDiagnostics';
 import { LicenseManager } from './licensing';
+import { KarateDocumentLinkProvider } from './documentLinks';
 
 // Global output channel for logging
 export let outputChannel: vscode.OutputChannel;
@@ -229,6 +230,14 @@ export function activate(context: vscode.ExtensionContext) {
         )
     );
 
+    // Register DocumentLink provider for file hyperlinks
+    context.subscriptions.push(
+        vscode.languages.registerDocumentLinkProvider(
+            { language: 'karate', scheme: 'file' },
+            new KarateDocumentLinkProvider()
+        )
+    );
+
     // Watch for feature file changes
     const watcher = vscode.workspace.createFileSystemWatcher('**/*.feature');
     watcher.onDidCreate(() => featureExplorerProvider.refresh());
@@ -298,12 +307,17 @@ async function debugKarateFeature(uri: vscode.Uri, line: number) {
     // line -1 means run entire feature, line >= 0 means specific line (0-indexed, add 1 for Karate)
     const lineSpec = line >= 0 ? `:${line + 1}` : '';
 
+    // Get log breakpoints from settings
+    const config = vscode.workspace.getConfiguration('karateDebug');
+    const logBreakpoints = config.get<string[]>('logBreakpoints', []);
+
     await vscode.debug.startDebugging(workspaceFolder, {
         type: 'karate',
         request: 'launch',
         name: 'Karate Debug',
         feature: `${uri.fsPath}${lineSpec}`,
-        karateEnv: currentEnvironment
+        karateEnv: currentEnvironment,
+        logBreakpoints: logBreakpoints
     });
 }
 

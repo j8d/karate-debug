@@ -2,6 +2,20 @@
 
 All notable changes to the Karate Debug IntelliJ plugin will be documented in this file.
 
+## [0.1.5] - 2026-01-22
+
+### Added
+- Log breakpoints - pause execution when specified strings appear in log output (e.g., 'NullPointerException', 'ERROR')
+- Syntax highlighting in debug console output (errors in red, warnings in yellow, Karate output in green)
+- Clickable file references in feature files with permanent underlines and Cmd/Ctrl+Click navigation:
+  - `classpath:path/to/file.feature` - Click to open the referenced file
+  - `read('path/to/file.json')` - Works with or without classpath: prefix
+  - `read('/path/to/file.json')` - Leading slash paths are supported
+  - `read('@tagName')` - Jump to a tag in the current file
+  - `file.feature@tagName` - Open file and jump to the specified tag
+  - Smart tooltips show "Jump to @tag" for same-file references or "Open file and jump to @tag" for cross-file references
+- Log filter setting to hide log lines containing specified strings (e.g., THYMELEAF, HikariPool)
+
 ## [0.1.4] - 2026-01-20
 
 ### Added

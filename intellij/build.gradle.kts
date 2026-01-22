@@ -119,6 +119,9 @@ intellijPlatform {
                 <li><b>Match Diagnostics</b> - See pass/fail highlights on match statements with actual values inline</li>
                 <li><b>Quick Fixes</b> - One-click fixes to update expected values from actual results</li>
                 <li><b>Conditional Breakpoints</b> - Set conditions on breakpoints using JavaScript expressions</li>
+                <li><b>File Navigation</b> - Clickable file references for classpath:, read(), and @tag patterns</li>
+                <li><b>Log Filtering</b> - Hide noisy log output with configurable exclude patterns</li>
+                <li><b>Log Breakpoints</b> - Pause execution when specific strings appear in logs</li>
                 <li><b>Gutter Icons</b> - Debug individual features or scenarios from the editor</li>
                 <li><b>Feature Explorer</b> - Browse and run tests from the Karate tool window</li>
                 <li><b>Project Auto-Detection</b> - Automatically detects Maven/Gradle Karate projects</li>

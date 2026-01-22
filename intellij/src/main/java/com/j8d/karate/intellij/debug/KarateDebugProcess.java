@@ -8,6 +8,8 @@ import com.intellij.execution.ui.ConsoleView;
 import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.execution.ui.ExecutionConsole;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.editor.markup.TextAttributes;
+import com.intellij.ui.JBColor;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.xdebugger.XDebugProcess;
@@ -17,6 +19,7 @@ import com.intellij.xdebugger.breakpoints.XBreakpointHandler;
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
 import com.intellij.xdebugger.frame.XExecutionStack;
 import com.intellij.xdebugger.frame.XSuspendContext;
+import com.j8d.karate.intellij.project.KarateProjectSettings;
 import com.j8d.karate.intellij.run.KarateRunConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,6 +29,17 @@ import org.jetbrains.annotations.Nullable;
  * This is the core of the debugging integration.
  */
 public class KarateDebugProcess extends XDebugProcess {
+
+    // Custom console content types for syntax highlighting
+    private static final ConsoleViewContentType KARATE_OUTPUT = new ConsoleViewContentType(
+            "KARATE_OUTPUT",
+            new TextAttributes(new JBColor(0x008000, 0x6A8759), null, null, null, 0));  // Green
+    private static final ConsoleViewContentType KARATE_SUCCESS = new ConsoleViewContentType(
+            "KARATE_SUCCESS",
+            new TextAttributes(new JBColor(0x008000, 0x6A8759), null, null, null, 1));  // Green bold
+    private static final ConsoleViewContentType KARATE_STOPPED = new ConsoleViewContentType(
+            "KARATE_STOPPED",
+            new TextAttributes(new JBColor(0x0000FF, 0x6897BB), null, null, null, 1));  // Blue bold
 
     private final KarateRunConfiguration configuration;
     private final ExecutionEnvironment environment;
@@ -139,11 +153,65 @@ public class KarateDebugProcess extends XDebugProcess {
     }
 
     public void log(String message) {
-        if (consoleView != null) {
+        if (consoleView != null && message != null) {
+            // Skip empty messages
+            if (message.trim().isEmpty()) {
+                return;
+            }
+
+            // Check if message should be filtered out
+            KarateProjectSettings settings = KarateProjectSettings.getInstance(getSession().getProject());
+            if (settings.shouldFilterLog(message)) {
+                return;
+            }
+
+            ConsoleViewContentType contentType = getContentType(message);
             ApplicationManager.getApplication().invokeLater(() -> {
-                consoleView.print(message + "\n", ConsoleViewContentType.NORMAL_OUTPUT);
+                consoleView.print(message + "\n", contentType);
             });
         }
+    }
+
+    /**
+     * Determines the appropriate console content type based on the log message content.
+     */
+    private ConsoleViewContentType getContentType(String message) {
+        if (message == null) {
+            return ConsoleViewContentType.NORMAL_OUTPUT;
+        }
+
+        // Error patterns - red
+        if (message.contains("ERROR") || message.contains("Exception") ||
+            message.contains("FAILED") || message.contains("failed:")) {
+            return ConsoleViewContentType.ERROR_OUTPUT;
+        }
+
+        // Warning patterns - yellow
+        if (message.contains("WARN")) {
+            return ConsoleViewContentType.LOG_WARNING_OUTPUT;
+        }
+
+        // Stopped/breakpoint messages - blue bold
+        if (message.startsWith("Stopped:")) {
+            return KARATE_STOPPED;
+        }
+
+        // Success patterns - green bold
+        if (message.contains("passed:") || message.contains("PASSED")) {
+            return KARATE_SUCCESS;
+        }
+
+        // Karate log output - green
+        if (message.contains("[karate.log]") || message.contains("[print]")) {
+            return KARATE_OUTPUT;
+        }
+
+        // System/debug messages - gray
+        if (message.startsWith("[Karate Debug]") || message.contains("DEBUG")) {
+            return ConsoleViewContentType.SYSTEM_OUTPUT;
+        }
+
+        return ConsoleViewContentType.NORMAL_OUTPUT;
     }
 
     public KarateDapClient getDapClient() {

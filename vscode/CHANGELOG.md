@@ -5,6 +5,20 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.12] - 2026-01-22
+
+### Added
+- Syntax highlighting in Debug Console output (errors in red, warnings in yellow, Karate output in green)
+- Clickable file references in feature files with permanent underlines and smart navigation:
+  - `classpath:path/to/file.feature` - Click to open the referenced file
+  - `read('path/to/file.json')` - Works with or without classpath: prefix
+  - `read('/path/to/file.json')` - Leading slash paths are supported
+  - `read('@tagName')` - Jump to a tag in the current file
+  - `file.feature@tagName` - Open file and jump to the specified tag
+  - Smart tooltips show "Jump to @tag" for same-file references or "Open file and jump to @tag" for cross-file references
+- Log breakpoints - pause execution when specified strings appear in log output (e.g., 'NullPointerException', 'ERROR')
+- Log filter setting to hide log lines containing specified strings (e.g., THYMELEAF, HikariPool)
+
 ## [0.6.11] - 2026-01-22
 
 ### Changed

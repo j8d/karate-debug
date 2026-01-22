@@ -285,6 +285,18 @@ public class KarateDapClient {
         JsonObject args = new JsonObject();
         args.addProperty("feature", featurePath);
 
+        // Add log breakpoints from project settings
+        KarateProjectSettings settings = KarateProjectSettings.getInstance(debugProcess.getSession().getProject());
+        List<String> logBreakpointPatterns = settings.getLogBreakpointPatterns();
+        if (!logBreakpointPatterns.isEmpty()) {
+            JsonArray logBreakpointsArray = new JsonArray();
+            for (String pattern : logBreakpointPatterns) {
+                logBreakpointsArray.add(pattern);
+            }
+            args.add("logBreakpoints", logBreakpointsArray);
+            debugProcess.log("Log breakpoints configured: " + logBreakpointPatterns);
+        }
+
         debugProcess.log("Launching with feature: " + featurePath);
 
         sendRequest("launch", args).thenAccept(response -> {
@@ -431,7 +443,7 @@ public class KarateDapClient {
                 handleTerminatedEvent();
                 break;
             case "output":
-                handleOutputEvent(body);
+                // Ignore output events - IntelliJ captures stdout directly and applies its own coloring
                 break;
             default:
                 LOG.debug("Unhandled DAP event: " + eventName);

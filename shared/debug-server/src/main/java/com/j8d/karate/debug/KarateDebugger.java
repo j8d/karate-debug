@@ -73,6 +73,11 @@ public class KarateDebugger implements RuntimeHook {
     // Key: variable name, Value: parsed value to set
     private final Map<String, Object> pendingVariableChanges = new ConcurrentHashMap<>();
 
+    // Log breakpoints: patterns that trigger a pause when found in log output
+    private volatile List<String> logBreakpointPatterns = List.of();
+    private volatile boolean logBreakpointTriggered = false;
+    private volatile String triggeredLogMessage = null;
+
     public KarateDebugger(DapSession session, String workspaceRoot, String karateEnv) {
         this.session = session;
         this.workspaceRoot = workspaceRoot;
@@ -81,6 +86,35 @@ public class KarateDebugger implements RuntimeHook {
 
     public String getWorkspaceRoot() {
         return workspaceRoot;
+    }
+
+    /**
+     * Set log breakpoint patterns. When any of these patterns are found in log output,
+     * execution will pause at the next step.
+     */
+    public void setLogBreakpoints(List<String> patterns) {
+        this.logBreakpointPatterns = patterns != null ? patterns : List.of();
+        if (!logBreakpointPatterns.isEmpty()) {
+            logger.info("Log breakpoints set: {}", logBreakpointPatterns);
+        }
+    }
+
+    /**
+     * Called by the log appender to check if a log message should trigger a breakpoint.
+     * If a pattern matches, sets a flag that will cause the next step to pause.
+     */
+    public void checkLogBreakpoint(String message) {
+        if (logBreakpointPatterns.isEmpty() || message == null || !running || paused) {
+            return;
+        }
+        String lowerMessage = message.toLowerCase();
+        for (String pattern : logBreakpointPatterns) {
+            if (lowerMessage.contains(pattern.toLowerCase())) {
+                logBreakpointTriggered = true;
+                triggeredLogMessage = message;
+                return;
+            }
+        }
     }
 
     public void setFeaturePath(String path) {
@@ -397,6 +431,16 @@ public class KarateDebugger implements RuntimeHook {
             default -> { }
         }
 
+        // Check for log breakpoint trigger
+        if (logBreakpointTriggered) {
+            shouldPause = true;
+            pauseReason = "log breakpoint";
+            matchedCondition = triggeredLogMessage;
+            // Reset the trigger
+            logBreakpointTriggered = false;
+            triggeredLogMessage = null;
+        }
+
         if (shouldPause && running) {
             pauseExecution(step, pauseReason, line, matchedCondition);
         }
@@ -460,7 +504,9 @@ public class KarateDebugger implements RuntimeHook {
         pauseLatch = new CountDownLatch(1);
 
         // Log informative message about why we stopped
-        if (condition != null && !condition.isEmpty()) {
+        if ("log breakpoint".equals(reason) && condition != null) {
+            logger.info("Stopped: log breakpoint triggered by: {}", condition);
+        } else if (condition != null && !condition.isEmpty()) {
             logger.info("Stopped: breakpoint at line {}, condition: {} is true", line, condition);
         } else if ("breakpoint".equals(reason)) {
             logger.info("Stopped: breakpoint at line {}", line);

@@ -20,7 +20,24 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
 
     /** Log raw output without prefix (for stdout from debug server) */
     private logRaw(message: string): void {
+        // Check if line should be filtered out
+        if (this.shouldFilterLog(message)) {
+            return;
+        }
         this.outputChannel.appendLine(message);
+    }
+
+    /** Check if a log line should be filtered out based on user settings (case-insensitive) */
+    private shouldFilterLog(message: string): boolean {
+        const config = vscode.workspace.getConfiguration('karateDebug');
+        const excludePatterns = config.get<string[]>('logFilter.exclude', []);
+
+        if (excludePatterns.length === 0) {
+            return false;
+        }
+
+        const lowerMessage = message.toLowerCase();
+        return excludePatterns.some(pattern => lowerMessage.includes(pattern.toLowerCase()));
     }
 
     async createDebugAdapterDescriptor(
