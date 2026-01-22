@@ -15,7 +15,7 @@ export class KarateDocumentLinkProvider implements vscode.DocumentLinkProvider {
     // Patterns to detect file references
     private static readonly PATTERNS = [
         // classpath: references
-        /classpath:([^\s'">\)]+)/g,
+        /classpath:([^\s'">)]+)/g,
         // read('...') or read("...")
         /read\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
     ];
@@ -151,7 +151,7 @@ export class KarateDocumentLinkProvider implements vscode.DocumentLinkProvider {
                     return fileUri.with({ fragment: `L${i + 1}` });
                 }
             }
-        } catch (e) {
+        } catch {
             // If we can't read the file, just return the file URI without fragment
         }
         return fileUri;
