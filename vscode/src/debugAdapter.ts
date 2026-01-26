@@ -63,6 +63,9 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         // Start our custom Karate debug server
         const javaDebugPort = config.javaDebugPort || 0;
         const jsDebugPort = config.jsDebugPort || 0;
+        const enablePolyglotDebugging = config.enablePolyglotDebugging || false;
+        const enableJavaDebugging = config.enableJavaDebugging || false;
+        const enableJsDebugging = config.enableJsDebugging || false;
 
         // Track the JS debug port so we can clean it up on next session
         this.lastJsDebugPort = jsDebugPort;
@@ -77,7 +80,10 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
             port,
             config.karateEnv || 'dev',
             javaDebugPort,
-            jsDebugPort
+            jsDebugPort,
+            enablePolyglotDebugging,
+            enableJavaDebugging,
+            enableJsDebugging
         );
 
         // If Java debug port is specified, notify user
@@ -197,7 +203,10 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         port: number,
         karateEnv: string,
         javaDebugPort: number = 0,
-        jsDebugPort: number = 0
+        jsDebugPort: number = 0,
+        enablePolyglotDebugging: boolean = false,
+        enableJavaDebugging: boolean = false,
+        enableJsDebugging: boolean = false
     ): Promise<ChildProcess> {
         const config = vscode.workspace.getConfiguration('karateRunner');
 
@@ -224,28 +233,31 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         // Build Java args - add debug agents if specified
         const args: string[] = [];
 
-        if (javaDebugPort > 0) {
-            // Enable JDWP for Java debugging - suspend=n so Karate starts immediately
-            args.push(`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${javaDebugPort}`);
-        }
+        // In polyglot mode, the child process handles debug agents, not the parent
+        if (!enablePolyglotDebugging) {
+            if (javaDebugPort > 0) {
+                // Enable JDWP for Java debugging - suspend=n so Karate starts immediately
+                args.push(`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${javaDebugPort}`);
+            }
 
-        if (jsDebugPort > 0) {
-            // Enable GraalVM Chrome Inspector for JavaScript debugging
-            // This allows Chrome DevTools to attach and debug embedded JS in Karate tests
-            // Note: --inspect only works with GraalVM JDK, so we use polyglot system properties
-            // which work with GraalJS running on any JDK
-            args.push(`-Dpolyglot.inspect=${jsDebugPort}`);
+            if (jsDebugPort > 0) {
+                // Enable GraalVM Chrome Inspector for JavaScript debugging
+                // This allows Chrome DevTools to attach and debug embedded JS in Karate tests
+                // Note: --inspect only works with GraalVM JDK, so we use polyglot system properties
+                // which work with GraalJS running on any JDK
+                args.push(`-Dpolyglot.inspect=${jsDebugPort}`);
 
-            // Use Suspend=true so GraalVM waits for debugger before executing JS
-            // This should give us time to set breakpoints before karate-config.js runs
-            args.push('-Dpolyglot.inspect.Suspend=true');
+                // Use Suspend=true so GraalVM waits for debugger before executing JS
+                // This should give us time to set breakpoints before karate-config.js runs
+                args.push('-Dpolyglot.inspect.Suspend=true');
 
-            // WaitAttached ensures GraalVM waits for the debugger to fully attach
-            args.push('-Dpolyglot.inspect.WaitAttached=true');
+                // WaitAttached ensures GraalVM waits for the debugger to fully attach
+                args.push('-Dpolyglot.inspect.WaitAttached=true');
 
-            // Set source path to user's test sources to help filter out internal Karate JS
-            const sourcePath = path.join(workspaceRoot, 'src', 'test', 'java');
-            args.push(`-Dpolyglot.inspect.SourcePath=${sourcePath}`);
+                // Set source path to user's test sources to help filter out internal Karate JS
+                const sourcePath = path.join(workspaceRoot, 'src', 'test', 'java');
+                args.push(`-Dpolyglot.inspect.SourcePath=${sourcePath}`);
+            }
         }
 
         // Get log level from settings
@@ -258,12 +270,24 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         args.push('-e', karateEnv);
         args.push('-l', logLevel);
 
-        this.log(`Starting Karate debug server on port ${port}`);
-        if (javaDebugPort > 0) {
-            this.log(`Java debug agent listening on port ${javaDebugPort}`);
+        // Add polyglot mode flags
+        if (enablePolyglotDebugging) {
+            args.push('--polyglot');
+            args.push('--classpath', fullClasspath);
         }
-        if (jsDebugPort > 0) {
-            this.log(`[Experimental] JavaScript inspector listening on port ${jsDebugPort}`);
+
+        this.log(`Starting Karate debug server on port ${port}`);
+        if (enablePolyglotDebugging) {
+            this.log(`[Experimental] Polyglot debugging enabled`);
+            this.log(`  - Java debugging: ${enableJavaDebugging ? 'enabled' : 'disabled'}`);
+            this.log(`  - JavaScript debugging: ${enableJsDebugging ? 'enabled' : 'disabled'}`);
+        } else {
+            if (javaDebugPort > 0) {
+                this.log(`Java debug agent listening on port ${javaDebugPort}`);
+            }
+            if (jsDebugPort > 0) {
+                this.log(`[Experimental] JavaScript inspector listening on port ${jsDebugPort}`);
+            }
         }
         this.log(`Java: ${javaPath}`);
         this.log(`Debug server JAR: ${debugServerJar}`);
