@@ -17,6 +17,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <karate.version>1.5.2</karate.version>
+        <graalvm.version>23.0.8</graalvm.version>
     </properties>
 
     <dependencies>
@@ -48,6 +49,14 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.5.25</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- GraalVM Chrome Inspector - enables JavaScript debugging via Chrome DevTools Protocol -->
+        <dependency>
+            <groupId>org.graalvm.tools</groupId>
+            <artifactId>chromeinspector</artifactId>
+            <version>${graalvm.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

@@ -69,6 +69,10 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
     // Log breakpoints: comma-separated list of strings that trigger a pause when found in logs
     public String logBreakpoints = "";
 
+    // [Experimental] Port for JavaScript debugger (Chrome DevTools Protocol)
+    // When set to a value > 0, enables debugging of embedded JavaScript in Karate tests
+    public int jsDebugPort = 0;
+
     // Listeners for settings changes (not serialized)
     @Transient
     private final List<Runnable> changeListeners = new CopyOnWriteArrayList<>();

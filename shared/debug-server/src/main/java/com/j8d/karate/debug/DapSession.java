@@ -274,6 +274,8 @@ public class DapSession {
     private void handleConfigurationDone(JsonObject request) {
         sendResponse(request, true, null);
         // Start the Karate test execution
+        // If JS debugging is enabled with Suspend=true, GraalVM will pause
+        // when loading karate-config.js, waiting for the debugger to connect
         debugger.startExecution();
     }
 

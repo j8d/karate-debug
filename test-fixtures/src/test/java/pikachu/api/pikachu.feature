@@ -7,11 +7,11 @@ Feature: Pokemon API
     Then status 200
     And match response.name == 'pikachu'
     And match response.id == 25
-    And print 'ted'
-    And print 'thymeleafs'
-    And print 'thymeleaf'
-    And print 'asdf'
-    And print 'leaf'
+    And print 'twas'
+    And print 'brillig'
+    And print '&the'
+    And print 'Slithy'
+    And print 'toves'
     And match response.types == '#array'
     And call read('classpath:pikachu/api/pikachu-abilities.feature')
 
