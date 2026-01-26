@@ -59,6 +59,13 @@
             <version>${graalvm.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- WebSocket client for Chrome DevTools Protocol (CDP) communication -->
+        <dependency>
+            <groupId>org.java-websocket</groupId>
+            <artifactId>Java-WebSocket</artifactId>
+            <version>1.5.4</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -88,6 +95,7 @@
                             <artifactSet>
                                 <includes>
                                     <include>com.google.code.gson:gson</include>
+                                    <include>org.java-websocket:Java-WebSocket</include>
                                 </includes>
                             </artifactSet>
                             <transformers>
