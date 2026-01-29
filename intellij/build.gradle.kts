@@ -202,7 +202,7 @@ intellijPlatform {
 
 tasks {
     wrapper {
-        gradleVersion = "9.3.0"
+        gradleVersion = "9.3.1"
     }
     
     // Ensure debug-server JAR is built before compiling
