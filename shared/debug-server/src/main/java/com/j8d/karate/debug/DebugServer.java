@@ -14,27 +14,32 @@ import java.net.Socket;
  */
 public class DebugServer {
     private static final Logger logger = LoggerFactory.getLogger(DebugServer.class);
-    
+
     private final int port;
     private final String workspaceRoot;
     private final String karateEnv;
+    private final String classpath;
+    private final boolean polyglotMode;
     private ServerSocket serverSocket;
     private volatile boolean running = false;
 
-    public DebugServer(int port, String workspaceRoot, String karateEnv) {
+    public DebugServer(int port, String workspaceRoot, String karateEnv, String classpath, boolean polyglotMode) {
         this.port = port;
         this.workspaceRoot = workspaceRoot;
         this.karateEnv = karateEnv;
+        this.classpath = classpath;
+        this.polyglotMode = polyglotMode;
     }
 
     public void start() throws IOException {
         serverSocket = new ServerSocket(port);
         running = true;
-        
+
         logger.info("Karate Debug Server started on port {}", port);
         logger.info("Workspace: {}", workspaceRoot);
         logger.info("Environment: {}", karateEnv);
-        
+        logger.info("Mode: {}", polyglotMode ? "polyglot" : "standard");
+
         while (running) {
             try {
                 logger.trace("Waiting for debugger connection...");
@@ -42,8 +47,14 @@ public class DebugServer {
                 logger.trace("Debugger connected from {}", clientSocket.getRemoteSocketAddress());
 
                 // Handle the debug session
-                DapSession session = new DapSession(clientSocket, workspaceRoot, karateEnv);
-                boolean hadValidSession = session.run();
+                boolean hadValidSession;
+                if (polyglotMode) {
+                    PolyglotDapSession session = new PolyglotDapSession(clientSocket, workspaceRoot, karateEnv, classpath);
+                    hadValidSession = session.run();
+                } else {
+                    DapSession session = new DapSession(clientSocket, workspaceRoot, karateEnv);
+                    hadValidSession = session.run();
+                }
 
                 if (hadValidSession) {
                     logger.trace("Debug session completed");
@@ -76,6 +87,8 @@ public class DebugServer {
         String workspaceRoot = System.getProperty("user.dir");
         String karateEnv = "dev";
         String logLevel = "info";
+        String classpath = null;
+        boolean polyglotMode = false;
 
         // Parse command line arguments
         for (int i = 0; i < args.length; i++) {
@@ -99,6 +112,14 @@ public class DebugServer {
                     if (i + 1 < args.length) {
                         logLevel = args[++i];
                     }
+                }
+                case "--classpath", "-cp" -> {
+                    if (i + 1 < args.length) {
+                        classpath = args[++i];
+                    }
+                }
+                case "--polyglot" -> {
+                    polyglotMode = true;
                 }
                 case "--help", "-h" -> {
                     printUsage();
@@ -125,7 +146,7 @@ public class DebugServer {
         }
 
         try {
-            DebugServer server = new DebugServer(port, workspaceRoot, karateEnv);
+            DebugServer server = new DebugServer(port, workspaceRoot, karateEnv, classpath, polyglotMode);
 
             // Handle shutdown gracefully
             Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
@@ -171,6 +192,8 @@ public class DebugServer {
         System.out.println("  -w, --workspace <path>  Workspace root directory");
         System.out.println("  -e, --env <env>         Karate environment (default: dev)");
         System.out.println("  -l, --log-level <level> Log level: error, warn, info, debug, trace (default: info)");
+        System.out.println("  -cp, --classpath <cp>   Classpath for child process (polyglot mode only)");
+        System.out.println("  --polyglot              Enable polyglot debugging (Karate + JS + Java)");
         System.out.println("  -h, --help              Show this help");
     }
 }

@@ -109,6 +109,26 @@
                 "type": "number",
                 "description": "Port for Java debugger (JDWP). When set, enables simultaneous Java and Feature breakpoints. Use with a compound launch config to attach Java debugger.",
                 "default": 0
+              },
+              "jsDebugPort": {
+                "type": "number",
+                "description": "[Experimental] Port for JavaScript debugger (Chrome DevTools Protocol). When set, enables debugging of embedded JavaScript in Karate tests. Connect Chrome DevTools or VS Code JS debugger to this port.",
+                "default": 0
+              },
+              "enablePolyglotDebugging": {
+                "type": "boolean",
+                "description": "[Experimental] Enable unified polyglot debugging across Karate, JavaScript, and Java in a single debug session.",
+                "default": false
+              },
+              "enableJavaDebugging": {
+                "type": "boolean",
+                "description": "Enable Java debugging in polyglot mode. Only applies when enablePolyglotDebugging is true.",
+                "default": false
+              },
+              "enableJsDebugging": {
+                "type": "boolean",
+                "description": "Enable JavaScript debugging in polyglot mode. Only applies when enablePolyglotDebugging is true.",
+                "default": false
               }
             }
           }
@@ -134,6 +154,15 @@
             "request": "launch",
             "name": "Karate: Debug Feature Only",
             "feature": "${file}"
+          },
+          {
+            "type": "karate",
+            "request": "launch",
+            "name": "Karate: Polyglot Debug (Karate + JS + Java)",
+            "feature": "${file}",
+            "enablePolyglotDebugging": true,
+            "enableJavaDebugging": true,
+            "enableJsDebugging": true
           }
         ],
         "configurationSnippets": [
@@ -351,6 +380,7 @@
     "@types/mocha": "^10.0.0",
     "@types/node": "^24.0.0",
     "@types/vscode": "^1.80.0",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.51.0",
     "@typescript-eslint/parser": "^8.51.0",
     "@vscode/test-electron": "^2.3.0",
@@ -363,6 +393,7 @@
   },
   "dependencies": {
     "@vscode/debugadapter": "^1.64.0",
-    "@vscode/debugprotocol": "^1.64.0"
+    "@vscode/debugprotocol": "^1.64.0",
+    "ws": "^8.19.0"
   }
 }

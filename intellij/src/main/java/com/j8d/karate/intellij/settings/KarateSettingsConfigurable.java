@@ -39,6 +39,9 @@ public class KarateSettingsConfigurable implements Configurable {
     private JBCheckBox autoDiscoverEnvironmentsCheckbox;
     private JBTextField logFilterExcludeField;
     private JBTextField logBreakpointsField;
+    private JBCheckBox enablePolyglotDebuggingCheckbox;
+    private JBCheckBox polyglotJavaDebuggingCheckbox;
+    private JBCheckBox polyglotJsDebuggingCheckbox;
 
     public KarateSettingsConfigurable(Project project) {
         this.project = project;
@@ -86,6 +89,14 @@ public class KarateSettingsConfigurable implements Configurable {
         logFilterExcludeField = new JBTextField(settings.logFilterExclude);
         logBreakpointsField = new JBTextField(settings.logBreakpoints);
 
+        // Polyglot debugging settings
+        enablePolyglotDebuggingCheckbox = new JBCheckBox("[Experimental] Enable unified polyglot debugging",
+            settings.enablePolyglotDebugging);
+        polyglotJavaDebuggingCheckbox = new JBCheckBox("Enable Java debugging in polyglot mode",
+            settings.enableJavaDebugging);
+        polyglotJsDebuggingCheckbox = new JBCheckBox("Enable JavaScript debugging in polyglot mode",
+            settings.enableJsDebugging);
+
         // Update environment combo when environments field changes
         environmentsField.addActionListener(e -> updateEnvironmentCombo());
         
@@ -109,6 +120,10 @@ public class KarateSettingsConfigurable implements Configurable {
             .addSeparator()
             .addLabeledComponent(new JBLabel("Log filter (comma-separated strings to hide):"), logFilterExcludeField)
             .addLabeledComponent(new JBLabel("Log breakpoints (comma-separated, pause when found in logs):"), logBreakpointsField)
+            .addSeparator()
+            .addComponent(enablePolyglotDebuggingCheckbox)
+            .addComponent(polyglotJavaDebuggingCheckbox)
+            .addComponent(polyglotJsDebuggingCheckbox)
             .addComponentFillVertically(new JPanel(), 0)
             .getPanel();
         
@@ -129,7 +144,7 @@ public class KarateSettingsConfigurable implements Configurable {
     @Override
     public boolean isModified() {
         KarateProjectSettings settings = KarateProjectSettings.getInstance(project);
-        
+
         return !environmentsField.getText().equals(settings.environments) ||
             !String.valueOf(defaultEnvironmentCombo.getSelectedItem()).equals(settings.defaultEnvironment) ||
             !String.valueOf(logLevelCombo.getSelectedItem()).equals(settings.logLevel) ||
@@ -144,9 +159,12 @@ public class KarateSettingsConfigurable implements Configurable {
             matchShowActualValuesCheckbox.isSelected() != settings.matchDiagnosticsShowActualValues ||
             autoDiscoverEnvironmentsCheckbox.isSelected() != settings.autoDiscoverEnvironments ||
             !logFilterExcludeField.getText().equals(settings.logFilterExclude) ||
-            !logBreakpointsField.getText().equals(settings.logBreakpoints);
+            !logBreakpointsField.getText().equals(settings.logBreakpoints) ||
+            enablePolyglotDebuggingCheckbox.isSelected() != settings.enablePolyglotDebugging ||
+            polyglotJavaDebuggingCheckbox.isSelected() != settings.enableJavaDebugging ||
+            polyglotJsDebuggingCheckbox.isSelected() != settings.enableJsDebugging;
     }
-    
+
     @Override
     public void apply() throws ConfigurationException {
         KarateProjectSettings settings = KarateProjectSettings.getInstance(project);
@@ -166,15 +184,18 @@ public class KarateSettingsConfigurable implements Configurable {
         settings.autoDiscoverEnvironments = autoDiscoverEnvironmentsCheckbox.isSelected();
         settings.logFilterExclude = logFilterExcludeField.getText();
         settings.logBreakpoints = logBreakpointsField.getText();
+        settings.enablePolyglotDebugging = enablePolyglotDebuggingCheckbox.isSelected();
+        settings.enableJavaDebugging = polyglotJavaDebuggingCheckbox.isSelected();
+        settings.enableJsDebugging = polyglotJsDebuggingCheckbox.isSelected();
 
         // Notify listeners (e.g., status bar widgets) that settings have changed
         settings.fireSettingsChanged();
     }
-    
+
     @Override
     public void reset() {
         KarateProjectSettings settings = KarateProjectSettings.getInstance(project);
-        
+
         environmentsField.setText(settings.environments);
         updateEnvironmentCombo();
         defaultEnvironmentCombo.setSelectedItem(settings.defaultEnvironment);
@@ -191,6 +212,9 @@ public class KarateSettingsConfigurable implements Configurable {
         autoDiscoverEnvironmentsCheckbox.setSelected(settings.autoDiscoverEnvironments);
         logFilterExcludeField.setText(settings.logFilterExclude);
         logBreakpointsField.setText(settings.logBreakpoints);
+        enablePolyglotDebuggingCheckbox.setSelected(settings.enablePolyglotDebugging);
+        polyglotJavaDebuggingCheckbox.setSelected(settings.enableJavaDebugging);
+        polyglotJsDebuggingCheckbox.setSelected(settings.enableJsDebugging);
     }
 }
 

@@ -69,6 +69,19 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
     // Log breakpoints: comma-separated list of strings that trigger a pause when found in logs
     public String logBreakpoints = "";
 
+    // [Experimental] Port for JavaScript debugger (Chrome DevTools Protocol)
+    // When set to a value > 0, enables debugging of embedded JavaScript in Karate tests
+    public int jsDebugPort = 0;
+
+    // [Experimental] Enable unified polyglot debugging across Karate, JavaScript, and Java
+    public boolean enablePolyglotDebugging = false;
+
+    // Enable Java debugging in polyglot mode
+    public boolean enableJavaDebugging = false;
+
+    // Enable JavaScript debugging in polyglot mode
+    public boolean enableJsDebugging = false;
+
     // Listeners for settings changes (not serialized)
     @Transient
     private final List<Runnable> changeListeners = new CopyOnWriteArrayList<>();
@@ -245,6 +258,29 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
             .map(String::trim)
             .filter(s -> !s.isEmpty())
             .toList();
+    }
+
+    // ========== Polyglot Debugging Getters ==========
+
+    /**
+     * Check if polyglot debugging is enabled.
+     */
+    public boolean isPolyglotDebuggingEnabled() {
+        return enablePolyglotDebugging;
+    }
+
+    /**
+     * Check if Java debugging is enabled in polyglot mode.
+     */
+    public boolean isPolyglotJavaDebuggingEnabled() {
+        return enableJavaDebugging;
+    }
+
+    /**
+     * Check if JavaScript debugging is enabled in polyglot mode.
+     */
+    public boolean isPolyglotJsDebuggingEnabled() {
+        return enableJsDebugging;
     }
 }
 

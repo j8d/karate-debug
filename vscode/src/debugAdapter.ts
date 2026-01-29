@@ -1,13 +1,16 @@
-import { ChildProcess, spawn } from 'child_process';
+import { ChildProcess, spawn, execSync } from 'child_process';
 import * as fs from 'fs';
 import * as net from 'net';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { GraalInspectorClient } from './graalInspector';
 
 export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
     private readonly context: vscode.ExtensionContext;
     private readonly outputChannel: vscode.OutputChannel;
     private serverProcess: ChildProcess | null = null;
+    private lastJsDebugPort: number = 0;
+    private graalInspector: GraalInspectorClient | null = null;
 
     constructor(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel) {
         this.context = context;
@@ -51,16 +54,36 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
             throw new Error('No workspace folder found');
         }
 
+        // Clean up any previous session before starting a new one
+        this.cleanupPreviousSession();
+
         // Find a free port for the debug server
         const port = await this.findFreePort();
 
         // Start our custom Karate debug server
         const javaDebugPort = config.javaDebugPort || 0;
+        const jsDebugPort = config.jsDebugPort || 0;
+        const enablePolyglotDebugging = config.enablePolyglotDebugging || false;
+        const enableJavaDebugging = config.enableJavaDebugging || false;
+        const enableJsDebugging = config.enableJsDebugging || false;
+
+        // Track the JS debug port so we can clean it up on next session
+        this.lastJsDebugPort = jsDebugPort;
+
+        // Also kill any existing process on the JS debug port before starting
+        if (jsDebugPort > 0) {
+            this.killProcessOnPort(jsDebugPort);
+        }
+
         this.serverProcess = await this.startDebugServer(
             workspaceFolder.uri.fsPath,
             port,
             config.karateEnv || 'dev',
-            javaDebugPort
+            javaDebugPort,
+            jsDebugPort,
+            enablePolyglotDebugging,
+            enableJavaDebugging,
+            enableJsDebugging
         );
 
         // If Java debug port is specified, notify user
@@ -69,8 +92,28 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
             this.log(`Attach Java debugger to port ${javaDebugPort} for Java breakpoints`);
         }
 
-        // Wait for server to be ready
+        if (jsDebugPort > 0) {
+            this.log(`[Experimental] JavaScript inspector enabled on port ${jsDebugPort}`);
+        }
+
+        // Wait for debug server to be ready
         await this.waitForServer(port, 30000);
+
+        // Connect to the GraalVM inspector asynchronously
+        // The inspector only starts when Karate loads JavaScript, which happens
+        // after the DAP server is ready. We connect in the background.
+        if (jsDebugPort > 0) {
+            this.graalInspector = new GraalInspectorClient(
+                this.outputChannel,
+                workspaceFolder.uri.fsPath
+            );
+
+            // Connect asynchronously - don't block the debug session
+            // The inspector will be ready shortly after Karate starts executing
+            this.connectInspectorWithRetry(jsDebugPort, 30, 500).catch(err => {
+                this.log(`[GraalInspector] Failed to connect: ${err}`);
+            });
+        }
 
         // Show output channel AFTER connection (to avoid Debug Console taking focus)
         setTimeout(() => {
@@ -82,9 +125,60 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
     }
 
     dispose(): void {
+        this.cleanupPreviousSession();
+    }
+
+    /**
+     * Clean up any previous debug session - kill server process and free ports
+     */
+    private cleanupPreviousSession(): void {
+        // Disconnect the GraalVM inspector client
+        if (this.graalInspector) {
+            this.graalInspector.disconnect();
+            this.graalInspector = null;
+        }
+
+        // Kill the tracked server process
         if (this.serverProcess) {
             this.serverProcess.kill();
             this.serverProcess = null;
+        }
+
+        // Kill any process using the last JS debug port (in case it didn't shut down cleanly)
+        if (this.lastJsDebugPort > 0) {
+            this.killProcessOnPort(this.lastJsDebugPort);
+        }
+    }
+
+    /**
+     * Kill any process listening on the specified port (macOS/Linux only)
+     */
+    private killProcessOnPort(port: number): void {
+        try {
+            // Use lsof to find and kill processes on the port
+            execSync(`lsof -ti:${port} | xargs kill -9 2>/dev/null`, { stdio: 'ignore' });
+        } catch {
+            // Ignore errors - port may already be free
+        }
+    }
+
+    /**
+     * Connect to the GraalVM inspector with retries
+     */
+    private async connectInspectorWithRetry(port: number, maxRetries: number, delayMs: number): Promise<void> {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                await this.graalInspector!.connect(port);
+                this.log('[GraalInspector] Connected successfully');
+                return;
+            } catch (error) {
+                if (attempt < maxRetries) {
+                    this.log(`[GraalInspector] Connection attempt ${attempt} failed, retrying in ${delayMs}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                } else {
+                    this.log(`[GraalInspector] Failed to connect after ${maxRetries} attempts: ${error}`);
+                }
+            }
         }
     }
 
@@ -108,7 +202,11 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         workspaceRoot: string,
         port: number,
         karateEnv: string,
-        javaDebugPort: number = 0
+        javaDebugPort: number = 0,
+        jsDebugPort: number = 0,
+        enablePolyglotDebugging: boolean = false,
+        enableJavaDebugging: boolean = false,
+        enableJsDebugging: boolean = false
     ): Promise<ChildProcess> {
         const config = vscode.workspace.getConfiguration('karateRunner');
 
@@ -132,12 +230,34 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         // Our debug server JAR should be FIRST, followed by project classes, then Maven deps
         const fullClasspath = `${debugServerJar}:${testClasses}:${mainClasses}:${mavenCp}`;
 
-        // Build Java args - add JDWP agent if javaDebugPort is specified
+        // Build Java args - add debug agents if specified
         const args: string[] = [];
 
-        if (javaDebugPort > 0) {
-            // Enable JDWP for Java debugging - suspend=n so Karate starts immediately
-            args.push(`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${javaDebugPort}`);
+        // In polyglot mode, the child process handles debug agents, not the parent
+        if (!enablePolyglotDebugging) {
+            if (javaDebugPort > 0) {
+                // Enable JDWP for Java debugging - suspend=n so Karate starts immediately
+                args.push(`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${javaDebugPort}`);
+            }
+
+            if (jsDebugPort > 0) {
+                // Enable GraalVM Chrome Inspector for JavaScript debugging
+                // This allows Chrome DevTools to attach and debug embedded JS in Karate tests
+                // Note: --inspect only works with GraalVM JDK, so we use polyglot system properties
+                // which work with GraalJS running on any JDK
+                args.push(`-Dpolyglot.inspect=${jsDebugPort}`);
+
+                // Use Suspend=true so GraalVM waits for debugger before executing JS
+                // This should give us time to set breakpoints before karate-config.js runs
+                args.push('-Dpolyglot.inspect.Suspend=true');
+
+                // WaitAttached ensures GraalVM waits for the debugger to fully attach
+                args.push('-Dpolyglot.inspect.WaitAttached=true');
+
+                // Set source path to user's test sources to help filter out internal Karate JS
+                const sourcePath = path.join(workspaceRoot, 'src', 'test', 'java');
+                args.push(`-Dpolyglot.inspect.SourcePath=${sourcePath}`);
+            }
         }
 
         // Get log level from settings
@@ -150,9 +270,24 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         args.push('-e', karateEnv);
         args.push('-l', logLevel);
 
+        // Add polyglot mode flags
+        if (enablePolyglotDebugging) {
+            args.push('--polyglot');
+            args.push('--classpath', fullClasspath);
+        }
+
         this.log(`Starting Karate debug server on port ${port}`);
-        if (javaDebugPort > 0) {
-            this.log(`Java debug agent listening on port ${javaDebugPort}`);
+        if (enablePolyglotDebugging) {
+            this.log(`[Experimental] Polyglot debugging enabled`);
+            this.log(`  - Java debugging: ${enableJavaDebugging ? 'enabled' : 'disabled'}`);
+            this.log(`  - JavaScript debugging: ${enableJsDebugging ? 'enabled' : 'disabled'}`);
+        } else {
+            if (javaDebugPort > 0) {
+                this.log(`Java debug agent listening on port ${javaDebugPort}`);
+            }
+            if (jsDebugPort > 0) {
+                this.log(`[Experimental] JavaScript inspector listening on port ${jsDebugPort}`);
+            }
         }
         this.log(`Java: ${javaPath}`);
         this.log(`Debug server JAR: ${debugServerJar}`);

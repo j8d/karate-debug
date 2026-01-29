@@ -81,6 +81,14 @@ public class KarateDapClient {
         // Log level from settings
         String logLevel = settings.getEffectiveLogLevel();
 
+        // Get JS debug port from settings (experimental)
+        int jsDebugPort = settings.jsDebugPort;
+
+        // Get polyglot debugging settings
+        boolean enablePolyglotDebugging = settings.isPolyglotDebuggingEnabled();
+        boolean enableJavaDebugging = settings.isPolyglotJavaDebuggingEnabled();
+        boolean enableJsDebugging = settings.isPolyglotJsDebuggingEnabled();
+
         // Start the debug server
         List<String> command = new ArrayList<>();
         command.add(javaPath);
@@ -89,6 +97,15 @@ public class KarateDapClient {
         command.add("--add-opens=java.base/sun.nio.ch=ALL-UNNAMED");
         command.add("-XX:+EnableDynamicAgentLoading");
         command.add("-Dpolyglot.engine.WarnInterpreterOnly=false");
+
+        // In polyglot mode, the child process handles debug agents, not the parent
+        if (!enablePolyglotDebugging) {
+            // Enable Chrome Inspector for JavaScript debugging if configured
+            if (jsDebugPort > 0) {
+                command.add("--inspect=" + jsDebugPort);
+            }
+        }
+
         command.add("-cp");
         command.add(classpath);
         command.add("com.j8d.karate.debug.DebugServer");
@@ -101,8 +118,25 @@ public class KarateDapClient {
         command.add("-l");
         command.add(logLevel);
 
+        // Add polyglot mode flags
+        if (enablePolyglotDebugging) {
+            command.add("--polyglot");
+            command.add("--classpath");
+            command.add(classpath);
+        }
+
         debugProcess.log("Environment: " + karateEnv);
         debugProcess.log("Log level: " + logLevel);
+        if (enablePolyglotDebugging) {
+            debugProcess.log("[Experimental] Polyglot debugging enabled");
+            debugProcess.log("  - Java debugging: " + (enableJavaDebugging ? "enabled" : "disabled"));
+            debugProcess.log("  - JavaScript debugging: " + (enableJsDebugging ? "enabled" : "disabled"));
+        } else {
+            if (jsDebugPort > 0) {
+                debugProcess.log("[Experimental] JavaScript inspector enabled on port " + jsDebugPort);
+                debugProcess.log("Connect Chrome DevTools to: chrome://inspect or devtools://devtools/bundled/js_app.html?ws=127.0.0.1:" + jsDebugPort);
+            }
+        }
         debugProcess.log("Command: " + String.join(" ", command));
 
         ProcessBuilder pb = new ProcessBuilder(command);

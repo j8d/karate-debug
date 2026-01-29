@@ -17,6 +17,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <karate.version>1.5.2</karate.version>
+        <graalvm.version>24.0.0</graalvm.version>
     </properties>
 
     <dependencies>
@@ -50,6 +51,22 @@
             <version>1.5.26</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- GraalVM Chrome Inspector - enables JavaScript debugging via Chrome DevTools Protocol -->
+        <!-- Must match the GraalJS version used by Karate (24.0.0 for Karate 1.5.2) -->
+        <dependency>
+            <groupId>org.graalvm.tools</groupId>
+            <artifactId>chromeinspector-tool</artifactId>
+            <version>${graalvm.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- WebSocket client for Chrome DevTools Protocol (CDP) communication -->
+        <dependency>
+            <groupId>org.java-websocket</groupId>
+            <artifactId>Java-WebSocket</artifactId>
+            <version>1.5.4</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -79,6 +96,7 @@
                             <artifactSet>
                                 <includes>
                                     <include>com.google.code.gson:gson</include>
+                                    <include>org.java-websocket:Java-WebSocket</include>
                                 </includes>
                             </artifactSet>
                             <transformers>
