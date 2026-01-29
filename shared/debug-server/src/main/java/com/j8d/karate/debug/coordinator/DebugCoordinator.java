@@ -181,23 +181,15 @@ public class DebugCoordinator {
     /**
      * Connects all backends with retry logic.
      * Backends may not be immediately available after child process starts.
+     *
+     * Note: Backend initialization is performed in {@link DapMultiplexer#registerBackend},
+     * so this method intentionally avoids re-initializing backends to prevent
+     * duplicate listener registration and other side effects.
      */
     private void connectBackends() throws IOException, TimeoutException, InterruptedException {
-        // Initialize Karate backend (IPC is already connected via ChildProcessManager)
-        karateBackend.initialize(multiplexer);
-        log.debug("KarateBackend initialized");
-
-        // Initialize JavaScript backend (connection is async in start())
-        if (jsBackend != null) {
-            jsBackend.initialize(multiplexer);
-            log.debug("JavaScriptBackend initialized");
-        }
-
-        // Initialize Java backend (connection is in start())
-        if (javaBackend != null) {
-            javaBackend.initialize(multiplexer);
-            log.debug("JavaBackend initialized");
-        }
+        // Backends are already initialized via registerBackend() in createBackends().
+        // This method exists for any future connection/start logic that may be needed.
+        log.debug("All backends registered and initialized");
     }
 
     // ========== Breakpoint Management ==========

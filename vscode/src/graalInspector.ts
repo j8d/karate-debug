@@ -35,7 +35,8 @@ export class GraalInspectorClient {
     private outputChannel: vscode.OutputChannel;
     private workspaceRoot: string;
     private scripts: Map<string, ScriptInfo> = new Map();
-    private pendingResponses: Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }> = new Map();
+    private pendingResponses: Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void; timeoutId: NodeJS.Timeout }> = new Map();
+    private static readonly REQUEST_TIMEOUT_MS = 30000; // 30 second timeout for CDP requests
 
     // Breakpoint synchronization
     private fileToScriptId: Map<string, string> = new Map();  // file path -> script ID
@@ -161,8 +162,17 @@ export class GraalInspectorClient {
             const id = ++this.messageId;
             const message = { id, method, params };
 
+            // Set up timeout to prevent promise leaks if target never responds
+            const timeoutId = setTimeout(() => {
+                const pending = this.pendingResponses.get(id);
+                if (pending) {
+                    this.pendingResponses.delete(id);
+                    pending.reject(new Error(`CDP request '${method}' timed out after ${GraalInspectorClient.REQUEST_TIMEOUT_MS}ms`));
+                }
+            }, GraalInspectorClient.REQUEST_TIMEOUT_MS);
+
             // Store the promise callbacks to resolve when we get the response
-            this.pendingResponses.set(id, { resolve, reject });
+            this.pendingResponses.set(id, { resolve, reject, timeoutId });
 
             this.ws.send(JSON.stringify(message));
         });
@@ -173,6 +183,7 @@ export class GraalInspectorClient {
         if (message.id !== undefined) {
             const pending = this.pendingResponses.get(message.id);
             if (pending) {
+                clearTimeout(pending.timeoutId); // Clear the timeout since we got a response
                 this.pendingResponses.delete(message.id);
                 if (message.error) {
                     pending.reject(new Error(JSON.stringify(message.error)));
@@ -538,13 +549,21 @@ export class GraalInspectorClient {
             this.pauseDecoration = null;
         }
 
+        // Reject all pending responses to prevent promise leaks
+        for (const [, pending] of this.pendingResponses) {
+            clearTimeout(pending.timeoutId);
+            pending.reject(new Error('Disconnected'));
+        }
+        this.pendingResponses.clear();
+
         // Close WebSocket
         if (this.ws) {
             this.ws.close();
             this.ws = null;
         }
 
-        // Clear mappings
+        // Clear all mappings and script metadata
+        this.scripts.clear();
         this.fileToScriptId.clear();
         this.scriptIdToFile.clear();
     }
