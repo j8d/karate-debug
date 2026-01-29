@@ -1,24 +1,35 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
-  "labels": [
-    "dependencies"
-  ],
+  "extends": ["config:recommended"],
+  "schedule": ["after 9am and before 5pm on monday,tuesday,wednesday,thursday,friday"],
+  "timezone": "America/Chicago",
+  "platformAutomerge": true,
+  "rebaseWhen": "behind-base-branch",
+  "labels": ["dependencies"],
   "packageRules": [
+    {
+      "matchPackageNames": ["stripe", "@supabase/supabase-js", "jsonwebtoken"],
+      "automerge": false,
+      "description": "Security-sensitive packages require manual review"
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "auto"
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
     {
       "description": "Group IntelliJ platform updates",
       "groupName": "JetBrains dependencies",
-      "matchPackageNames": [
-        "/org.jetbrains.*/"
-      ]
+      "matchPackageNames": ["/org.jetbrains.*/"]
     },
     {
       "description": "Group npm updates",
-      "matchManagers": [
-        "npm"
-      ],
+      "matchManagers": ["npm"],
       "groupName": "npm dependencies"
     }
   ],

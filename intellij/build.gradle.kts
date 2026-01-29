@@ -2,7 +2,7 @@ import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 
 plugins {
     id("java")
-    id("org.jetbrains.intellij.platform") version "2.10.5"
+    id("org.jetbrains.intellij.platform") version "2.11.0"
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -202,7 +202,7 @@ intellijPlatform {
 
 tasks {
     wrapper {
-        gradleVersion = "9.3.0"
+        gradleVersion = "9.3.1"
     }
     
     // Ensure debug-server JAR is built before compiling
