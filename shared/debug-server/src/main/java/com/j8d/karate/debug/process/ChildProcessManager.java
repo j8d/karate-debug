@@ -33,16 +33,20 @@ public class ChildProcessManager {
     
     private static final Logger log = LoggerFactory.getLogger(ChildProcessManager.class);
     private static final Pattern IPC_PORT_PATTERN = Pattern.compile("IPC_PORT=(\\d+)");
+    private static final Pattern JDWP_PORT_PATTERN = Pattern.compile("Listening for transport dt_socket at address: (\\d+)");
     private static final int STARTUP_TIMEOUT_SECONDS = 30;
-    
+
     private final ChildProcessConfig config;
     private final IpcClient ipcClient;
-    
+
     private Process process;
     private ChildProcessInfo processInfo;
     private CompletableFuture<ChildProcessInfo> readyFuture;
     private Thread outputThread;
     private Thread errorThread;
+
+    // Ports discovered from child process output
+    private volatile int discoveredJdwpPort = 0;
     
     public ChildProcessManager(ChildProcessConfig config) {
         this.config = config;
@@ -63,7 +67,16 @@ public class ChildProcessManager {
         
         // Build command line
         List<String> command = buildCommand();
-        log.debug("Command: {}", String.join(" ", command));
+        // Log abbreviated command (full classpath is too long)
+        String cmdSummary = command.stream()
+            .map(arg -> arg.startsWith("-cp") || arg.contains(":") && arg.contains(".jar")
+                ? (arg.startsWith("-cp") ? arg : "[classpath]")
+                : arg)
+            .reduce((a, b) -> a + " " + b)
+            .orElse("");
+        log.info("Starting child process: {}", cmdSummary.length() > 200
+            ? cmdSummary.substring(0, 200) + "..."
+            : cmdSummary);
         
         // Start process
         ProcessBuilder pb = new ProcessBuilder(command);
@@ -161,8 +174,11 @@ public class ChildProcessManager {
         if (config.getKarateEnv() != null) {
             cmd.add("--env=" + config.getKarateEnv());
         }
+        if (config.getWorkingDirectory() != null) {
+            cmd.add("--workspace=" + config.getWorkingDirectory().getAbsolutePath());
+        }
         cmd.add("--log-level=" + config.getLogLevel());
-        
+
         return cmd;
     }
     
@@ -174,6 +190,13 @@ public class ChildProcessManager {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     log.debug("[child stdout] {}", line);
+
+                    // Look for JDWP port announcement (JVM prints this to stdout)
+                    Matcher jdwpMatcher = JDWP_PORT_PATTERN.matcher(line);
+                    if (jdwpMatcher.find()) {
+                        discoveredJdwpPort = Integer.parseInt(jdwpMatcher.group(1));
+                        log.info("Discovered JDWP port: {}", discoveredJdwpPort);
+                    }
 
                     // Look for IPC port announcement
                     Matcher matcher = IPC_PORT_PATTERN.matcher(line);
@@ -198,6 +221,13 @@ public class ChildProcessManager {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     log.debug("[child stderr] {}", line);
+
+                    // Look for JDWP port announcement
+                    Matcher jdwpMatcher = JDWP_PORT_PATTERN.matcher(line);
+                    if (jdwpMatcher.find()) {
+                        discoveredJdwpPort = Integer.parseInt(jdwpMatcher.group(1));
+                        log.info("Discovered JDWP port from stderr: {}", discoveredJdwpPort);
+                    }
                 }
             } catch (IOException e) {
                 if (isRunning()) {
@@ -250,13 +280,21 @@ public class ChildProcessManager {
     private void handleReadyEvent(int ipcPort, IpcMessage event) {
         log.debug("Received ready event: {}", event);
 
+        // Get ports from event body, falling back to discovered ports
         int jdwpPort = event.getBodyInt("jdwpPort", 0);
+        if (jdwpPort == 0 && discoveredJdwpPort > 0) {
+            jdwpPort = discoveredJdwpPort;
+            log.debug("Using JDWP port discovered from stderr: {}", jdwpPort);
+        }
+
         int cdpPort = event.getBodyInt("cdpPort", 0);
         String cdpWebSocketUrl = event.getBodyString("cdpWebSocketUrl");
         String graalVmVersion = event.getBodyString("graalVmVersion");
 
         ChildProcessInfo info = new ChildProcessInfo(
             ipcPort, jdwpPort, cdpPort, cdpWebSocketUrl, graalVmVersion);
+
+        log.info("Child process ready: IPC={}, JDWP={}, CDP={}", ipcPort, jdwpPort, cdpPort);
 
         readyFuture.complete(info);
     }

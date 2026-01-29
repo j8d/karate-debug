@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/j8d/karate-debug"
+    "url": "https://github.com/j8d-org/karate-debug"
   },
   "bugs": {
     "email": "ryan@karatedebug.com"
@@ -129,6 +129,21 @@
                 "type": "boolean",
                 "description": "Enable JavaScript debugging in polyglot mode. Only applies when enablePolyglotDebugging is true.",
                 "default": false
+              },
+              "skipJdkClasses": {
+                "type": "boolean",
+                "description": "Skip JDK core classes (java.*, javax.*, jdk.*, sun.*, com.sun.*) when stepping in Java code. When enabled, stepping will automatically exit framework code and return to user code.",
+                "default": true
+              },
+              "skipKarateFramework": {
+                "type": "boolean",
+                "description": "Skip Karate framework classes (com.intuit.karate.*) when stepping in Java code. Set to false to step into Karate source code for debugging.",
+                "default": true
+              },
+              "skipKarateDependencies": {
+                "type": "boolean",
+                "description": "Skip Karate's third-party dependencies (com.jayway.jsonpath.*, io.netty.*, org.slf4j.*, etc.) when stepping in Java code. Set to false to step through all library code that Karate uses internally.",
+                "default": true
               }
             }
           }

@@ -1,0 +1,940 @@
+[Karate Debug] Using SDKMAN Java 21.0.7-amzn for GraalJS compatibility
+[Karate Debug] Maven classpath loaded (95 entries)
+[Karate Debug] Starting Karate debug server on port 64758
+[Karate Debug] [Experimental] Polyglot debugging enabled
+[Karate Debug]   - Java debugging: enabled
+[Karate Debug]   - JavaScript debugging: enabled
+[Karate Debug] Java: /Users/ryan/.sdkman/candidates/java/21.0.7-amzn/bin/java
+[Karate Debug] Debug server JAR: /Users/ryan/j8d/karate-debug/vscode/resources/karate-debug-server-1.0.0.jar
+[Karate Debug] Workspace: /Users/ryan/j8d/karate-debug/test-fixtures
+[Karate Debug] Environment: dev
+[Karate Debug] Log level: debug
+[Karate Debug] Classpath: (98 entries)
+[Karate Debug] Waiting for debug server to be ready on port 64758...
+Karate Debug Server started on port 64758
+Workspace: /Users/ryan/j8d/karate-debug/test-fixtures
+Environment: dev
+Mode: polyglot
+[Karate Debug] Debug server ready on port 64758
+Polyglot launch: feature=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature, java=true, js=true, skipJdk=false, skipKarate=false, skipKarateDeps=false
+Initializing DebugCoordinator...
+Queued 1 breakpoints for /Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature (state=CHILD_STARTING)
+Starting child process...
+Starting child process: java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:0 -Dpolyglot.inspect=0 -Dpolyglot.inspect.Suspend=false -cp [classpath] com.j8d.karate.debug.runner.KarateRunner --feature=/Users/r...
+Waiting for coordinator initialization before starting...
+[child stdout] Listening for transport dt_socket at address: 64765
+Discovered JDWP port: 64765
+[child stdout] KarateRunner starting...
+[child stdout] IPC server started on port 64766
+[child stdout] Waiting for parent connection...
+[child stdout] IPC_PORT=64766
+Discovered IPC port: 64766, connecting...
+Connecting to IPC server at localhost:64766
+Connected to IPC server
+Parent IPC reader thread started: IPC-Reader
+IPC client connected
+[child stdout] IPC server started on port 64766
+[child stdout] Parent connected from /127.0.0.1:64767
+[child stdout] IPC sender thread started
+[child stdout] IPC reader thread started: IPC-Reader
+[child stdout] sun.jdwp.listenerAddress = null
+[child stdout] sun.java.command = com.j8d.karate.debug.runner.KarateRunner --feature=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature --env=dev --workspace=/Users/ryan/j8d/karate-debug/test-fixtures --log-level=INFO
+[child stdout] polyglot.inspect = 0
+[child stdout] Chrome Inspector using dynamic port, attempting discovery...
+[child stdout] Dynamic Chrome Inspector port (0) not yet supported for discovery
+[child stdout] Sending ready event: {}
+[child stdout] IPC TX queued [thread=Ready-Sender]: {"seq":1,"type":"event","event":"ready","body":{}}
+[child stdout] IPC sender took message: seq=1, event=ready
+[child stdout] IPC sender BEFORE write() for seq=1
+[child stdout] IPC sender BEFORE flush() for seq=1
+[child stdout] IPC sender AFTER flush() for seq=1
+Parent IPC RX [thread=IPC-Reader]: {"seq":1,"type":"event","event":"ready","body":{}}
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":1,"type":"event","event":"ready","body":{}}
+Received ready event: IpcMessage{type=event, seq=1, event=ready}
+Using JDWP port discovered from stderr: 64765
+Child process ready: IPC=64766, JDWP=64765, CDP=0
+Parent IPC reader finished handling message
+Child process ready: ChildProcessInfo{ipcPort=64766, jdwpPort=64765, cdpPort=0, cdpWebSocketUrl='null', graalVmVersion='null'}
+Child process ready: IPC=64766, JDWP=64765, CDP=0
+Registering backend: KARATE
+Created KarateBackend
+JdiClient created with skipJdkClasses=false, skipKarateFramework=false, skipKarateDependencies=false
+Registering backend: JAVA
+Created JavaBackend for localhost:64765, skipJdk=false, skipKarate=false, skipKarateDeps=false
+KarateBackend initialized
+JavaBackend initialized
+All backends ready
+Coordinator initialized successfully
+Starting DapMultiplexer with 2 backends
+Starting backend: KARATE
+Starting KarateBackend
+IPC TX [thread=ForkJoinPool.commonPool-worker-1]: {"seq":1,"type":"request","command":"start","body":{}}
+Starting backend: JAVA
+Starting JavaBackend, connecting to localhost:64765
+Connecting to JVM at localhost:64765
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":1,"type":"request","command":"start","body":{}}
+[child stdout] Handling command: start with body: {}
+[child stdout] Starting Karate execution
+[child stdout] Starting execution, featurePath=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature, featureLine=-1
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":2,"type":"response","requestSeq":1,"success":true}
+[child stdout] IPC sender took message: seq=2, event=null
+[child stdout] IPC sender BEFORE write() for seq=2
+[child stdout] Classpath path: classpath:polyglot/polyglot-test.feature
+[child stdout] Starting Karate execution: classpath:polyglot/polyglot-test.feature
+[child stdout] IPC sender BEFORE flush() for seq=2
+[child stdout] IPC sender AFTER flush() for seq=2
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":2,"type":"response","requestSeq":1,"success":true}
+Parent IPC RX [thread=IPC-Reader]: {"seq":2,"type":"response","requestSeq":1,"success":true}
+Parent IPC reader finished handling message
+handleThreads: stoppedThreadId=-1
+Connected to JVM: OpenJDK 64-Bit Server VM
+JavaBackend ready
+Applying 1 queued breakpoints for /Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature
+Routing setBreakpoints to KARATE: 1 breakpoints in /Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature
+IPC TX [thread=ForkJoinPool.commonPool-worker-1]: {"seq":2,"type":"request","command":"setBreakpoints","body":{"filePath":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature","breakpoints":[{"line":17}]}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":2,"type":"request","command":"setBreakpoints","body":{"filePath":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature","breakpoints":[{"line":17}]}}
+[child stdout] Handling command: setBreakpoints with body: {"filePath":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature","breakpoints":[{"line":17}]}
+[child stdout] Setting breakpoints in: /Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature (count: 1)
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":3,"type":"response","requestSeq":2,"success":true,"body":{"breakpoints":[{"id":1,"verified":true,"line":17,"source":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature"}]}}
+[child stdout] IPC sender took message: seq=3, event=null
+[child stdout] IPC sender BEFORE write() for seq=3
+[child stdout] IPC sender BEFORE flush() for seq=3
+Parent IPC RX [thread=IPC-Reader]: {"seq":3,"type":"response","requestSeq":2,"success":true,"body":{"breakpoints":[{"id":1,"verified":true,"line":17,"source":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature"}]}}
+[child stdout] IPC sender AFTER flush() for seq=3
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":3,"type":"response","requestSeq":2,"success":true,"body":{"breakpoints":[{"id":1,"verified":true,"line":17,"source":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature"}]}}
+Parent IPC reader finished handling message
+Execution started
+[child stdout] karate.env is: 'dev'
+[child stdout] [config] classpath:karate-config.js
+[child stderr] Debugger listening on ws://127.0.0.1:64769/i8u_3N0blhuaaOeEq48dXBgfHMAYVAqOiGD-jXvAO3o
+[child stderr] For help, see: https://www.graalvm.org/tools/chrome-debugger
+[child stderr] E.g. in Chrome open: devtools://devtools/bundled/js_app.html?ws=127.0.0.1:64769/i8u_3N0blhuaaOeEq48dXBgfHMAYVAqOiGD-jXvAO3o
+[child stdout] [karate.log] karate.env is: dev 
+[child stdout] beforeStep: line=6, relativePath=polyglot/polyglot-test.feature, normalizedPath=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature
+[child stdout] beforeStep: breakpoints keys=[/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature]
+[child stdout] beforeStep: fileBreakpoints for path=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature -> {17=BreakpointInfo[line=17, condition=null]}
+[child stdout] beforeStep: line=8, relativePath=polyglot/polyglot-test.feature, normalizedPath=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature
+[child stdout] beforeStep: breakpoints keys=[/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature]
+[child stdout] beforeStep: fileBreakpoints for path=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature -> {17=BreakpointInfo[line=17, condition=null]}
+[child stdout] beforeStep: line=12, relativePath=polyglot/polyglot-test.feature, normalizedPath=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature
+[child stdout] beforeStep: breakpoints keys=[/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature]
+[child stdout] beforeStep: fileBreakpoints for path=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature -> {17=BreakpointInfo[line=17, condition=null]}
+[child stdout] beforeStep: line=16, relativePath=polyglot/polyglot-test.feature, normalizedPath=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature
+[child stdout] beforeStep: breakpoints keys=[/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature]
+[child stdout] beforeStep: fileBreakpoints for path=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature -> {17=BreakpointInfo[line=17, condition=null]}
+[child stdout] beforeStep: line=17, relativePath=polyglot/polyglot-test.feature, normalizedPath=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature
+[child stdout] beforeStep: breakpoints keys=[/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature]
+[child stdout] beforeStep: fileBreakpoints for path=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature -> {17=BreakpointInfo[line=17, condition=null]}
+[child stdout] Stopped: breakpoint at line 17
+[child stdout] IPC TX queued [thread=karate-execution]: {"seq":4,"type":"event","event":"stopped","body":{"threadId":1,"reason":"breakpoint"}}
+[child stdout] IPC sender took message: seq=4, event=stopped
+[child stdout] IPC sender BEFORE write() for seq=4
+[child stdout] IPC sender BEFORE flush() for seq=4
+Parent IPC RX [thread=IPC-Reader]: {"seq":4,"type":"event","event":"stopped","body":{"threadId":1,"reason":"breakpoint"}}
+[child stdout] IPC sender AFTER flush() for seq=4
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":4,"type":"event","event":"stopped","body":{"threadId":1,"reason":"breakpoint"}}
+Backend KARATE stopped: thread=1, reason=breakpoint, steppingInBackend=null, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=1, reason=breakpoint, backend=KARATE
+Sending stopped event to VS Code: threadId=1, reason=breakpoint
+Parent IPC reader finished handling message
+handleThreads: stoppedThreadId=1
+handleStackTrace: threadId=1
+getStackFrames: globalThreadId=1, backend=KARATE, localId=1
+Sending getStackFrames IPC request for threadId=1
+IPC TX [thread=main]: {"seq":3,"type":"request","command":"getStackFrames","body":{"threadId":1}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":3,"type":"request","command":"getStackFrames","body":{"threadId":1}}
+[child stdout] Handling command: getStackFrames with body: {"threadId":1}
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":5,"type":"response","requestSeq":3,"success":true,"body":{"stackFrames":[{"id":1,"name":"match validation.valid \u003d\u003d true","line":17,"column":1,"sourcePath":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature","sourceName":"Polyglot Debugging Test"}]}}
+[child stdout] IPC sender took message: seq=5, event=null
+[child stdout] IPC sender BEFORE write() for seq=5
+Parent IPC RX [thread=IPC-Reader]: {"seq":5,"type":"response","requestSeq":3,"success":true,"body":{"stackFrames":[{"id":1,"name":"match validation.valid \u003d\u003d true","line":17,"column":1,"sourcePath":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature","sourceName":"Polyglot Debugging Test"}]}}
+[child stdout] IPC sender BEFORE flush() for seq=5
+[child stdout] IPC sender AFTER flush() for seq=5
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":5,"type":"response","requestSeq":3,"success":true,"body":{"stackFrames":[{"id":1,"name":"match validation.valid \u003d\u003d true","line":17,"column":1,"sourcePath":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature","sourceName":"Polyglot Debugging Test"}]}}
+Parent IPC reader finished handling message
+Received getStackFrames IPC response
+getStackFrames: got 1 frames from backend KARATE
+  Frame: id=1, name=match validation.valid == true, source=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature, line=17
+Sending stackTrace response: 1 frames, first frame id=1, name=match validation.valid == true, line=17
+handleStackTrace: threadId=1
+getStackFrames: globalThreadId=1, backend=KARATE, localId=1
+Sending getStackFrames IPC request for threadId=1
+IPC TX [thread=main]: {"seq":4,"type":"request","command":"getStackFrames","body":{"threadId":1}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":4,"type":"request","command":"getStackFrames","body":{"threadId":1}}
+[child stdout] Handling command: getStackFrames with body: {"threadId":1}
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":6,"type":"response","requestSeq":4,"success":true,"body":{"stackFrames":[{"id":2,"name":"match validation.valid \u003d\u003d true","line":17,"column":1,"sourcePath":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature","sourceName":"Polyglot Debugging Test"}]}}
+[child stdout] IPC sender took message: seq=6, event=null
+[child stdout] IPC sender BEFORE write() for seq=6
+[child stdout] IPC sender BEFORE flush() for seq=6
+[child stdout] IPC sender AFTER flush() for seq=6
+Parent IPC RX [thread=IPC-Reader]: {"seq":6,"type":"response","requestSeq":4,"success":true,"body":{"stackFrames":[{"id":2,"name":"match validation.valid \u003d\u003d true","line":17,"column":1,"sourcePath":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature","sourceName":"Polyglot Debugging Test"}]}}
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":6,"type":"response","requestSeq":4,"success":true,"body":{"stackFrames":[{"id":2,"name":"match validation.valid \u003d\u003d true","line":17,"column":1,"sourcePath":"/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature","sourceName":"Polyglot Debugging Test"}]}}
+Parent IPC reader finished handling message
+Received getStackFrames IPC response
+getStackFrames: got 1 frames from backend KARATE
+  Frame: id=2, name=match validation.valid == true, source=/Users/ryan/j8d/karate-debug/test-fixtures/src/test/java/polyglot/polyglot-test.feature, line=17
+Sending stackTrace response: 1 frames, first frame id=2, name=match validation.valid == true, line=17
+Evaluate with frameId=0, stoppedBackend=KARATE, using backend KARATE
+IPC TX [thread=main]: {"seq":5,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match validation.valid \u003d\u003d true","context":"repl"}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":5,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match validation.valid \u003d\u003d true","context":"repl"}}
+[child stdout] Handling command: evaluate with body: {"frameId":0,"expression":"match validation.valid == true","context":"repl"}
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":7,"type":"response","requestSeq":5,"success":true,"body":{"result":"PASS","type":"boolean"}}
+[child stdout] IPC sender took message: seq=7, event=null
+[child stdout] IPC sender BEFORE write() for seq=7
+[child stdout] IPC sender BEFORE flush() for seq=7
+[child stdout] IPC sender AFTER flush() for seq=7
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":7,"type":"response","requestSeq":5,"success":true,"body":{"result":"PASS","type":"boolean"}}
+Parent IPC RX [thread=IPC-Reader]: {"seq":7,"type":"response","requestSeq":5,"success":true,"body":{"result":"PASS","type":"boolean"}}
+Parent IPC reader finished handling message
+Evaluate with frameId=0, stoppedBackend=KARATE, using backend KARATE
+IPC TX [thread=main]: {"seq":6,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match validation.itemCount \u003d\u003d 2","context":"repl"}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":6,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match validation.itemCount \u003d\u003d 2","context":"repl"}}
+[child stdout] Handling command: evaluate with body: {"frameId":0,"expression":"match validation.itemCount == 2","context":"repl"}
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":8,"type":"response","requestSeq":6,"success":true,"body":{"result":"PASS","type":"boolean"}}
+[child stdout] IPC sender took message: seq=8, event=null
+[child stdout] IPC sender BEFORE write() for seq=8
+[child stdout] IPC sender BEFORE flush() for seq=8
+[child stdout] IPC sender AFTER flush() for seq=8
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":8,"type":"response","requestSeq":6,"success":true,"body":{"result":"PASS","type":"boolean"}}
+Parent IPC RX [thread=IPC-Reader]: {"seq":8,"type":"response","requestSeq":6,"success":true,"body":{"result":"PASS","type":"boolean"}}
+Parent IPC reader finished handling message
+Evaluate with frameId=0, stoppedBackend=KARATE, using backend KARATE
+IPC TX [thread=main]: {"seq":7,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match processed.orderId \u003d\u003d \u0027ORD-001\u0027","context":"repl"}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":7,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match processed.orderId \u003d\u003d \u0027ORD-001\u0027","context":"repl"}}
+[child stdout] Handling command: evaluate with body: {"frameId":0,"expression":"match processed.orderId == 'ORD-001'","context":"repl"}
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":9,"type":"response","requestSeq":7,"success":true,"body":{"result":"Variable not defined: processed","type":"error"}}
+[child stdout] IPC sender took message: seq=9, event=null
+[child stdout] IPC sender BEFORE write() for seq=9
+[child stdout] IPC sender BEFORE flush() for seq=9
+[child stdout] IPC sender AFTER flush() for seq=9
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":9,"type":"response","requestSeq":7,"success":true,"body":{"result":"Variable not defined: processed","type":"error"}}
+Parent IPC RX [thread=IPC-Reader]: {"seq":9,"type":"response","requestSeq":7,"success":true,"body":{"result":"Variable not defined: processed","type":"error"}}
+Parent IPC reader finished handling message
+Evaluate with frameId=0, stoppedBackend=KARATE, using backend KARATE
+IPC TX [thread=main]: {"seq":8,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match processed.itemCount \u003d\u003d 2","context":"repl"}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":8,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match processed.itemCount \u003d\u003d 2","context":"repl"}}
+[child stdout] Handling command: evaluate with body: {"frameId":0,"expression":"match processed.itemCount == 2","context":"repl"}
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":10,"type":"response","requestSeq":8,"success":true,"body":{"result":"Variable not defined: processed","type":"error"}}
+[child stdout] IPC sender took message: seq=10, event=null
+[child stdout] IPC sender BEFORE write() for seq=10
+[child stdout] IPC sender BEFORE flush() for seq=10
+[child stdout] IPC sender AFTER flush() for seq=10
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":10,"type":"response","requestSeq":8,"success":true,"body":{"result":"Variable not defined: processed","type":"error"}}
+Parent IPC RX [thread=IPC-Reader]: {"seq":10,"type":"response","requestSeq":8,"success":true,"body":{"result":"Variable not defined: processed","type":"error"}}
+Parent IPC reader finished handling message
+Evaluate with frameId=0, stoppedBackend=KARATE, using backend KARATE
+IPC TX [thread=main]: {"seq":9,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match processed.total \u003d\u003d 45.50","context":"repl"}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":9,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match processed.total \u003d\u003d 45.50","context":"repl"}}
+[child stdout] Handling command: evaluate with body: {"frameId":0,"expression":"match processed.total == 45.50","context":"repl"}
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":11,"type":"response","requestSeq":9,"success":true,"body":{"result":"Variable not defined: processed","type":"error"}}
+[child stdout] IPC sender took message: seq=11, event=null
+[child stdout] IPC sender BEFORE write() for seq=11
+[child stdout] IPC sender BEFORE flush() for seq=11
+[child stdout] IPC sender AFTER flush() for seq=11
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":11,"type":"response","requestSeq":9,"success":true,"body":{"result":"Variable not defined: processed","type":"error"}}
+Parent IPC RX [thread=IPC-Reader]: {"seq":11,"type":"response","requestSeq":9,"success":true,"body":{"result":"Variable not defined: processed","type":"error"}}
+Parent IPC reader finished handling message
+Evaluate with frameId=0, stoppedBackend=KARATE, using backend KARATE
+IPC TX [thread=main]: {"seq":10,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match confirmation.status \u003d\u003d \u0027confirmed\u0027","context":"repl"}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":10,"type":"request","command":"evaluate","body":{"frameId":0,"expression":"match confirmation.status \u003d\u003d \u0027confirmed\u0027","context":"repl"}}
+[child stdout] Handling command: evaluate with body: {"frameId":0,"expression":"match confirmation.status == 'confirmed'","context":"repl"}
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":12,"type":"response","requestSeq":10,"success":true,"body":{"result":"Variable not defined: confirmation","type":"error"}}
+[child stdout] IPC sender took message: seq=12, event=null
+[child stdout] IPC sender BEFORE write() for seq=12
+[child stdout] IPC sender BEFORE flush() for seq=12
+[child stdout] IPC sender AFTER flush() for seq=12
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":12,"type":"response","requestSeq":10,"success":true,"body":{"result":"Variable not defined: confirmation","type":"error"}}
+Parent IPC RX [thread=IPC-Reader]: {"seq":12,"type":"response","requestSeq":10,"success":true,"body":{"result":"Variable not defined: confirmation","type":"error"}}
+Parent IPC reader finished handling message
+Method entry events enabled for cross-language step-into
+Enabled Java method entry for cross-language step-into
+Step into on KARATE thread 1
+IPC TX [thread=main]: {"seq":11,"type":"request","command":"stepInto","body":{"threadId":1}}
+[child stdout] IPC RX [thread=IPC-Reader]: {"seq":11,"type":"request","command":"stepInto","body":{"threadId":1}}
+[child stdout] Handling command: stepInto with body: {"threadId":1}
+[child stdout] Step into on thread: 1
+[child stdout] Step into thread 1
+[child stdout] IPC TX queued [thread=IPC-Reader]: {"seq":13,"type":"response","requestSeq":11,"success":true}
+[child stdout] IPC sender took message: seq=13, event=null
+[child stdout] IPC sender BEFORE write() for seq=13
+Parent IPC RX [thread=IPC-Reader]: {"seq":13,"type":"response","requestSeq":11,"success":true}
+Parent IPC reader finished handling message
+[child stdout] IPC sender BEFORE flush() for seq=13
+[child stdout] IPC sender AFTER flush() for seq=13
+[child stdout] IPC TX sent [thread=IPC-Sender]: {"seq":13,"type":"response","requestSeq":11,"success":true}
+Method entry: parse at com/jayway/jsonpath/JsonPath.java:636
+Method entry events disabled
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 38 frames from backend JAVA
+  Frame: id=1, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=2, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=3, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=4, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=5, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=6, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=7, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=8, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=9, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=10, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=11, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=12, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=13, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=14, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=15, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=16, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=17, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=18, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=19, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=20, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=21, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=22, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=23, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=24, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=25, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=26, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=27, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=28, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=29, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=30, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=31, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=32, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=33, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=34, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=35, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=36, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=37, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=38, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Created sourceReference 1 for path: com/jayway/jsonpath/JsonPath.java
+Created sourceReference 2 for path: com/intuit/karate/Json.java
+Created sourceReference 3 for path: com/intuit/karate/core/ScenarioEngine.java
+Created sourceReference 4 for path: com/intuit/karate/ScenarioActions.java
+Created sourceReference 5 for path: java/lang/invoke/LambdaForm$DMH
+Created sourceReference 6 for path: java/lang/invoke/LambdaForm$MH
+Created sourceReference 7 for path: java/lang/invoke/Invokers$Holder
+Created sourceReference 8 for path: jdk/internal/reflect/DirectMethodHandleAccessor.java
+Created sourceReference 9 for path: java/lang/reflect/Method.java
+Created sourceReference 10 for path: com/intuit/karate/core/StepRuntime.java
+Created sourceReference 11 for path: com/intuit/karate/core/ScenarioRuntime.java
+Created sourceReference 12 for path: com/intuit/karate/core/FeatureRuntime.java
+Created sourceReference 13 for path: com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java
+Created sourceReference 14 for path: java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java
+Created sourceReference 15 for path: java/util/stream/ReferencePipeline.java
+Created sourceReference 16 for path: com/intuit/karate/core/ScenarioIterator.java
+Created sourceReference 17 for path: java/util/Spliterator.java
+Created sourceReference 18 for path: java/util/stream/AbstractPipeline.java
+Created sourceReference 19 for path: java/util/stream/StreamSpliterators.java
+Created sourceReference 20 for path: java/util/Spliterators.java
+Created sourceReference 21 for path: java/util/concurrent/Executors.java
+Created sourceReference 22 for path: java/util/concurrent/FutureTask.java
+Created sourceReference 23 for path: com/intuit/karate/core/SyncExecutorService.java
+Created sourceReference 24 for path: java/util/concurrent/AbstractExecutorService.java
+Created sourceReference 25 for path: com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java
+Created sourceReference 26 for path: java/util/ArrayList.java
+Created sourceReference 27 for path: com/intuit/karate/Suite.java
+Created sourceReference 28 for path: com/intuit/karate/Runner.java
+Created sourceReference 29 for path: com/j8d/karate/debug/runner/RunnerDebugger.java
+Created sourceReference 30 for path: com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java
+Created sourceReference 31 for path: java/lang/Thread.java
+Sending stackTrace response: 38 frames, first frame id=200000, name=com.jayway.jsonpath.JsonPath.parse, line=636
+Source request with sourceReference=1, resolved to path: com/jayway/jsonpath/JsonPath.java
+handleSource: looking for source path: com/jayway/jsonpath/JsonPath.java
+Attempting to decompile/load source for: com/jayway/jsonpath/JsonPath.java
+Retrieved 98 classpath entries from target VM
+BytecodeLoader initialized with 98 classpath entries
+DecompilationService initialized with 98 classpath entries
+Searching for source file in sources JARs: com/jayway/jsonpath/JsonPath.java
+JAR path doesn't match Maven repository pattern: /Users/ryan/j8d/karate-debug/vscode/resources/karate-debug-server-1.0.0.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-transport-native-unix-common/4.2.6.Final/netty-transport-native-unix-common-4.2.6.Final-linux-x86_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-transport-native-unix-common/4.2.6.Final/netty-transport-native-unix-common-4.2.6.Final-linux-aarch_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-transport-native-unix-common/4.2.6.Final/netty-transport-native-unix-common-4.2.6.Final-osx-x86_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-transport-native-unix-common/4.2.6.Final/netty-transport-native-unix-common-4.2.6.Final-osx-aarch_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-transport-native-epoll/4.2.6.Final/netty-transport-native-epoll-4.2.6.Final-linux-x86_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-transport-native-epoll/4.2.6.Final/netty-transport-native-epoll-4.2.6.Final-linux-aarch_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-transport-native-kqueue/4.2.6.Final/netty-transport-native-kqueue-4.2.6.Final-osx-x86_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-resolver-dns-native-macos/4.2.6.Final/netty-resolver-dns-native-macos-4.2.6.Final-osx-x86_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-transport-native-kqueue/4.2.6.Final/netty-transport-native-kqueue-4.2.6.Final-osx-aarch_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-resolver-dns-native-macos/4.2.6.Final/netty-resolver-dns-native-macos-4.2.6.Final-osx-aarch_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-tcnative-boringssl-static/2.0.73.Final/netty-tcnative-boringssl-static-2.0.73.Final-linux-x86_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-tcnative-boringssl-static/2.0.73.Final/netty-tcnative-boringssl-static-2.0.73.Final-linux-aarch_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-tcnative-boringssl-static/2.0.73.Final/netty-tcnative-boringssl-static-2.0.73.Final-osx-x86_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-tcnative-boringssl-static/2.0.73.Final/netty-tcnative-boringssl-static-2.0.73.Final-osx-aarch_64.jar
+JAR path doesn't match Maven repository pattern: /Users/ryan/.m2/repository/io/netty/netty-tcnative-boringssl-static/2.0.73.Final/netty-tcnative-boringssl-static-2.0.73.Final-windows-x86_64.jar
+Found source for com.jayway.jsonpath.JsonPath in /Users/ryan/.m2/repository/com/jayway/jsonpath/json-path/2.9.0/json-path-2.9.0-sources.jar
+Loaded source from sources JAR for com.jayway.jsonpath.JsonPath (28577 chars)
+Successfully loaded source for: com/jayway/jsonpath/JsonPath.java
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=com.jayway.jsonpath.internal.ParseContextImpl, method=<init>, line=21
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 39 frames from backend JAVA
+  Frame: id=39, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=40, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=41, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=42, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=43, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=44, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=45, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=46, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=47, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=48, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=49, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=50, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=51, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=52, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=53, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=54, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=55, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=56, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=57, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=58, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=59, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=60, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=61, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=62, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=63, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=64, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=65, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=66, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=67, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=68, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=69, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=70, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=71, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=72, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=73, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=74, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=75, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=76, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=77, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Created sourceReference 32 for path: com/jayway/jsonpath/internal/ParseContextImpl.java
+Sending stackTrace response: 39 frames, first frame id=200038, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, line=21
+Source request with sourceReference=32, resolved to path: com/jayway/jsonpath/internal/ParseContextImpl.java
+handleSource: looking for source path: com/jayway/jsonpath/internal/ParseContextImpl.java
+Attempting to decompile/load source for: com/jayway/jsonpath/internal/ParseContextImpl.java
+Searching for source file in sources JARs: com/jayway/jsonpath/internal/ParseContextImpl.java
+Found source for com.jayway.jsonpath.internal.ParseContextImpl in /Users/ryan/.m2/repository/com/jayway/jsonpath/json-path/2.9.0/json-path-2.9.0-sources.jar
+Loaded source from sources JAR for com.jayway.jsonpath.internal.ParseContextImpl (2583 chars)
+Successfully loaded source for: com/jayway/jsonpath/internal/ParseContextImpl.java
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=com.jayway.jsonpath.Configuration, method=defaultConfiguration, line=168
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 40 frames from backend JAVA
+  Frame: id=78, name=com.jayway.jsonpath.Configuration.defaultConfiguration, source=com/jayway/jsonpath/Configuration.java, line=168
+  Frame: id=79, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=80, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=81, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=82, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=83, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=84, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=85, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=86, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=87, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=88, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=89, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=90, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=91, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=92, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=93, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=94, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=95, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=96, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=97, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=98, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=99, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=100, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=101, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=102, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=103, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=104, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=105, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=106, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=107, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=108, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=109, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=110, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=111, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=112, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=113, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=114, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=115, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=116, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=117, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Created sourceReference 33 for path: com/jayway/jsonpath/Configuration.java
+Sending stackTrace response: 40 frames, first frame id=200077, name=com.jayway.jsonpath.Configuration.defaultConfiguration, line=168
+Source request with sourceReference=33, resolved to path: com/jayway/jsonpath/Configuration.java
+handleSource: looking for source path: com/jayway/jsonpath/Configuration.java
+Attempting to decompile/load source for: com/jayway/jsonpath/Configuration.java
+Searching for source file in sources JARs: com/jayway/jsonpath/Configuration.java
+Found source for com.jayway.jsonpath.Configuration in /Users/ryan/.m2/repository/com/jayway/jsonpath/json-path/2.9.0/json-path-2.9.0-sources.jar
+Loaded source from sources JAR for com.jayway.jsonpath.Configuration (9807 chars)
+Successfully loaded source for: com/jayway/jsonpath/Configuration.java
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=com.jayway.jsonpath.Configuration, method=getEffectiveDefaults, line=42
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 41 frames from backend JAVA
+  Frame: id=118, name=com.jayway.jsonpath.Configuration.getEffectiveDefaults, source=com/jayway/jsonpath/Configuration.java, line=42
+  Frame: id=119, name=com.jayway.jsonpath.Configuration.defaultConfiguration, source=com/jayway/jsonpath/Configuration.java, line=168
+  Frame: id=120, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=121, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=122, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=123, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=124, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=125, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=126, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=127, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=128, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=129, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=130, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=131, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=132, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=133, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=134, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=135, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=136, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=137, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=138, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=139, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=140, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=141, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=142, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=143, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=144, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=145, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=146, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=147, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=148, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=149, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=150, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=151, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=152, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=153, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=154, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=155, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=156, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=157, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=158, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Sending stackTrace response: 41 frames, first frame id=200117, name=com.jayway.jsonpath.Configuration.getEffectiveDefaults, line=42
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=com.jayway.jsonpath.Configuration, method=getEffectiveDefaults, line=43
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 41 frames from backend JAVA
+  Frame: id=159, name=com.jayway.jsonpath.Configuration.getEffectiveDefaults, source=com/jayway/jsonpath/Configuration.java, line=43
+  Frame: id=160, name=com.jayway.jsonpath.Configuration.defaultConfiguration, source=com/jayway/jsonpath/Configuration.java, line=168
+  Frame: id=161, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=162, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=163, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=164, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=165, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=166, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=167, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=168, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=169, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=170, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=171, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=172, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=173, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=174, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=175, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=176, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=177, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=178, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=179, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=180, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=181, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=182, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=183, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=184, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=185, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=186, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=187, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=188, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=189, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=190, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=191, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=192, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=193, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=194, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=195, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=196, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=197, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=198, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=199, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Sending stackTrace response: 41 frames, first frame id=200158, name=com.jayway.jsonpath.Configuration.getEffectiveDefaults, line=43
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=com.jayway.jsonpath.Configuration, method=defaultConfiguration, line=168
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 40 frames from backend JAVA
+  Frame: id=200, name=com.jayway.jsonpath.Configuration.defaultConfiguration, source=com/jayway/jsonpath/Configuration.java, line=168
+  Frame: id=201, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=202, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=203, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=204, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=205, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=206, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=207, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=208, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=209, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=210, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=211, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=212, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=213, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=214, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=215, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=216, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=217, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=218, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=219, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=220, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=221, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=222, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=223, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=224, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=225, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=226, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=227, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=228, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=229, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=230, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=231, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=232, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=233, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=234, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=235, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=236, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=237, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=238, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=239, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Sending stackTrace response: 40 frames, first frame id=200199, name=com.jayway.jsonpath.Configuration.defaultConfiguration, line=168
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=com.jayway.jsonpath.Configuration, method=defaultConfiguration, line=169
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 40 frames from backend JAVA
+  Frame: id=240, name=com.jayway.jsonpath.Configuration.defaultConfiguration, source=com/jayway/jsonpath/Configuration.java, line=169
+  Frame: id=241, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=242, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=243, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=244, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=245, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=246, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=247, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=248, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=249, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=250, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=251, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=252, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=253, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=254, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=255, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=256, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=257, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=258, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=259, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=260, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=261, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=262, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=263, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=264, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=265, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=266, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=267, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=268, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=269, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=270, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=271, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=272, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=273, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=274, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=275, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=276, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=277, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=278, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=279, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Sending stackTrace response: 40 frames, first frame id=200239, name=com.jayway.jsonpath.Configuration.defaultConfiguration, line=169
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=com.jayway.jsonpath.Configuration, method=builder, line=177
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 41 frames from backend JAVA
+  Frame: id=280, name=com.jayway.jsonpath.Configuration.builder, source=com/jayway/jsonpath/Configuration.java, line=177
+  Frame: id=281, name=com.jayway.jsonpath.Configuration.defaultConfiguration, source=com/jayway/jsonpath/Configuration.java, line=169
+  Frame: id=282, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=283, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=284, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=285, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=286, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=287, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=288, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=289, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=290, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=291, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=292, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=293, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=294, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=295, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=296, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=297, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=298, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=299, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=300, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=301, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=302, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=303, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=304, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=305, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=306, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=307, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=308, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=309, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=310, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=311, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=312, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=313, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=314, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=315, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=316, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=317, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=318, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=319, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=320, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Sending stackTrace response: 41 frames, first frame id=200279, name=com.jayway.jsonpath.Configuration.builder, line=177
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=com.jayway.jsonpath.Configuration$ConfigurationBuilder, method=<init>, line=183
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 42 frames from backend JAVA
+  Frame: id=321, name=com.jayway.jsonpath.Configuration$ConfigurationBuilder.<init>, source=com/jayway/jsonpath/Configuration.java, line=183
+  Frame: id=322, name=com.jayway.jsonpath.Configuration.builder, source=com/jayway/jsonpath/Configuration.java, line=177
+  Frame: id=323, name=com.jayway.jsonpath.Configuration.defaultConfiguration, source=com/jayway/jsonpath/Configuration.java, line=169
+  Frame: id=324, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=325, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=326, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=327, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=328, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=329, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=330, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=331, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=332, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=333, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=334, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=335, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=336, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=337, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=338, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=339, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=340, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=341, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=342, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=343, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=344, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=345, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=346, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=347, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=348, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=349, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=350, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=351, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=352, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=353, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=354, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=355, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=356, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=357, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=358, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=359, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=360, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=361, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=362, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Sending stackTrace response: 42 frames, first frame id=200320, name=com.jayway.jsonpath.Configuration$ConfigurationBuilder.<init>, line=183
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=java.lang.Object, method=<init>, line=45
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 43 frames from backend JAVA
+  Frame: id=363, name=java.lang.Object.<init>, source=java/lang/Object.java, line=45
+  Frame: id=364, name=com.jayway.jsonpath.Configuration$ConfigurationBuilder.<init>, source=com/jayway/jsonpath/Configuration.java, line=183
+  Frame: id=365, name=com.jayway.jsonpath.Configuration.builder, source=com/jayway/jsonpath/Configuration.java, line=177
+  Frame: id=366, name=com.jayway.jsonpath.Configuration.defaultConfiguration, source=com/jayway/jsonpath/Configuration.java, line=169
+  Frame: id=367, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=368, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=369, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=370, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=371, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=372, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=373, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=374, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=375, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=376, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=377, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=378, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=379, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=380, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=381, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=382, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=383, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=384, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=385, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=386, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=387, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=388, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=389, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=390, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=391, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=392, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=393, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=394, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=395, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=396, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=397, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=398, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=399, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=400, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=401, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=402, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=403, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=404, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=405, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Created sourceReference 34 for path: java/lang/Object.java
+Sending stackTrace response: 43 frames, first frame id=200362, name=java.lang.Object.<init>, line=45
+Source request with sourceReference=34, resolved to path: java/lang/Object.java
+handleSource: looking for source path: java/lang/Object.java
+Attempting to decompile/load source for: java/lang/Object.java
+Searching for source file in sources JARs: java/lang/Object.java
+Found JDK src.zip at: /Users/ryan/.sdkman/candidates/java/21.0.7-amzn/lib/src.zip
+Source not found in any sources JAR: java.lang.Object
+Searching for class file: java/lang/Object.class
+Class not found in classpath: java.lang.Object
+No bytecode found for java.lang.Object
+Source file not found: java/lang/Object.java (tried workspace: /Users/ryan/j8d/karate-debug/test-fixtures)
+Step into on JAVA thread 1
+Creating step request: thread=karate-execution, depth=INTO, suspended=true
+Step request enabled, resuming thread karate-execution
+Thread karate-execution resumed
+StepEvent received: thread=karate-execution, class=com.jayway.jsonpath.Configuration$ConfigurationBuilder, method=<init>, line=187
+Backend JAVA stopped: thread=2000, reason=step, steppingInBackend=JAVA, stoppedBackend=null
+Forwarding stopped event to VS Code: thread=2000, reason=step, backend=JAVA
+Sending stopped event to VS Code: threadId=2000, reason=step
+handleThreads: stoppedThreadId=2000
+handleStackTrace: threadId=2000
+getStackFrames: globalThreadId=2000, backend=JAVA, localId=1
+getStackFrames: got 42 frames from backend JAVA
+  Frame: id=406, name=com.jayway.jsonpath.Configuration$ConfigurationBuilder.<init>, source=com/jayway/jsonpath/Configuration.java, line=187
+  Frame: id=407, name=com.jayway.jsonpath.Configuration.builder, source=com/jayway/jsonpath/Configuration.java, line=177
+  Frame: id=408, name=com.jayway.jsonpath.Configuration.defaultConfiguration, source=com/jayway/jsonpath/Configuration.java, line=169
+  Frame: id=409, name=com.jayway.jsonpath.internal.ParseContextImpl.<init>, source=com/jayway/jsonpath/internal/ParseContextImpl.java, line=21
+  Frame: id=410, name=com.jayway.jsonpath.JsonPath.parse, source=com/jayway/jsonpath/JsonPath.java, line=636
+  Frame: id=411, name=com.intuit.karate.Json.of, source=com/intuit/karate/Json.java, line=67
+  Frame: id=412, name=com.intuit.karate.core.ScenarioEngine.evalJsonPath, source=com/intuit/karate/core/ScenarioEngine.java, line=2076
+  Frame: id=413, name=com.intuit.karate.core.ScenarioEngine.match, source=com/intuit/karate/core/ScenarioEngine.java, line=1817
+  Frame: id=414, name=com.intuit.karate.core.ScenarioEngine.matchResult, source=com/intuit/karate/core/ScenarioEngine.java, line=167
+  Frame: id=415, name=com.intuit.karate.ScenarioActions.match, source=com/intuit/karate/ScenarioActions.java, line=317
+  Frame: id=416, name=java.lang.invoke.LambdaForm$DMH/0x000000700144c000.invokeVirtual, source=java/lang/invoke/LambdaForm$DMH, line=-1
+  Frame: id=417, name=java.lang.invoke.LambdaForm$MH/0x000000700144d800.invoke, source=java/lang/invoke/LambdaForm$MH, line=-1
+  Frame: id=418, name=java.lang.invoke.Invokers$Holder.invokeExact_MT, source=java/lang/invoke/Invokers$Holder, line=-1
+  Frame: id=419, name=jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=157
+  Frame: id=420, name=jdk.internal.reflect.DirectMethodHandleAccessor.invoke, source=jdk/internal/reflect/DirectMethodHandleAccessor.java, line=103
+  Frame: id=421, name=java.lang.reflect.Method.invoke, source=java/lang/reflect/Method.java, line=580
+  Frame: id=422, name=com.intuit.karate.core.StepRuntime.execute, source=com/intuit/karate/core/StepRuntime.java, line=288
+  Frame: id=423, name=com.intuit.karate.core.ScenarioRuntime.execute, source=com/intuit/karate/core/ScenarioRuntime.java, line=450
+  Frame: id=424, name=com.intuit.karate.core.ScenarioRuntime.run, source=com/intuit/karate/core/ScenarioRuntime.java, line=401
+  Frame: id=425, name=com.intuit.karate.core.FeatureRuntime.processScenario, source=com/intuit/karate/core/FeatureRuntime.java, line=193
+  Frame: id=426, name=com.intuit.karate.core.FeatureRuntime$$Lambda/0x00000070011ad968.accept, source=com/intuit/karate/core/FeatureRuntime$$Lambda/0x00000070011ad968.java, line=-1
+  Frame: id=427, name=java.util.stream.StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.accept, source=java/util/stream/StreamSpliterators$WrappingSpliterator$$Lambda/0x00000070010dfd08.java, line=-1
+  Frame: id=428, name=java.util.stream.ReferencePipeline$2$1.accept, source=java/util/stream/ReferencePipeline.java, line=179
+  Frame: id=429, name=com.intuit.karate.core.ScenarioIterator.tryAdvance, source=com/intuit/karate/core/ScenarioIterator.java, line=162
+  Frame: id=430, name=java.util.Spliterator.forEachRemaining, source=java/util/Spliterator.java, line=332
+  Frame: id=431, name=java.util.stream.AbstractPipeline.copyInto, source=java/util/stream/AbstractPipeline.java, line=509
+  Frame: id=432, name=java.util.stream.AbstractPipeline.wrapAndCopyInto, source=java/util/stream/AbstractPipeline.java, line=499
+  Frame: id=433, name=java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining, source=java/util/stream/StreamSpliterators.java, line=310
+  Frame: id=434, name=java.util.Spliterators$1Adapter.forEachRemaining, source=java/util/Spliterators.java, line=706
+  Frame: id=435, name=com.intuit.karate.core.FeatureRuntime.run, source=com/intuit/karate/core/FeatureRuntime.java, line=182
+  Frame: id=436, name=java.util.concurrent.Executors$RunnableAdapter.call, source=java/util/concurrent/Executors.java, line=572
+  Frame: id=437, name=java.util.concurrent.FutureTask.run, source=java/util/concurrent/FutureTask.java, line=317
+  Frame: id=438, name=com.intuit.karate.core.SyncExecutorService.execute, source=com/intuit/karate/core/SyncExecutorService.java, line=70
+  Frame: id=439, name=java.util.concurrent.AbstractExecutorService.submit, source=java/util/concurrent/AbstractExecutorService.java, line=123
+  Frame: id=440, name=com.intuit.karate.Suite$$Lambda/0x00000070011ad730.accept, source=com/intuit/karate/Suite$$Lambda/0x00000070011ad730.java, line=-1
+  Frame: id=441, name=java.util.ArrayList.forEach, source=java/util/ArrayList.java, line=1596
+  Frame: id=442, name=com.intuit.karate.Suite.run, source=com/intuit/karate/Suite.java, line=239
+  Frame: id=443, name=com.intuit.karate.Runner$Builder.parallel, source=com/intuit/karate/Runner.java, line=533
+  Frame: id=444, name=com.j8d.karate.debug.runner.RunnerDebugger.lambda$start$0, source=com/j8d/karate/debug/runner/RunnerDebugger.java, line=109
+  Frame: id=445, name=com.j8d.karate.debug.runner.RunnerDebugger$$Lambda/0x0000007001104530.run, source=com/j8d/karate/debug/runner/RunnerDebugger$$Lambda/0x0000007001104530.java, line=-1
+  Frame: id=446, name=java.lang.Thread.runWith, source=java/lang/Thread.java, line=1596
+  Frame: id=447, name=java.lang.Thread.run, source=java/lang/Thread.java, line=1583
+Sending stackTrace response: 42 frames, first frame id=200405, name=com.jayway.jsonpath.Configuration$ConfigurationBuilder.<init>, line=187
+Source request with sourceReference=33, resolved to path: com/jayway/jsonpath/Configuration.java
+handleSource: looking for source path: com/jayway/jsonpath/Configuration.java
+Attempting to decompile/load source for: com/jayway/jsonpath/Configuration.java
+Returning cached source for com.jayway.jsonpath.Configuration
+Successfully loaded source for: com/jayway/jsonpath/Configuration.java

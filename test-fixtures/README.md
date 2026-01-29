@@ -7,7 +7,7 @@ Test fixtures for developing and testing the Karate Debugger VS Code extension.
 - Java 21+
 - Maven
 - VS Code with:
-  - [Karate Debugger](https://github.com/j8d/karate-debug/releases/latest) extension
+  - [Karate Debugger](https://github.com/j8d-org/karate-debug/releases/latest) extension
   - [Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack) (for Java debugging)
 
 ## Setup

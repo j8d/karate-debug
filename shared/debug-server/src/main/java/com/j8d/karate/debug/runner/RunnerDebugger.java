@@ -244,13 +244,15 @@ public class RunnerDebugger implements RuntimeHook {
         String sourcePath = normalizeSourcePath(relativePath);
         int line = step.getLine();
 
-        log.trace("beforeStep: {}:{}", sourcePath, line);
+        log.debug("beforeStep: line={}, relativePath={}, normalizedPath={}", line, relativePath, sourcePath);
+        log.debug("beforeStep: breakpoints keys={}", breakpoints.keySet());
 
         boolean shouldPause = false;
         String pauseReason = "breakpoint";
 
         // Check for breakpoint (with optional condition)
         Map<Integer, BreakpointInfo> fileBreakpoints = breakpoints.get(sourcePath);
+        log.debug("beforeStep: fileBreakpoints for path={} -> {}", sourcePath, fileBreakpoints);
         if (fileBreakpoints != null) {
             BreakpointInfo bp = fileBreakpoints.get(line);
             if (bp != null) {

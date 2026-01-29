@@ -9,6 +9,9 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -26,6 +29,7 @@ import com.j8d.karate.debug.backend.SetVariableResult;
 import com.j8d.karate.debug.backend.StackFrame;
 import com.j8d.karate.debug.backend.Variable;
 import com.j8d.karate.debug.coordinator.DebugCoordinator;
+import com.j8d.karate.debug.decompiler.DecompilationService;
 import com.j8d.karate.debug.multiplexer.MultiplexerEventListener;
 import com.j8d.karate.debug.process.ChildProcessConfig;
 
@@ -54,11 +58,22 @@ public class PolyglotDapSession implements MultiplexerEventListener {
 
     private DebugCoordinator coordinator;
     private ChildProcessConfig config;
+    private CompletableFuture<Void> initializationFuture;
 
     // Launch configuration
     private String featurePath;
     private boolean enableJavaDebugging = false;
     private boolean enableJsDebugging = false;
+
+    // Decompilation support for viewing framework source code
+    private DecompilationService decompilationService;
+
+    // Source reference tracking for external sources (JARs, decompiled classes)
+    // When a source file doesn't exist locally, we assign it a sourceReference ID
+    // so VS Code will request the content via the "source" DAP request
+    private final AtomicInteger nextSourceReference = new AtomicInteger(1);
+    private final Map<Integer, String> sourceRefToPath = new ConcurrentHashMap<>();
+    private final Map<String, Integer> pathToSourceRef = new ConcurrentHashMap<>();
 
     public PolyglotDapSession(Socket socket, String workspaceRoot, String karateEnv, String classpath) {
         this.socket = socket;
@@ -194,6 +209,7 @@ public class PolyglotDapSession implements MultiplexerEventListener {
             case "scopes" -> handleScopes(message, args);
             case "variables" -> handleVariables(message, args);
             case "setVariable" -> handleSetVariable(message, args);
+            case "source" -> handleSource(message, args);
             case "continue" -> handleContinue(message, args);
             case "next" -> handleNext(message, args);
             case "stepIn" -> handleStepIn(message, args);
@@ -234,7 +250,13 @@ public class PolyglotDapSession implements MultiplexerEventListener {
         enableJavaDebugging = args.has("enableJavaDebugging") && args.get("enableJavaDebugging").getAsBoolean();
         enableJsDebugging = args.has("enableJsDebugging") && args.get("enableJsDebugging").getAsBoolean();
 
-        log.info("Polyglot launch: feature={}, java={}, js={}", featurePath, enableJavaDebugging, enableJsDebugging);
+        // Step filtering options (default to true for backward compatibility)
+        boolean skipJdkClasses = !args.has("skipJdkClasses") || args.get("skipJdkClasses").getAsBoolean();
+        boolean skipKarateFramework = !args.has("skipKarateFramework") || args.get("skipKarateFramework").getAsBoolean();
+        boolean skipKarateDependencies = !args.has("skipKarateDependencies") || args.get("skipKarateDependencies").getAsBoolean();
+
+        log.info("Polyglot launch: feature={}, java={}, js={}, skipJdk={}, skipKarate={}, skipKarateDeps={}",
+                featurePath, enableJavaDebugging, enableJsDebugging, skipJdkClasses, skipKarateFramework, skipKarateDependencies);
 
         // Create child process config
         config = new ChildProcessConfig()
@@ -243,14 +265,17 @@ public class PolyglotDapSession implements MultiplexerEventListener {
             .classpath(classpath)
             .karateEnv(karateEnv)
             .enableJavaDebugging(enableJavaDebugging)
-            .enableJsDebugging(enableJsDebugging);
+            .enableJsDebugging(enableJsDebugging)
+            .skipJdkClasses(skipJdkClasses)
+            .skipKarateFramework(skipKarateFramework)
+            .skipKarateDependencies(skipKarateDependencies);
 
         // Create coordinator
         coordinator = new DebugCoordinator(config);
         coordinator.setEventListener(this);
 
-        // Initialize asynchronously
-        coordinator.initialize()
+        // Initialize asynchronously - store future so configurationDone can wait for it
+        initializationFuture = coordinator.initialize()
             .thenRun(() -> {
                 log.info("Coordinator initialized successfully");
                 sendResponse(request, true, null);
@@ -299,24 +324,53 @@ public class PolyglotDapSession implements MultiplexerEventListener {
     }
 
     private void handleConfigurationDone(JsonObject request) {
-        sendResponse(request, true, null);
-        // Start execution after breakpoints are set
-        coordinator.start();
+        // Wait for initialization to complete before starting execution
+        if (initializationFuture != null && !initializationFuture.isDone()) {
+            log.debug("Waiting for coordinator initialization before starting...");
+            initializationFuture.thenRun(() -> {
+                sendResponse(request, true, null);
+                coordinator.start();
+            });
+        } else {
+            sendResponse(request, true, null);
+            coordinator.start();
+        }
     }
 
     private void handleThreads(JsonObject request) {
         JsonObject body = new JsonObject();
         JsonArray threads = new JsonArray();
-        JsonObject thread = new JsonObject();
-        thread.addProperty("id", 1);
-        thread.addProperty("name", "Karate Main");
-        threads.add(thread);
+
+        // Always include Karate main thread
+        JsonObject karateThread = new JsonObject();
+        karateThread.addProperty("id", 1);
+        karateThread.addProperty("name", "Karate Main");
+        threads.add(karateThread);
+
+        // Include Java thread if we have a Java backend and it's stopped
+        int stoppedThreadId = coordinator.getStoppedThreadId();
+        log.debug("handleThreads: stoppedThreadId={}", stoppedThreadId);
+        if (stoppedThreadId >= 2000 && stoppedThreadId < 3000) {
+            // Java thread range
+            JsonObject javaThread = new JsonObject();
+            javaThread.addProperty("id", stoppedThreadId);
+            javaThread.addProperty("name", "Java Thread");
+            threads.add(javaThread);
+        } else if (stoppedThreadId >= 1000 && stoppedThreadId < 2000) {
+            // JavaScript thread range
+            JsonObject jsThread = new JsonObject();
+            jsThread.addProperty("id", stoppedThreadId);
+            jsThread.addProperty("name", "JavaScript Thread");
+            threads.add(jsThread);
+        }
+
         body.add("threads", threads);
         sendResponse(request, true, body);
     }
 
     private void handleStackTrace(JsonObject request, JsonObject args) {
         int threadId = args.get("threadId").getAsInt();
+        log.debug("handleStackTrace: threadId={}", threadId);
         List<StackFrame> frames = coordinator.getStackFrames(threadId);
 
         JsonArray framesArray = new JsonArray();
@@ -326,8 +380,18 @@ public class PolyglotDapSession implements MultiplexerEventListener {
             frameObj.addProperty("name", frame.name());
 
             JsonObject source = new JsonObject();
-            source.addProperty("path", frame.sourcePath());
+            String sourcePath = frame.sourcePath();
+            source.addProperty("path", sourcePath);
             source.addProperty("name", frame.sourceName());
+
+            // For files that don't exist locally, add a sourceReference so VS Code
+            // will request the content via the "source" DAP request instead of
+            // trying to open the file directly (which would fail)
+            if (sourcePath != null && !isLocalFile(sourcePath)) {
+                int sourceRef = getOrCreateSourceReference(sourcePath);
+                source.addProperty("sourceReference", sourceRef);
+            }
+
             frameObj.add("source", source);
 
             frameObj.addProperty("line", frame.line());
@@ -338,7 +402,61 @@ public class PolyglotDapSession implements MultiplexerEventListener {
         JsonObject body = new JsonObject();
         body.add("stackFrames", framesArray);
         body.addProperty("totalFrames", frames.size());
+
+        // Log first few frames with their IDs to verify global mapping
+        if (!frames.isEmpty()) {
+            log.debug("Sending stackTrace response: {} frames, first frame id={}, name={}, line={}",
+                frames.size(), frames.get(0).id(), frames.get(0).name(), frames.get(0).line());
+        }
+
         sendResponse(request, true, body);
+    }
+
+    /**
+     * Check if a source path points to a local file that exists on disk.
+     */
+    private boolean isLocalFile(String sourcePath) {
+        if (sourcePath == null) return false;
+
+        // If it's an absolute path, check if file exists
+        File file = new File(sourcePath);
+        if (file.isAbsolute()) {
+            return file.exists();
+        }
+
+        // For relative paths, try to resolve against workspace
+        String wsRoot = coordinator != null ? coordinator.getWorkspaceRoot() : workspaceRoot;
+        if (wsRoot != null) {
+            String[] searchPaths = {
+                sourcePath,
+                "src/test/java/" + sourcePath,
+                "src/test/resources/" + sourcePath,
+                "src/main/java/" + sourcePath,
+                "src/main/resources/" + sourcePath
+            };
+
+            for (String searchPath : searchPaths) {
+                file = new File(wsRoot, searchPath);
+                if (file.exists()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get or create a source reference ID for a source path.
+     * Source references are used for files that don't exist locally (e.g., from JARs).
+     */
+    private int getOrCreateSourceReference(String sourcePath) {
+        return pathToSourceRef.computeIfAbsent(sourcePath, path -> {
+            int ref = nextSourceReference.getAndIncrement();
+            sourceRefToPath.put(ref, path);
+            log.debug("Created sourceReference {} for path: {}", ref, path);
+            return ref;
+        });
     }
 
     private void handleScopes(JsonObject request, JsonObject args) {
@@ -421,6 +539,113 @@ public class PolyglotDapSession implements MultiplexerEventListener {
         }
     }
 
+    private void handleSource(JsonObject request, JsonObject args) {
+        // VS Code is asking for source content - either from file system or decompiled
+        try {
+            JsonObject source = args.getAsJsonObject("source");
+            String sourcePath = source != null && source.has("path") ? source.get("path").getAsString() : null;
+
+            // Check for sourceReference - this means VS Code is requesting content for a
+            // file that doesn't exist locally (e.g., from a JAR or needs decompilation)
+            int sourceReference = 0;
+            if (source != null && source.has("sourceReference")) {
+                sourceReference = source.get("sourceReference").getAsInt();
+            } else if (args.has("sourceReference")) {
+                sourceReference = args.get("sourceReference").getAsInt();
+            }
+
+            // If we have a sourceReference, look up the path
+            if (sourceReference > 0) {
+                String refPath = sourceRefToPath.get(sourceReference);
+                if (refPath != null) {
+                    log.debug("Source request with sourceReference={}, resolved to path: {}", sourceReference, refPath);
+                    sourcePath = refPath;
+                } else {
+                    log.warn("Unknown sourceReference: {}", sourceReference);
+                }
+            }
+
+            if (sourcePath != null) {
+                log.debug("handleSource: looking for source path: {}", sourcePath);
+
+                // First, try to find the source file on disk
+                java.io.File file = new java.io.File(sourcePath);
+
+                // If not absolute, try resolving against workspace and common source directories
+                if (!file.isAbsolute() || !file.exists()) {
+                    String wsRoot = coordinator != null ? coordinator.getWorkspaceRoot() : workspaceRoot;
+                    if (wsRoot != null) {
+                        String[] searchPaths = {
+                            sourcePath,
+                            "src/test/java/" + sourcePath,
+                            "src/test/resources/" + sourcePath,
+                            "src/main/java/" + sourcePath,
+                            "src/main/resources/" + sourcePath
+                        };
+
+                        for (String searchPath : searchPaths) {
+                            file = new java.io.File(wsRoot, searchPath);
+                            if (file.exists()) {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // If file exists, return its contents
+                if (file.exists()) {
+                    String content = java.nio.file.Files.readString(file.toPath());
+                    JsonObject body = new JsonObject();
+                    body.addProperty("content", content);
+                    sendResponse(request, true, body);
+                    return;
+                }
+
+                // File not found - try decompilation if it looks like a class path
+                if (DecompilationService.isDecompilableSourcePath(sourcePath)) {
+                    log.debug("Attempting to decompile/load source for: {}", sourcePath);
+                    String decompiled = tryDecompile(sourcePath);
+                    if (decompiled != null) {
+                        log.info("Successfully loaded source for: {}", sourcePath);
+                        JsonObject body = new JsonObject();
+                        body.addProperty("content", decompiled);
+                        sendResponse(request, true, body);
+                        return;
+                    }
+                }
+
+                log.warn("Source file not found: {} (tried workspace: {})", sourcePath, workspaceRoot);
+            }
+
+            // If we can't find the file and can't decompile, send an error
+            sendResponse(request, false, null);
+        } catch (Exception e) {
+            log.error("Error reading source file", e);
+            sendResponse(request, false, null);
+        }
+    }
+
+    /**
+     * Attempts to decompile a class file from the classpath.
+     * Lazily initializes the decompilation service on first use.
+     */
+    private String tryDecompile(String sourcePath) {
+        // Initialize decompilation service lazily (needs classpath from Java backend)
+        if (decompilationService == null && coordinator != null) {
+            List<String> classpathEntries = coordinator.getJavaClasspathEntries();
+            if (!classpathEntries.isEmpty()) {
+                decompilationService = new DecompilationService(classpathEntries);
+            }
+        }
+
+        if (decompilationService == null) {
+            log.debug("Decompilation service not available (no classpath entries)");
+            return null;
+        }
+
+        return decompilationService.getSourceByPath(sourcePath);
+    }
+
     private void handleContinue(JsonObject request, JsonObject args) {
         int threadId = args.get("threadId").getAsInt();
         coordinator.resume(threadId);
@@ -484,6 +709,7 @@ public class PolyglotDapSession implements MultiplexerEventListener {
             body.addProperty("text", description);
         }
         body.addProperty("allThreadsStopped", true);
+        log.info("Sending stopped event to VS Code: threadId={}, reason={}", globalThreadId, reason);
         sendEvent("stopped", body);
     }
 

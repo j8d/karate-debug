@@ -294,7 +294,7 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         this.log(`Workspace: ${workspaceRoot}`);
         this.log(`Environment: ${karateEnv}`);
         this.log(`Log level: ${logLevel}`);
-        this.log(`Classpath: ${fullClasspath}`);
+        this.log(`Classpath: (${fullClasspath.split(':').length} entries)`);
 
         const serverProcess = spawn(javaPath, args, {
             cwd: workspaceRoot,

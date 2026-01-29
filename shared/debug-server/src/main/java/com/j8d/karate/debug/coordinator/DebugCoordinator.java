@@ -172,9 +172,15 @@ public class DebugCoordinator {
 
         // Create Java backend if JDWP is available
         if (processInfo.hasJavaDebugging()) {
-            javaBackend = new JavaBackend("localhost", processInfo.getJdwpPort());
+            String workspaceRoot = config.getWorkingDirectory() != null
+                ? config.getWorkingDirectory().getAbsolutePath()
+                : null;
+            javaBackend = new JavaBackend("localhost", processInfo.getJdwpPort(), workspaceRoot,
+                    config.isSkipJdkClasses(), config.isSkipKarateFramework(), config.isSkipKarateDependencies());
             multiplexer.registerBackend(javaBackend);
-            log.debug("Created JavaBackend for localhost:{}", processInfo.getJdwpPort());
+            log.debug("Created JavaBackend for localhost:{}, skipJdk={}, skipKarate={}, skipKarateDeps={}",
+                    processInfo.getJdwpPort(), config.isSkipJdkClasses(), config.isSkipKarateFramework(),
+                    config.isSkipKarateDependencies());
         }
     }
 
@@ -247,11 +253,12 @@ public class DebugCoordinator {
             return;
         }
 
-        // Apply any remaining queued breakpoints
+        // Start all backends first (connects JDI, etc.)
+        multiplexer.start();
+
+        // Apply any remaining queued breakpoints (now that backends are connected)
         applyQueuedBreakpoints();
 
-        // Start all backends
-        multiplexer.start();
         state = CoordinatorState.RUNNING;
         log.info("Execution started");
     }
@@ -333,5 +340,35 @@ public class DebugCoordinator {
      */
     public void onBackendStopped() {
         state = CoordinatorState.STOPPED;
+    }
+
+    /**
+     * Returns the global thread ID that is currently stopped, or -1 if not stopped.
+     */
+    public int getStoppedThreadId() {
+        return multiplexer.getStoppedThreadId();
+    }
+
+    /**
+     * Returns the classpath entries from the Java backend.
+     * Used for loading bytecode for decompilation.
+     *
+     * @return List of classpath entries, or empty list if Java backend not available
+     */
+    public List<String> getJavaClasspathEntries() {
+        if (javaBackend == null) {
+            log.debug("Java backend not available, returning empty classpath");
+            return List.of();
+        }
+        return javaBackend.getClasspathEntries();
+    }
+
+    /**
+     * Returns the workspace root directory.
+     */
+    public String getWorkspaceRoot() {
+        return config.getWorkingDirectory() != null
+            ? config.getWorkingDirectory().getAbsolutePath()
+            : null;
     }
 }

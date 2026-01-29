@@ -23,7 +23,12 @@ public class ChildProcessConfig {
     
     private boolean enableJsDebugging = false;
     private int jsDebugPort = 0;  // 0 = auto-assign
-    
+
+    // Step filtering configuration
+    private boolean skipJdkClasses = true;           // Skip java.*, javax.*, jdk.*, sun.*, com.sun.*
+    private boolean skipKarateFramework = true;      // Skip com.intuit.karate.*
+    private boolean skipKarateDependencies = true;   // Skip com.jayway.jsonpath.*, io.netty.*, etc.
+
     // ========== Builder-style setters ==========
     
     public ChildProcessConfig workingDirectory(File dir) {
@@ -85,7 +90,22 @@ public class ChildProcessConfig {
         this.jsDebugPort = port;
         return this;
     }
-    
+
+    public ChildProcessConfig skipJdkClasses(boolean skip) {
+        this.skipJdkClasses = skip;
+        return this;
+    }
+
+    public ChildProcessConfig skipKarateFramework(boolean skip) {
+        this.skipKarateFramework = skip;
+        return this;
+    }
+
+    public ChildProcessConfig skipKarateDependencies(boolean skip) {
+        this.skipKarateDependencies = skip;
+        return this;
+    }
+
     // ========== Getters ==========
     
     public File getWorkingDirectory() {
@@ -130,6 +150,18 @@ public class ChildProcessConfig {
     
     public int getJsDebugPort() {
         return jsDebugPort;
+    }
+
+    public boolean isSkipJdkClasses() {
+        return skipJdkClasses;
+    }
+
+    public boolean isSkipKarateFramework() {
+        return skipKarateFramework;
+    }
+
+    public boolean isSkipKarateDependencies() {
+        return skipKarateDependencies;
     }
 }
 

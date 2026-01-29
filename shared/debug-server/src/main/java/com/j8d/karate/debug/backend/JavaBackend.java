@@ -39,6 +39,8 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
     private final JdiClient jdiClient;
     private final String host;
     private final int port;
+    private final String workspaceRoot;
+    private final List<String> sourcePaths;
 
     private BackendEventListener listener;
     private volatile boolean ready = false;
@@ -54,6 +56,8 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
 
     // Variable reference mapping: our varRef -> ObjectReference
     private final Map<Integer, ObjectReference> varRefToObject = new ConcurrentHashMap<>();
+    // Locals scope varRef -> FrameRef (separate map since ConcurrentHashMap doesn't allow null)
+    private final Map<Integer, FrameRef> localVarRefToFrame = new ConcurrentHashMap<>();
     private final AtomicInteger nextVarRef = new AtomicInteger(1);
 
     // Breakpoint tracking
@@ -62,12 +66,42 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
 
     /**
      * Creates a JavaBackend that will connect to the given JDWP endpoint.
+     *
+     * @param host The JDWP host
+     * @param port The JDWP port
+     * @param workspaceRoot The workspace root directory for resolving source paths
      */
-    public JavaBackend(String host, int port) {
+    public JavaBackend(String host, int port, String workspaceRoot) {
+        this(host, port, workspaceRoot, true, true, true);
+    }
+
+    /**
+     * Creates a JavaBackend with configurable step filtering.
+     *
+     * @param host The JDWP host
+     * @param port The JDWP port
+     * @param workspaceRoot The workspace root directory for resolving source paths
+     * @param skipJdkClasses Whether to auto-skip JDK core classes when stepping
+     * @param skipKarateFramework Whether to auto-skip Karate framework classes when stepping
+     * @param skipKarateDependencies Whether to auto-skip Karate's dependencies (jsonpath, netty, etc.)
+     */
+    public JavaBackend(String host, int port, String workspaceRoot,
+                       boolean skipJdkClasses, boolean skipKarateFramework, boolean skipKarateDependencies) {
         this.host = host;
         this.port = port;
-        this.jdiClient = new JdiClient();
+        this.workspaceRoot = workspaceRoot;
+        this.jdiClient = new JdiClient(skipJdkClasses, skipKarateFramework, skipKarateDependencies);
         this.jdiClient.setListener(this);
+
+        // Build list of source paths to search
+        this.sourcePaths = new ArrayList<>();
+        if (workspaceRoot != null) {
+            // Common Maven/Gradle source locations
+            sourcePaths.add(workspaceRoot + "/src/main/java");
+            sourcePaths.add(workspaceRoot + "/src/test/java");
+            sourcePaths.add(workspaceRoot + "/src/main/kotlin");
+            sourcePaths.add(workspaceRoot + "/src/test/kotlin");
+        }
     }
 
     // ========== DebugBackend Implementation ==========
@@ -216,6 +250,31 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
         }
     }
 
+    // ========== Cross-Language Step Support ==========
+
+    /**
+     * Enables method entry catching for cross-language step-into.
+     * When enabled, we'll receive events when execution enters user Java methods.
+     */
+    public void enableMethodEntry() {
+        jdiClient.enableMethodEntry();
+    }
+
+    /**
+     * Disables method entry catching.
+     */
+    public void disableMethodEntry() {
+        jdiClient.disableMethodEntry();
+    }
+
+    /**
+     * Cancels all active step requests.
+     * Called when a Java step exits to framework code and we need to clean up.
+     */
+    public void cancelAllSteps() {
+        jdiClient.cancelAllSteps();
+    }
+
     // ========== Stack Frame Inspection ==========
 
     @Override
@@ -276,7 +335,8 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
             scopes.add(Scope.of("Locals", localVarRef));
 
             // Store frame reference for later variable lookup
-            varRefToObject.put(localVarRef, null); // Special marker for locals
+            // Note: We use a separate map for locals since ConcurrentHashMap doesn't allow null
+            localVarRefToFrame.put(localVarRef, ref);
 
             // "this" object scope if available
             ObjectReference thisObj = frame.thisObject();
@@ -297,11 +357,27 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
     public List<Variable> getVariables(int variablesReference) {
         List<Variable> variables = new ArrayList<>();
 
-        ObjectReference obj = varRefToObject.get(variablesReference);
+        // Check if this is a locals scope reference
+        FrameRef frameRef = localVarRefToFrame.get(variablesReference);
+        if (frameRef != null) {
+            // Get local variables from the frame
+            ThreadReference thread = jdiClient.findThread(frameRef.threadId());
+            if (thread != null) {
+                try {
+                    StackFrame frame = thread.frames().get(frameRef.frameIndex());
+                    for (LocalVariable localVar : frame.visibleVariables()) {
+                        Value value = frame.getValue(localVar);
+                        variables.add(valueToVariable(localVar.name(), value));
+                    }
+                } catch (IncompatibleThreadStateException | AbsentInformationException e) {
+                    log.debug("Could not get local variables: {}", e.getMessage());
+                }
+            }
+            return variables;
+        }
 
+        ObjectReference obj = varRefToObject.get(variablesReference);
         if (obj == null) {
-            // This is a "locals" scope - get from current frame
-            // For now, return empty - would need to track frame context
             return variables;
         }
 
@@ -418,7 +494,39 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
     @Override
     public void onClassPrepare(String className) {
         // Pending breakpoints are handled by JdiClient
-        log.debug("Class prepared: {}", className);
+        // Use trace level to avoid polluting logs - many classes are loaded during execution
+        log.trace("Class prepared: {}", className);
+    }
+
+    @Override
+    public void onMethodEntry(ThreadReference thread, Location location) {
+        // Method entry for cross-language step-into
+        // Use getOrCreateLocalThreadId to ensure the thread mapping exists
+        int threadId = getOrCreateLocalThreadId(thread);
+
+        try {
+            String sourcePath = location.sourcePath();
+            int line = location.lineNumber();
+            String methodName = location.method().name();
+            log.debug("Method entry: {} at {}:{}", methodName, sourcePath, line);
+
+            // Disable method entry catching - we've caught what we need
+            jdiClient.disableMethodEntry();
+
+            if (listener != null) {
+                listener.onStopped(this, threadId, "step",
+                    "Stepped into " + methodName);
+            }
+        } catch (AbsentInformationException e) {
+            String methodName = location.method().name();
+            log.debug("Method entry with no source info: {}", methodName);
+            // Still notify about the stop
+            jdiClient.disableMethodEntry();
+            if (listener != null) {
+                listener.onStopped(this, threadId, "step",
+                    "Stepped into " + methodName);
+            }
+        }
     }
 
     @Override
@@ -479,11 +587,23 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
     }
 
     private String extractSourcePath(Location location) {
+        String relativePath;
         try {
-            return location.sourcePath();
+            relativePath = location.sourcePath();
         } catch (AbsentInformationException e) {
-            return location.declaringType().name().replace('.', '/') + ".java";
+            relativePath = location.declaringType().name().replace('.', '/') + ".java";
         }
+
+        // Try to resolve to absolute path by searching source directories
+        for (String sourceDir : sourcePaths) {
+            java.io.File file = new java.io.File(sourceDir, relativePath);
+            if (file.exists()) {
+                return file.getAbsolutePath();
+            }
+        }
+
+        // Fallback to relative path if not found
+        return relativePath;
     }
 
     private String extractSourceName(Location location) {
@@ -562,5 +682,54 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
      * Reference to a stack frame: (thread ID, frame index within thread)
      */
     private record FrameRef(long threadId, int frameIndex) {}
+
+    // ========== Classpath Access for Decompilation ==========
+
+    /**
+     * Gets the classpath entries from the target VM.
+     * Used for loading bytecode for decompilation.
+     *
+     * @return List of classpath entries, or empty list if not available
+     */
+    public List<String> getClasspathEntries() {
+        if (!isReady() || jdiClient == null || jdiClient.getVm() == null) {
+            log.warn("Cannot get classpath: JDI not connected");
+            return List.of();
+        }
+
+        try {
+            com.sun.jdi.VirtualMachine vm = jdiClient.getVm();
+            List<String> entries = new java.util.ArrayList<>();
+
+            // Check if VM supports path searching
+            if (vm instanceof com.sun.jdi.PathSearchingVirtualMachine psvm) {
+                String baseDir = psvm.baseDirectory();
+
+                // Add classpath entries
+                for (String cp : psvm.classPath()) {
+                    if (new java.io.File(cp).isAbsolute()) {
+                        entries.add(cp);
+                    } else {
+                        entries.add(new java.io.File(baseDir, cp).getAbsolutePath());
+                    }
+                }
+
+                // Add boot classpath entries
+                for (String bcp : psvm.bootClassPath()) {
+                    if (new java.io.File(bcp).isAbsolute()) {
+                        entries.add(bcp);
+                    } else {
+                        entries.add(new java.io.File(baseDir, bcp).getAbsolutePath());
+                    }
+                }
+            }
+
+            log.debug("Retrieved {} classpath entries from target VM", entries.size());
+            return entries;
+        } catch (Exception e) {
+            log.warn("Failed to get classpath: {}", e.getMessage());
+            return List.of();
+        }
+    }
 }
 

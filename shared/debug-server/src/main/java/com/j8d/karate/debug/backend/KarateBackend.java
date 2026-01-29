@@ -176,7 +176,9 @@ public class KarateBackend implements DebugBackend {
         body.addProperty("threadId", threadId);
 
         try {
+            log.debug("Sending getStackFrames IPC request for threadId={}", threadId);
             IpcMessage response = sendCommandSync(IpcCommands.GET_STACK_FRAMES, body);
+            log.debug("Received getStackFrames IPC response");
             return parseStackFrames(response.getBody());
         } catch (Exception e) {
             log.error("Failed to get stack frames", e);

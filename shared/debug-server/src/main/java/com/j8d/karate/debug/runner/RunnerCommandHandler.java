@@ -3,6 +3,7 @@ package com.j8d.karate.debug.runner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.j8d.karate.debug.ipc.IpcCommands;
 import com.j8d.karate.debug.ipc.IpcServerHandler;
@@ -49,37 +50,54 @@ public class RunnerCommandHandler implements IpcServerHandler {
         };
     }
     
+    // Store breakpoints that arrive before debugger is created
+    private final java.util.Map<String, JsonArray> pendingBreakpoints = new java.util.concurrent.ConcurrentHashMap<>();
+
     private JsonObject handleStart(JsonObject body) {
         log.info("Starting Karate execution");
-        
+
         // Create debugger and start execution
-        // This will be implemented when we refactor KarateDebugger
         debugger = new RunnerDebugger(runner);
+
+        // Apply any breakpoints that were set before debugger was created
+        if (!pendingBreakpoints.isEmpty()) {
+            log.debug("Applying {} pending breakpoint files", pendingBreakpoints.size());
+            for (java.util.Map.Entry<String, JsonArray> entry : pendingBreakpoints.entrySet()) {
+                log.debug("Applying pending breakpoints for: {}", entry.getKey());
+                debugger.setBreakpoints(entry.getKey(), entry.getValue());
+            }
+            pendingBreakpoints.clear();
+        }
+
         debugger.start();
-        
+
         return null; // Simple acknowledgment
     }
-    
+
     private JsonObject handleStop(JsonObject body) {
         log.info("Stopping Karate execution");
-        
+
         if (debugger != null) {
             debugger.stop();
         }
         runner.shutdown();
-        
+
         return null;
     }
-    
+
     private JsonObject handleSetBreakpoints(JsonObject body) {
         String filePath = body.get("filePath").getAsString();
-        // breakpoints array will be parsed and set
-        log.debug("Setting breakpoints in: {}", filePath);
-        
+        JsonArray breakpointsArray = body.getAsJsonArray("breakpoints");
+        log.debug("Setting breakpoints in: {} (count: {})", filePath, breakpointsArray.size());
+
         if (debugger != null) {
-            return debugger.setBreakpoints(filePath, body.getAsJsonArray("breakpoints"));
+            return debugger.setBreakpoints(filePath, breakpointsArray);
+        } else {
+            // Store for later when debugger is created
+            log.debug("Debugger not ready, storing {} breakpoints for later", breakpointsArray.size());
+            pendingBreakpoints.put(filePath, breakpointsArray);
+            return new JsonObject();
         }
-        return new JsonObject();
     }
     
     private JsonObject handleResume(JsonObject body) {

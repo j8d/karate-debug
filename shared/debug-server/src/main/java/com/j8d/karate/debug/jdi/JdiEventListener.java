@@ -54,11 +54,19 @@ public interface JdiEventListener {
     /**
      * Called when a class is prepared (loaded and ready for use).
      * This is useful for setting deferred breakpoints.
-     * 
+     *
      * @param className The fully qualified class name
      */
     void onClassPrepare(String className);
-    
+
+    /**
+     * Called when execution enters a method (for cross-language step-into).
+     *
+     * @param thread The thread that entered the method
+     * @param location The location at the method entry point
+     */
+    void onMethodEntry(ThreadReference thread, Location location);
+
     /**
      * Called when the debugged VM disconnects.
      */

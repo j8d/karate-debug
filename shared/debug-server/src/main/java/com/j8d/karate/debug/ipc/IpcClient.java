@@ -145,10 +145,18 @@ public class IpcClient {
     /**
      * Sends a message without waiting for a response (fire-and-forget).
      */
-    private void sendMessage(IpcMessage message) {
+    private synchronized void sendMessage(IpcMessage message) {
         String json = gson.toJson(message);
-        log.debug("IPC TX: {}", json);
-        writer.println(json);
+        log.debug("IPC TX [thread={}]: {}", Thread.currentThread().getName(), json);
+
+        try {
+            byte[] bytes = (json + "\n").getBytes(StandardCharsets.UTF_8);
+            socket.getOutputStream().write(bytes);
+            socket.getOutputStream().flush();
+            log.trace("IPC TX flushed [thread={}], wrote {} bytes", Thread.currentThread().getName(), bytes.length);
+        } catch (IOException e) {
+            log.error("IPC TX ERROR: Failed to write to socket", e);
+        }
     }
     
     public boolean isConnected() {
@@ -159,12 +167,15 @@ public class IpcClient {
      * The main read loop that runs in a background thread.
      */
     private void readLoop() {
+        log.info("Parent IPC reader thread started: {}", Thread.currentThread().getName());
         try {
             String line;
             while (connected && (line = reader.readLine()) != null) {
-                log.debug("IPC RX: {}", line);
+                log.debug("Parent IPC RX [thread={}]: {}", Thread.currentThread().getName(), line);
                 handleMessage(line);
+                log.debug("Parent IPC reader finished handling message");
             }
+            log.info("Parent IPC reader loop exited: connected={}", connected);
         } catch (IOException e) {
             if (connected) {
                 log.error("Error reading from IPC server", e);
@@ -173,6 +184,7 @@ public class IpcClient {
                 }
             }
         } finally {
+            log.info("Parent IPC reader thread ending");
             if (connected) {
                 connected = false;
                 if (listener != null) {
