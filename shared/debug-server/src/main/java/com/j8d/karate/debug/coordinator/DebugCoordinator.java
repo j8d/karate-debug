@@ -1,6 +1,7 @@
 package com.j8d.karate.debug.coordinator;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -171,9 +172,11 @@ public class DebugCoordinator {
 
         // Create JavaScript backend if DAP is available
         if (processInfo.hasJsDebugging()) {
-            jsBackend = new JavaScriptBackend(processInfo.getJsDapPort());
+            Path workspacePath = getWorkspacePath();
+            jsBackend = new JavaScriptBackend(processInfo.getJsDapPort(), workspacePath);
             multiplexer.registerBackend(jsBackend);
-            log.debug("Created JavaScriptBackend for DAP port {}", processInfo.getJsDapPort());
+            log.debug("Created JavaScriptBackend for DAP port {}, workspace={}",
+                    processInfo.getJsDapPort(), workspacePath);
         }
 
         // Create Java backend if JDWP is available
@@ -188,6 +191,16 @@ public class DebugCoordinator {
                     processInfo.getJdwpPort(), config.isSkipJdkClasses(), config.isSkipKarateFramework(),
                     config.isSkipKarateDependencies());
         }
+    }
+
+    /**
+     * Gets the workspace path for source matching.
+     */
+    private Path getWorkspacePath() {
+        if (config.getWorkingDirectory() != null) {
+            return config.getWorkingDirectory().toPath();
+        }
+        return null;
     }
 
     /**
@@ -220,8 +233,9 @@ public class DebugCoordinator {
             return;
         }
 
-        log.info("Late-creating JavaScriptBackend for DAP port {}", port);
-        jsBackend = new JavaScriptBackend(port);
+        Path workspacePath = getWorkspacePath();
+        log.info("Late-creating JavaScriptBackend for DAP port {}, workspace={}", port, workspacePath);
+        jsBackend = new JavaScriptBackend(port, workspacePath);
         multiplexer.registerBackend(jsBackend);
 
         // Since the multiplexer is already started, we need to explicitly start the backend
@@ -230,9 +244,37 @@ public class DebugCoordinator {
         if (state.ordinal() >= CoordinatorState.BACKENDS_READY.ordinal()) {
             log.info("Starting late-registered JavaScriptBackend");
             jsBackend.start();
+
+            // Apply any queued JavaScript breakpoints now that the backend exists
+            applyQueuedJavaScriptBreakpoints();
         }
 
         log.info("JavaScriptBackend ready for JavaScript debugging");
+    }
+
+    /**
+     * Applies queued breakpoints that are for JavaScript files.
+     * Called when the JavaScript backend is late-created.
+     */
+    private void applyQueuedJavaScriptBreakpoints() {
+        List<QueuedBreakpoints> jsBreakpoints = new ArrayList<>();
+        synchronized (queuedBreakpoints) {
+            // Find and remove JavaScript breakpoints from the queue
+            var iterator = queuedBreakpoints.iterator();
+            while (iterator.hasNext()) {
+                QueuedBreakpoints queued = iterator.next();
+                if (jsBackend.canHandleFile(queued.filePath())) {
+                    jsBreakpoints.add(queued);
+                    iterator.remove();
+                }
+            }
+        }
+
+        for (QueuedBreakpoints queued : jsBreakpoints) {
+            log.info("Applying {} queued JavaScript breakpoints for {}",
+                    queued.requests().size(), queued.filePath());
+            multiplexer.setBreakpoints(queued.filePath(), queued.requests());
+        }
     }
 
     // ========== Breakpoint Management ==========
@@ -255,12 +297,26 @@ public class DebugCoordinator {
 
     /**
      * Applies all queued breakpoints. Called after backends are ready.
+     * JavaScript breakpoints are kept in the queue if the JS backend doesn't exist yet.
      */
     public void applyQueuedBreakpoints() {
-        List<QueuedBreakpoints> toApply;
+        List<QueuedBreakpoints> toApply = new ArrayList<>();
+        List<QueuedBreakpoints> toKeep = new ArrayList<>();
+
         synchronized (queuedBreakpoints) {
-            toApply = new ArrayList<>(queuedBreakpoints);
+            for (QueuedBreakpoints queued : queuedBreakpoints) {
+                // Check if this is a JavaScript file and the JS backend doesn't exist yet
+                if (isJavaScriptFile(queued.filePath()) && jsBackend == null) {
+                    // Keep JavaScript breakpoints for later when the backend is created
+                    toKeep.add(queued);
+                    log.debug("Keeping {} JS breakpoints queued for {} (JS backend not ready)",
+                            queued.requests().size(), queued.filePath());
+                } else {
+                    toApply.add(queued);
+                }
+            }
             queuedBreakpoints.clear();
+            queuedBreakpoints.addAll(toKeep);
         }
 
         for (QueuedBreakpoints queued : toApply) {
@@ -269,6 +325,15 @@ public class DebugCoordinator {
         }
 
         state = CoordinatorState.BREAKPOINTS_SET;
+    }
+
+    /**
+     * Checks if a file path is a JavaScript file.
+     */
+    private boolean isJavaScriptFile(String filePath) {
+        if (filePath == null) return false;
+        String lower = filePath.toLowerCase();
+        return lower.endsWith(".js") || lower.endsWith(".mjs");
     }
 
     // ========== Lifecycle ==========
