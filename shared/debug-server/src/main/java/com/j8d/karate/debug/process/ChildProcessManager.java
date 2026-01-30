@@ -30,11 +30,21 @@ import com.j8d.karate.debug.ipc.IpcMessage;
  * - Provides access to child process info
  */
 public class ChildProcessManager {
-    
+
     private static final Logger log = LoggerFactory.getLogger(ChildProcessManager.class);
     private static final Pattern IPC_PORT_PATTERN = Pattern.compile("IPC_PORT=(\\d+)");
     private static final Pattern JDWP_PORT_PATTERN = Pattern.compile("Listening for transport dt_socket at address: (\\d+)");
+    // GraalVM DAP server outputs: "[Graal DAP] Starting server and listening on localhost/127.0.0.1:PORT"
+    private static final Pattern DAP_PORT_PATTERN = Pattern.compile("\\[Graal DAP\\] Starting server and listening on .+:(\\d+)");
     private static final int STARTUP_TIMEOUT_SECONDS = 30;
+
+    /**
+     * Listener for GraalVM DAP port discovery events.
+     * Called when the GraalVM DAP server port is discovered from stderr.
+     */
+    public interface DapDiscoveryListener {
+        void onDapPortDiscovered(int port);
+    }
 
     private final ChildProcessConfig config;
     private final IpcClient ipcClient;
@@ -44,13 +54,23 @@ public class ChildProcessManager {
     private CompletableFuture<ChildProcessInfo> readyFuture;
     private Thread outputThread;
     private Thread errorThread;
+    private volatile DapDiscoveryListener dapDiscoveryListener;
 
     // Ports discovered from child process output
     private volatile int discoveredJdwpPort = 0;
-    
+    private volatile int discoveredDapPort = 0;
+
     public ChildProcessManager(ChildProcessConfig config) {
         this.config = config;
         this.ipcClient = new IpcClient();
+    }
+
+    /**
+     * Sets a listener to be notified when the GraalVM DAP port is discovered from stderr.
+     * This is called when GraalVM starts the DAP server.
+     */
+    public void setDapDiscoveryListener(DapDiscoveryListener listener) {
+        this.dapDiscoveryListener = listener;
     }
     
     /**
@@ -152,12 +172,12 @@ public class ChildProcessManager {
             String portSpec = port > 0 ? String.valueOf(port) : "*:0";
             cmd.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=" + portSpec);
         }
-        
-        // Add Chrome Inspector if JS debugging enabled
+
+        // Add GraalVM DAP server if JS debugging enabled
+        // Note: dap.Suspend option is not supported in the GraalVM version bundled with Karate
         if (config.isJsDebuggingEnabled()) {
             int port = config.getJsDebugPort();
-            cmd.add("-Dpolyglot.inspect=" + (port > 0 ? port : "0"));
-            cmd.add("-Dpolyglot.inspect.Suspend=false");
+            cmd.add("-Dpolyglot.dap=" + (port > 0 ? port : "0"));
         }
         
         // Add classpath
@@ -198,6 +218,23 @@ public class ChildProcessManager {
                         log.info("Discovered JDWP port: {}", discoveredJdwpPort);
                     }
 
+                    // Look for GraalVM DAP server port announcement (can come via stdout)
+                    // Pattern: "[Graal DAP] Starting server and listening on localhost/127.0.0.1:PORT"
+                    Matcher dapMatcher = DAP_PORT_PATTERN.matcher(line);
+                    if (dapMatcher.find()) {
+                        discoveredDapPort = Integer.parseInt(dapMatcher.group(1));
+                        log.info("Discovered GraalVM DAP server from stdout: port={}", discoveredDapPort);
+
+                        // Notify listener for late JavaScript backend creation
+                        DapDiscoveryListener listener = dapDiscoveryListener;
+                        if (listener != null) {
+                            log.info("Notifying DAP discovery listener");
+                            listener.onDapPortDiscovered(discoveredDapPort);
+                        } else {
+                            log.debug("No DAP discovery listener registered");
+                        }
+                    }
+
                     // Look for IPC port announcement
                     Matcher matcher = IPC_PORT_PATTERN.matcher(line);
                     if (matcher.find()) {
@@ -227,6 +264,23 @@ public class ChildProcessManager {
                     if (jdwpMatcher.find()) {
                         discoveredJdwpPort = Integer.parseInt(jdwpMatcher.group(1));
                         log.info("Discovered JDWP port from stderr: {}", discoveredJdwpPort);
+                    }
+
+                    // Look for GraalVM DAP server port announcement
+                    // Pattern: "[Graal DAP] Starting server and listening on localhost/127.0.0.1:PORT"
+                    Matcher dapMatcher = DAP_PORT_PATTERN.matcher(line);
+                    if (dapMatcher.find()) {
+                        discoveredDapPort = Integer.parseInt(dapMatcher.group(1));
+                        log.info("Discovered GraalVM DAP server from stderr: port={}", discoveredDapPort);
+
+                        // Notify listener for late JavaScript backend creation
+                        DapDiscoveryListener listener = dapDiscoveryListener;
+                        if (listener != null) {
+                            log.info("Notifying DAP discovery listener");
+                            listener.onDapPortDiscovered(discoveredDapPort);
+                        } else {
+                            log.debug("No DAP discovery listener registered");
+                        }
                     }
                 }
             } catch (IOException e) {
@@ -287,14 +341,19 @@ public class ChildProcessManager {
             log.debug("Using JDWP port discovered from stderr: {}", jdwpPort);
         }
 
-        int cdpPort = event.getBodyInt("cdpPort", 0);
-        String cdpWebSocketUrl = event.getBodyString("cdpWebSocketUrl");
+        // Get DAP port from event body or from stderr discovery
+        int jsDapPort = event.getBodyInt("jsDapPort", 0);
         String graalVmVersion = event.getBodyString("graalVmVersion");
 
-        ChildProcessInfo info = new ChildProcessInfo(
-            ipcPort, jdwpPort, cdpPort, cdpWebSocketUrl, graalVmVersion);
+        // Fall back to DAP port discovered from stderr (for dynamic port case)
+        if (jsDapPort == 0 && discoveredDapPort > 0) {
+            jsDapPort = discoveredDapPort;
+            log.debug("Using GraalVM DAP port discovered from stderr: {}", jsDapPort);
+        }
 
-        log.info("Child process ready: IPC={}, JDWP={}, CDP={}", ipcPort, jdwpPort, cdpPort);
+        ChildProcessInfo info = new ChildProcessInfo(ipcPort, jdwpPort, jsDapPort, graalVmVersion);
+
+        log.info("Child process ready: IPC={}, JDWP={}, JS-DAP={}", ipcPort, jdwpPort, jsDapPort);
 
         readyFuture.complete(info);
     }

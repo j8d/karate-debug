@@ -15,6 +15,7 @@ import com.j8d.karate.debug.backend.BreakpointRequest;
 import com.j8d.karate.debug.backend.DebugBackend;
 import com.j8d.karate.debug.backend.DebugBackend.BackendType;
 import com.j8d.karate.debug.backend.JavaBackend;
+import com.j8d.karate.debug.backend.JavaScriptBackend;
 import com.j8d.karate.debug.backend.EvaluateResult;
 import com.j8d.karate.debug.backend.Scope;
 import com.j8d.karate.debug.backend.SetVariableResult;
@@ -344,7 +345,7 @@ public class DapMultiplexer implements BackendEventListener {
 
     /**
      * Steps into on the specified global thread.
-     * For cross-language step-into from Karate, enables Java method entry catching.
+     * For cross-language step-into from Karate, enables Java method entry and JS script entry catching.
      */
     public void stepInto(int globalThreadId) {
         ThreadRef ref = toLocalThreadId(globalThreadId);
@@ -370,17 +371,33 @@ public class DapMultiplexer implements BackendEventListener {
             return;
         }
 
-        // If stepping from Karate and Java backend exists, enable method entry catching
-        // This allows us to catch when Karate calls into user Java code
-        if (ref.type() == BackendType.KARATE && backends.containsKey(BackendType.JAVA)) {
-            JavaBackend javaBackend = (JavaBackend) backends.get(BackendType.JAVA);
-            javaBackend.enableMethodEntry();
-            // Set steppingInBackend to JAVA so we suppress Karate's stopped event
-            // if Java method entry catches before Karate step completes
-            steppingInBackend = BackendType.JAVA;
-            crossLanguageStepMode = true; // This is a cross-language step from Karate
-            log.debug("Enabled Java method entry for cross-language step-into");
-        } else if (ref.type() != BackendType.KARATE) {
+        // If stepping from Karate, enable entry catching for both Java and JavaScript
+        // This allows us to catch when Karate calls into user code in either language
+        if (ref.type() == BackendType.KARATE) {
+            boolean enabledAnyCatching = false;
+
+            // Enable Java method entry catching if Java backend exists
+            if (backends.containsKey(BackendType.JAVA)) {
+                JavaBackend javaBackend = (JavaBackend) backends.get(BackendType.JAVA);
+                javaBackend.enableMethodEntry();
+                log.debug("Enabled Java method entry for cross-language step-into");
+                enabledAnyCatching = true;
+            }
+
+            // Enable JavaScript script entry catching if JS backend exists
+            if (backends.containsKey(BackendType.JAVASCRIPT)) {
+                JavaScriptBackend jsBackend = (JavaScriptBackend) backends.get(BackendType.JAVASCRIPT);
+                jsBackend.enableScriptEntry();
+                log.debug("Enabled JavaScript script entry for cross-language step-into");
+                enabledAnyCatching = true;
+            }
+
+            if (enabledAnyCatching) {
+                // We'll catch whichever language gets entered first
+                // steppingInBackend will be set when onStopped is called
+                crossLanguageStepMode = true;
+            }
+        } else {
             steppingInBackend = ref.type(); // Track that we're stepping in this backend
             // NOT cross-language mode - this is stepping within Java/JS
             crossLanguageStepMode = false;
@@ -651,11 +668,15 @@ public class DapMultiplexer implements BackendEventListener {
             steppingInBackend = null;
             crossLanguageStepMode = false;
 
-            // Disable method entry catching and cancel any pending steps
+            // Disable entry catching and cancel any pending steps
             if (backends.containsKey(BackendType.JAVA)) {
                 JavaBackend javaBackend = (JavaBackend) backends.get(BackendType.JAVA);
                 javaBackend.disableMethodEntry();
                 javaBackend.cancelAllSteps();
+            }
+            if (backends.containsKey(BackendType.JAVASCRIPT)) {
+                JavaScriptBackend jsBackend = (JavaScriptBackend) backends.get(BackendType.JAVASCRIPT);
+                jsBackend.disableScriptEntry();
             }
             // Fall through to forward the Karate stopped event
         }
@@ -673,10 +694,14 @@ public class DapMultiplexer implements BackendEventListener {
             crossLanguageStepMode = false; // Cross-language step completed
         }
 
-        // Disable method entry catching if it was enabled (cross-language step cleanup)
+        // Disable entry catching if it was enabled (cross-language step cleanup)
         if (backends.containsKey(BackendType.JAVA)) {
             JavaBackend javaBackend = (JavaBackend) backends.get(BackendType.JAVA);
             javaBackend.disableMethodEntry();
+        }
+        if (backends.containsKey(BackendType.JAVASCRIPT)) {
+            JavaScriptBackend jsBackend = (JavaScriptBackend) backends.get(BackendType.JAVASCRIPT);
+            jsBackend.disableScriptEntry();
         }
 
         stoppedBackend = type;

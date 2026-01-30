@@ -3,6 +3,7 @@ package com.j8d.karate.debug.backend;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -11,79 +12,102 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.j8d.karate.debug.cdp.CdpClient;
-import com.j8d.karate.debug.cdp.CdpEventListener;
+import com.j8d.karate.debug.dap.DapClient;
+import com.j8d.karate.debug.dap.DapEventListener;
 
 /**
- * DebugBackend implementation for JavaScript debugging via Chrome DevTools Protocol.
- * 
- * Connects to GraalVM's Chrome Inspector to debug JavaScript code executed
+ * DebugBackend implementation for JavaScript debugging via DAP (Debug Adapter Protocol).
+ *
+ * Connects to GraalVM's built-in DAP server to debug JavaScript code executed
  * within Karate tests (karate-config.js, JS functions, etc.).
  */
-public class JavaScriptBackend implements DebugBackend, CdpEventListener {
-    
+public class JavaScriptBackend implements DebugBackend, DapEventListener {
+
     private static final Logger log = LoggerFactory.getLogger(JavaScriptBackend.class);
-    
-    private final CdpClient cdpClient;
-    private final String webSocketUrl;
-    
+
+    private final DapClient dapClient;
+    private final int dapPort;
+
     private BackendEventListener listener;
     private volatile boolean ready = false;
-    
-    // Script tracking: scriptId -> ScriptInfo
-    private final Map<String, ScriptInfo> scripts = new ConcurrentHashMap<>();
-    // Reverse lookup: normalized path -> scriptId
-    private final Map<String, String> pathToScriptId = new ConcurrentHashMap<>();
-    
-    // Breakpoint tracking: our breakpoint ID -> CDP breakpoint ID
-    private final Map<String, String> breakpointIdMap = new ConcurrentHashMap<>();
+
+    // Source tracking: sourceReference -> SourceInfo
+    private final Map<Integer, SourceInfo> sources = new ConcurrentHashMap<>();
+    // Reverse lookup: normalized path -> sourceReference
+    private final Map<String, Integer> pathToSourceRef = new ConcurrentHashMap<>();
+
+    // Breakpoint tracking: our breakpoint ID -> verified status
+    private final Map<Integer, Boolean> breakpointVerified = new ConcurrentHashMap<>();
     private final AtomicInteger nextBreakpointId = new AtomicInteger(1);
-    
+
     // Current pause state
-    private volatile JsonObject[] currentCallFrames;
+    private volatile JsonArray currentStackFrames;
     private volatile String currentPauseReason;
-    
-    // ID allocation for frames and variable references
-    private final AtomicInteger nextFrameId = new AtomicInteger(1);
+    private volatile int currentThreadId = 1;  // JavaScript is single-threaded
+
+    // ID allocation for variable references
     private final AtomicInteger nextVarRef = new AtomicInteger(1);
-    
-    // Frame ID -> CDP callFrameId mapping
-    private final Map<Integer, String> frameIdToCdpId = new ConcurrentHashMap<>();
-    private final Map<String, Integer> cdpIdToFrameId = new ConcurrentHashMap<>();
-    
-    // Variable reference -> CDP object ID mapping
-    private final Map<Integer, String> varRefToObjectId = new ConcurrentHashMap<>();
-    
+
+    // Variable reference -> scope/variables reference from DAP
+    private final Map<Integer, Integer> varRefToDapRef = new ConcurrentHashMap<>();
+
+    // Script entry catching for cross-language step-into
+    private volatile boolean scriptEntryCatchingEnabled = false;
+    // Track pending step-into across languages
+    private volatile boolean pendingStepIn = false;
+
     /**
-     * Creates a JavaScriptBackend that will connect to the given CDP endpoint.
-     * 
-     * @param webSocketUrl The WebSocket URL for the Chrome Inspector
+     * Creates a JavaScriptBackend that will connect to the given DAP server port.
+     *
+     * @param dapPort The port for the GraalVM DAP server
      */
-    public JavaScriptBackend(String webSocketUrl) {
-        this.webSocketUrl = webSocketUrl;
-        this.cdpClient = new CdpClient();
-        this.cdpClient.setListener(this);
+    public JavaScriptBackend(int dapPort) {
+        this.dapPort = dapPort;
+        this.dapClient = new DapClient();
+        this.dapClient.setListener(this);
     }
     
     // ========== DebugBackend Implementation ==========
-    
+
     @Override
     public BackendType getType() {
         return BackendType.JAVASCRIPT;
     }
-    
+
     @Override
     public void initialize(BackendEventListener listener) {
         this.listener = listener;
     }
-    
+
     @Override
     public void start() {
-        log.info("Starting JavaScriptBackend, connecting to {}", webSocketUrl);
-        
-        cdpClient.connect(webSocketUrl)
-            .thenCompose(v -> cdpClient.send("Debugger.enable", null))
-            .thenCompose(v -> cdpClient.send("Runtime.enable", null))
+        log.info("Starting JavaScriptBackend, connecting to DAP port {}", dapPort);
+
+        dapClient.connect("127.0.0.1", dapPort)
+            .thenCompose(v -> {
+                // Send initialize request
+                JsonObject initArgs = new JsonObject();
+                initArgs.addProperty("clientID", "karate-debug");
+                initArgs.addProperty("clientName", "Karate Debug");
+                initArgs.addProperty("adapterID", "graalvm");
+                initArgs.addProperty("linesStartAt1", true);
+                initArgs.addProperty("columnsStartAt1", true);
+                initArgs.addProperty("pathFormat", "path");
+                initArgs.addProperty("supportsVariableType", true);
+                initArgs.addProperty("supportsVariablePaging", false);
+                initArgs.addProperty("supportsRunInTerminalRequest", false);
+                return dapClient.send("initialize", initArgs);
+            })
+            .thenCompose(capabilities -> {
+                log.debug("DAP capabilities: {}", capabilities);
+                // Send attach request to attach to the running JS context
+                JsonObject attachArgs = new JsonObject();
+                return dapClient.send("attach", attachArgs);
+            })
+            .thenCompose(v -> {
+                // Send configurationDone
+                return dapClient.send("configurationDone", null);
+            })
             .thenAccept(v -> {
                 log.info("JavaScriptBackend ready");
                 ready = true;
@@ -93,19 +117,24 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
                 return null;
             });
     }
-    
+
     @Override
     public void stop() {
         log.info("Stopping JavaScriptBackend");
         ready = false;
-        cdpClient.disconnect();
+        try {
+            dapClient.send("disconnect", null);
+        } catch (Exception e) {
+            log.debug("Error sending disconnect", e);
+        }
+        dapClient.disconnect();
     }
-    
+
     @Override
     public boolean isReady() {
-        return ready && cdpClient.isConnected();
+        return ready && dapClient.isConnected();
     }
-    
+
     @Override
     public boolean canHandleFile(String filePath) {
         if (filePath == null) return false;
@@ -116,75 +145,58 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
     @Override
     public List<Breakpoint> setBreakpoints(String filePath, List<BreakpointRequest> breakpoints) {
         List<Breakpoint> results = new ArrayList<>();
-        
-        // Find the script ID for this file
-        String scriptId = findScriptIdForPath(filePath);
-        if (scriptId == null) {
-            log.warn("No script found for path: {}", filePath);
-            // Return unverified breakpoints
+
+        try {
+            // DAP uses setBreakpoints with source and breakpoint list
+            JsonObject args = new JsonObject();
+
+            // Set source
+            JsonObject source = new JsonObject();
+            source.addProperty("path", filePath);
+            args.add("source", source);
+
+            // Set breakpoints array
+            JsonArray bpArray = new JsonArray();
+            for (BreakpointRequest req : breakpoints) {
+                JsonObject bp = new JsonObject();
+                bp.addProperty("line", req.line());
+                if (req.hasCondition()) {
+                    bp.addProperty("condition", req.condition());
+                }
+                bpArray.add(bp);
+            }
+            args.add("breakpoints", bpArray);
+
+            JsonObject result = dapClient.sendSync("setBreakpoints", args);
+
+            // Parse response breakpoints
+            if (result != null && result.has("breakpoints")) {
+                JsonArray responseBps = result.getAsJsonArray("breakpoints");
+                for (int i = 0; i < responseBps.size(); i++) {
+                    JsonObject bp = responseBps.get(i).getAsJsonObject();
+                    int bpId = nextBreakpointId.getAndIncrement();
+                    boolean verified = bp.has("verified") && bp.get("verified").getAsBoolean();
+                    int line = bp.has("line") ? bp.get("line").getAsInt() : breakpoints.get(i).line();
+
+                    if (verified) {
+                        results.add(Breakpoint.verified(bpId, line, filePath));
+                    } else {
+                        String message = bp.has("message") ? bp.get("message").getAsString() : "Not verified";
+                        results.add(Breakpoint.unverified(bpId, line, filePath, message));
+                    }
+                    breakpointVerified.put(bpId, verified);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to set breakpoints for {}", filePath, e);
+            // Return unverified breakpoints on error
             for (BreakpointRequest req : breakpoints) {
                 results.add(Breakpoint.unverified(nextBreakpointId.getAndIncrement(),
-                    req.line(), filePath, "Script not loaded"));
+                    req.line(), filePath, e.getMessage()));
             }
-            return results;
-        }
-        
-        // Remove existing breakpoints for this file
-        removeBreakpointsForFile(filePath);
-        
-        // Set new breakpoints
-        for (BreakpointRequest req : breakpoints) {
-            Breakpoint bp = setBreakpoint(scriptId, filePath, req);
-            results.add(bp);
         }
 
         return results;
-    }
-
-    private Breakpoint setBreakpoint(String scriptId, String filePath, BreakpointRequest req) {
-        int bpId = nextBreakpointId.getAndIncrement();
-
-        try {
-            JsonObject params = new JsonObject();
-            JsonObject location = new JsonObject();
-            location.addProperty("scriptId", scriptId);
-            location.addProperty("lineNumber", req.line() - 1); // CDP uses 0-based lines
-            params.add("location", location);
-
-            if (req.hasCondition()) {
-                params.addProperty("condition", req.condition());
-            }
-
-            JsonObject result = cdpClient.sendSync("Debugger.setBreakpoint", params);
-
-            String cdpBreakpointId = result.get("breakpointId").getAsString();
-            breakpointIdMap.put(String.valueOf(bpId), cdpBreakpointId);
-
-            JsonObject actualLocation = result.getAsJsonObject("actualLocation");
-            int actualLine = actualLocation.get("lineNumber").getAsInt() + 1; // Convert to 1-based
-
-            return Breakpoint.verified(bpId, actualLine, filePath);
-
-        } catch (Exception e) {
-            log.error("Failed to set breakpoint at {}:{}", filePath, req.line(), e);
-            return Breakpoint.unverified(bpId, req.line(), filePath, e.getMessage());
-        }
-    }
-
-    private void removeBreakpointsForFile(String filePath) {
-        // Find and remove all breakpoints for this file
-        List<String> toRemove = new ArrayList<>();
-        for (Map.Entry<String, String> entry : breakpointIdMap.entrySet()) {
-            try {
-                JsonObject params = new JsonObject();
-                params.addProperty("breakpointId", entry.getValue());
-                cdpClient.sendSync("Debugger.removeBreakpoint", params);
-                toRemove.add(entry.getKey());
-            } catch (Exception e) {
-                log.warn("Failed to remove breakpoint {}", entry.getValue(), e);
-            }
-        }
-        toRemove.forEach(breakpointIdMap::remove);
     }
 
     // ========== Execution Control ==========
@@ -192,7 +204,9 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
     @Override
     public void resume(int threadId) {
         try {
-            cdpClient.sendSync("Debugger.resume", null);
+            JsonObject args = new JsonObject();
+            args.addProperty("threadId", threadId > 0 ? threadId : currentThreadId);
+            dapClient.sendSync("continue", args);
             clearPauseState();
         } catch (Exception e) {
             log.error("Failed to resume", e);
@@ -202,7 +216,9 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
     @Override
     public void stepOver(int threadId) {
         try {
-            cdpClient.sendSync("Debugger.stepOver", null);
+            JsonObject args = new JsonObject();
+            args.addProperty("threadId", threadId > 0 ? threadId : currentThreadId);
+            dapClient.sendSync("next", args);
         } catch (Exception e) {
             log.error("Failed to step over", e);
         }
@@ -211,7 +227,9 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
     @Override
     public void stepInto(int threadId) {
         try {
-            cdpClient.sendSync("Debugger.stepInto", null);
+            JsonObject args = new JsonObject();
+            args.addProperty("threadId", threadId > 0 ? threadId : currentThreadId);
+            dapClient.sendSync("stepIn", args);
         } catch (Exception e) {
             log.error("Failed to step into", e);
         }
@@ -220,7 +238,9 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
     @Override
     public void stepOut(int threadId) {
         try {
-            cdpClient.sendSync("Debugger.stepOut", null);
+            JsonObject args = new JsonObject();
+            args.addProperty("threadId", threadId > 0 ? threadId : currentThreadId);
+            dapClient.sendSync("stepOut", args);
         } catch (Exception e) {
             log.error("Failed to step out", e);
         }
@@ -229,10 +249,51 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
     @Override
     public void pause(int threadId) {
         try {
-            cdpClient.sendSync("Debugger.pause", null);
+            JsonObject args = new JsonObject();
+            args.addProperty("threadId", threadId > 0 ? threadId : currentThreadId);
+            dapClient.sendSync("pause", args);
         } catch (Exception e) {
             log.error("Failed to pause", e);
         }
+    }
+
+    // ========== Cross-Language Step Support ==========
+
+    /**
+     * Enables script entry catching for cross-language step-into.
+     * With DAP, we can try to pause execution when JavaScript starts.
+     */
+    public void enableScriptEntry() {
+        if (scriptEntryCatchingEnabled) {
+            return; // Already enabled
+        }
+
+        scriptEntryCatchingEnabled = true;
+        pendingStepIn = true;
+
+        log.debug("Enabled script entry catching for cross-language step-into");
+
+        // Try to pause immediately when JS starts executing
+        try {
+            JsonObject args = new JsonObject();
+            args.addProperty("threadId", currentThreadId);
+            dapClient.send("pause", args);
+        } catch (Exception e) {
+            log.debug("Could not send pause request: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Disables script entry catching.
+     */
+    public void disableScriptEntry() {
+        if (!scriptEntryCatchingEnabled) {
+            return;
+        }
+
+        pendingStepIn = false;
+        scriptEntryCatchingEnabled = false;
+        log.debug("Disabled script entry catching");
     }
 
     // ========== Inspection ==========
@@ -241,30 +302,24 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
     public List<StackFrame> getStackFrames(int threadId) {
         List<StackFrame> frames = new ArrayList<>();
 
-        if (currentCallFrames == null) {
+        if (currentStackFrames == null) {
             return frames;
         }
 
-        for (JsonObject cdpFrame : currentCallFrames) {
-            String cdpFrameId = cdpFrame.get("callFrameId").getAsString();
-            String functionName = cdpFrame.get("functionName").getAsString();
-            if (functionName.isEmpty()) {
-                functionName = "(anonymous)";
+        for (int i = 0; i < currentStackFrames.size(); i++) {
+            JsonObject dapFrame = currentStackFrames.get(i).getAsJsonObject();
+            int frameId = dapFrame.get("id").getAsInt();
+            String functionName = dapFrame.has("name") ? dapFrame.get("name").getAsString() : "(anonymous)";
+            int line = dapFrame.has("line") ? dapFrame.get("line").getAsInt() : 0;
+            int column = dapFrame.has("column") ? dapFrame.get("column").getAsInt() : 0;
+
+            String sourcePath = "unknown";
+            String sourceName = "unknown";
+            if (dapFrame.has("source")) {
+                JsonObject source = dapFrame.getAsJsonObject("source");
+                sourcePath = source.has("path") ? source.get("path").getAsString() : "unknown";
+                sourceName = source.has("name") ? source.get("name").getAsString() : extractFileName(sourcePath);
             }
-
-            JsonObject location = cdpFrame.getAsJsonObject("location");
-            String scriptId = location.get("scriptId").getAsString();
-            int line = location.get("lineNumber").getAsInt() + 1; // Convert to 1-based
-            int column = location.has("columnNumber") ?
-                location.get("columnNumber").getAsInt() + 1 : 1;
-
-            ScriptInfo script = scripts.get(scriptId);
-            String sourcePath = script != null ? script.url : "unknown";
-            String sourceName = extractFileName(sourcePath);
-
-            int frameId = nextFrameId.getAndIncrement();
-            frameIdToCdpId.put(frameId, cdpFrameId);
-            cdpIdToFrameId.put(cdpFrameId, frameId);
 
             frames.add(StackFrame.of(frameId, functionName, sourcePath, sourceName, line, column));
         }
@@ -276,30 +331,27 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
     public List<Scope> getScopes(int frameId) {
         List<Scope> scopes = new ArrayList<>();
 
-        String cdpFrameId = frameIdToCdpId.get(frameId);
-        if (cdpFrameId == null || currentCallFrames == null) {
-            return scopes;
-        }
+        try {
+            JsonObject args = new JsonObject();
+            args.addProperty("frameId", frameId);
+            JsonObject result = dapClient.sendSync("scopes", args);
 
-        // Find the frame in currentCallFrames
-        for (JsonObject cdpFrame : currentCallFrames) {
-            if (cdpFrame.get("callFrameId").getAsString().equals(cdpFrameId)) {
-                JsonArray scopeChain = cdpFrame.getAsJsonArray("scopeChain");
-                for (int i = 0; i < scopeChain.size(); i++) {
-                    JsonObject scope = scopeChain.get(i).getAsJsonObject();
-                    String type = scope.get("type").getAsString();
-                    String name = getScopeName(type);
+            if (result != null && result.has("scopes")) {
+                JsonArray dapScopes = result.getAsJsonArray("scopes");
+                for (int i = 0; i < dapScopes.size(); i++) {
+                    JsonObject scope = dapScopes.get(i).getAsJsonObject();
+                    String name = scope.has("name") ? scope.get("name").getAsString() : "Scope";
+                    int varRef = scope.has("variablesReference") ? scope.get("variablesReference").getAsInt() : 0;
 
-                    JsonObject object = scope.getAsJsonObject("object");
-                    String objectId = object.get("objectId").getAsString();
+                    // Map our varRef to DAP's varRef
+                    int ourVarRef = nextVarRef.getAndIncrement();
+                    varRefToDapRef.put(ourVarRef, varRef);
 
-                    int varRef = nextVarRef.getAndIncrement();
-                    varRefToObjectId.put(varRef, objectId);
-
-                    scopes.add(Scope.of(name, varRef));
+                    scopes.add(Scope.of(name, ourVarRef));
                 }
-                break;
             }
+        } catch (Exception e) {
+            log.error("Failed to get scopes for frame {}", frameId, e);
         }
 
         return scopes;
@@ -309,28 +361,33 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
     public List<Variable> getVariables(int variablesReference) {
         List<Variable> variables = new ArrayList<>();
 
-        String objectId = varRefToObjectId.get(variablesReference);
-        if (objectId == null) {
-            return variables;
+        Integer dapRef = varRefToDapRef.get(variablesReference);
+        if (dapRef == null) {
+            dapRef = variablesReference;  // Fall back to direct reference
         }
 
         try {
-            JsonObject params = new JsonObject();
-            params.addProperty("objectId", objectId);
-            params.addProperty("ownProperties", true);
+            JsonObject args = new JsonObject();
+            args.addProperty("variablesReference", dapRef);
+            JsonObject result = dapClient.sendSync("variables", args);
 
-            JsonObject result = cdpClient.sendSync("Runtime.getProperties", params);
-            JsonArray properties = result.getAsJsonArray("result");
+            if (result != null && result.has("variables")) {
+                JsonArray dapVars = result.getAsJsonArray("variables");
+                for (int i = 0; i < dapVars.size(); i++) {
+                    JsonObject v = dapVars.get(i).getAsJsonObject();
+                    String name = v.has("name") ? v.get("name").getAsString() : "?";
+                    String value = v.has("value") ? v.get("value").getAsString() : "";
+                    String type = v.has("type") ? v.get("type").getAsString() : "";
+                    int childRef = v.has("variablesReference") ? v.get("variablesReference").getAsInt() : 0;
 
-            for (int i = 0; i < properties.size(); i++) {
-                JsonObject prop = properties.get(i).getAsJsonObject();
-                String name = prop.get("name").getAsString();
-
-                if (!prop.has("value")) continue;
-
-                JsonObject value = prop.getAsJsonObject("value");
-                Variable var = createVariable(name, value);
-                variables.add(var);
+                    if (childRef > 0) {
+                        int ourChildRef = nextVarRef.getAndIncrement();
+                        varRefToDapRef.put(ourChildRef, childRef);
+                        variables.add(Variable.withChildren(name, value, type, ourChildRef));
+                    } else {
+                        variables.add(Variable.simple(name, value, type));
+                    }
+                }
             }
         } catch (Exception e) {
             log.error("Failed to get variables for ref {}", variablesReference, e);
@@ -341,28 +398,27 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
 
     @Override
     public EvaluateResult evaluate(int frameId, String expression, String context) {
-        String cdpFrameId = frameIdToCdpId.get(frameId);
-
         try {
-            JsonObject params = new JsonObject();
-            params.addProperty("expression", expression);
-            if (cdpFrameId != null) {
-                params.addProperty("callFrameId", cdpFrameId);
+            JsonObject args = new JsonObject();
+            args.addProperty("expression", expression);
+            args.addProperty("frameId", frameId);
+            args.addProperty("context", context != null ? context : "watch");
+
+            JsonObject result = dapClient.sendSync("evaluate", args);
+
+            if (result != null) {
+                String value = result.has("result") ? result.get("result").getAsString() : "";
+                String type = result.has("type") ? result.get("type").getAsString() : "";
+                int varRef = result.has("variablesReference") ? result.get("variablesReference").getAsInt() : 0;
+
+                if (varRef > 0) {
+                    int ourVarRef = nextVarRef.getAndIncrement();
+                    varRefToDapRef.put(ourVarRef, varRef);
+                    return EvaluateResult.withChildren(value, type, ourVarRef);
+                }
+                return EvaluateResult.simple(value, type);
             }
-            params.addProperty("returnByValue", false);
-
-            JsonObject result = cdpClient.sendSync("Debugger.evaluateOnCallFrame", params);
-
-            if (result.has("exceptionDetails")) {
-                JsonObject exception = result.getAsJsonObject("exceptionDetails");
-                String errorText = exception.has("text") ?
-                    exception.get("text").getAsString() : "Evaluation error";
-                return EvaluateResult.error(errorText);
-            }
-
-            JsonObject remoteObject = result.getAsJsonObject("result");
-            return createEvaluateResult(remoteObject);
-
+            return EvaluateResult.error("No result");
         } catch (Exception e) {
             log.error("Failed to evaluate expression: {}", expression, e);
             return EvaluateResult.error(e.getMessage());
@@ -371,106 +427,156 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
 
     @Override
     public SetVariableResult setVariable(int variablesReference, String name, String value) {
-        // JavaScript variable modification via CDP
-        String objectId = varRefToObjectId.get(variablesReference);
-        if (objectId == null) {
-            return new SetVariableResult(value, "unknown", 0);
+        Integer dapRef = varRefToDapRef.get(variablesReference);
+        if (dapRef == null) {
+            dapRef = variablesReference;
         }
 
         try {
-            // Use Runtime.callFunctionOn to set the property
-            JsonObject params = new JsonObject();
-            params.addProperty("objectId", objectId);
-            params.addProperty("functionDeclaration",
-                "function(name, value) { this[name] = value; return this[name]; }");
+            JsonObject args = new JsonObject();
+            args.addProperty("variablesReference", dapRef);
+            args.addProperty("name", name);
+            args.addProperty("value", value);
 
-            JsonArray args = new JsonArray();
-            JsonObject nameArg = new JsonObject();
-            nameArg.addProperty("value", name);
-            args.add(nameArg);
+            JsonObject result = dapClient.sendSync("setVariable", args);
 
-            JsonObject valueArg = new JsonObject();
-            valueArg.addProperty("value", value);
-            args.add(valueArg);
-
-            params.add("arguments", args);
-            params.addProperty("returnByValue", true);
-
-            JsonObject result = cdpClient.sendSync("Runtime.callFunctionOn", params);
-            JsonObject returnValue = result.getAsJsonObject("result");
-
-            String newValue = returnValue.has("value") ?
-                returnValue.get("value").toString() : value;
-            String type = returnValue.has("type") ?
-                returnValue.get("type").getAsString() : "unknown";
-
-            return new SetVariableResult(newValue, type, 0);
-
+            if (result != null) {
+                String newValue = result.has("value") ? result.get("value").getAsString() : value;
+                String type = result.has("type") ? result.get("type").getAsString() : "unknown";
+                int varRef = result.has("variablesReference") ? result.get("variablesReference").getAsInt() : 0;
+                return new SetVariableResult(newValue, type, varRef);
+            }
+            return new SetVariableResult(value, "unknown", 0);
         } catch (Exception e) {
             log.error("Failed to set variable {} = {}", name, value, e);
             return new SetVariableResult(value, "error", 0);
         }
     }
 
-    // ========== CdpEventListener Implementation ==========
+    // ========== DapEventListener Implementation ==========
 
     @Override
-    public void onScriptParsed(String scriptId, String url, int startLine, int startColumn,
-                               int endLine, int endColumn, String hash) {
-        log.debug("Script parsed: {} -> {}", scriptId, url);
+    public void onStopped(JsonObject body) {
+        String reason = body.has("reason") ? body.get("reason").getAsString() : "unknown";
+        int threadId = body.has("threadId") ? body.get("threadId").getAsInt() : 1;
 
-        ScriptInfo info = new ScriptInfo(scriptId, url, startLine, endLine, hash);
-        scripts.put(scriptId, info);
+        log.debug("DAP stopped: reason={}, threadId={}", reason, threadId);
 
-        if (url != null && !url.isEmpty()) {
-            String normalizedPath = normalizePath(url);
-            pathToScriptId.put(normalizedPath, scriptId);
-        }
-    }
+        // Fetch stack frames asynchronously to avoid blocking the DAP reader thread
+        // (calling sendSync from the reader thread would cause deadlock)
+        String description = body.has("description") ? body.get("description").getAsString() : reason;
 
-    @Override
-    public void onPaused(JsonObject[] callFrames, String reason, String[] hitBreakpoints, JsonObject data) {
-        log.debug("Paused: reason={}, frames={}", reason, callFrames.length);
+        CompletableFuture.runAsync(() -> {
+            try {
+                JsonObject args = new JsonObject();
+                args.addProperty("threadId", threadId);
+                JsonObject result = dapClient.sendSync("stackTrace", args);
+                if (result != null && result.has("stackFrames")) {
+                    currentStackFrames = result.getAsJsonArray("stackFrames");
 
-        currentCallFrames = callFrames;
-        currentPauseReason = reason;
+                    // Check if this is an unwanted stop from internal/anonymous code
+                    // GraalVM DAP sometimes pauses on internal script initialization
+                    if ("debugger_statement".equals(reason) && currentStackFrames.size() > 0) {
+                        JsonObject topFrame = currentStackFrames.get(0).getAsJsonObject();
+                        JsonObject source = topFrame.has("source") ? topFrame.getAsJsonObject("source") : null;
 
-        // Clear frame ID mappings for fresh allocation
-        frameIdToCdpId.clear();
-        cdpIdToFrameId.clear();
-        varRefToObjectId.clear();
-        nextFrameId.set(1);
-        nextVarRef.set(1);
+                        // Check if source is internal (no path, or name is "Unnamed")
+                        boolean isInternal = source == null
+                            || (!source.has("path") && !source.has("name"))
+                            || (source.has("name") && "Unnamed".equals(source.get("name").getAsString()));
 
-        if (listener != null) {
-            // JavaScript is single-threaded, use thread ID 1
-            String description = reason;
-            if (hitBreakpoints != null && hitBreakpoints.length > 0) {
-                description = "Breakpoint hit";
+                        if (isInternal) {
+                            log.debug("Auto-continuing past internal debugger_statement in Unnamed source");
+                            try {
+                                JsonObject continueArgs = new JsonObject();
+                                continueArgs.addProperty("threadId", threadId);
+                                dapClient.send("continue", continueArgs);
+                            } catch (Exception e) {
+                                log.error("Failed to auto-continue", e);
+                            }
+                            return; // Don't notify listener about this internal stop
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Failed to get stack frames on stop", e);
             }
-            listener.onStopped(this, 1, reason, description);
-        }
+
+            // Update pause state
+            currentPauseReason = reason;
+            currentThreadId = threadId;
+
+            // Clear variable reference mappings for fresh allocation
+            varRefToDapRef.clear();
+            nextVarRef.set(1);
+
+            // Notify listener after stack frames are fetched
+            if (listener != null) {
+                listener.onStopped(this, threadId, reason, description);
+            }
+        });
     }
 
     @Override
-    public void onResumed() {
-        log.debug("Resumed");
+    public void onContinued(JsonObject body) {
+        log.debug("DAP continued");
         clearPauseState();
 
         if (listener != null) {
-            listener.onContinued(this, 1, true);
+            int threadId = body.has("threadId") ? body.get("threadId").getAsInt() : 1;
+            boolean allThreadsContinued = body.has("allThreadsContinued") && body.get("allThreadsContinued").getAsBoolean();
+            listener.onContinued(this, threadId, allThreadsContinued);
         }
     }
 
     @Override
-    public void onBreakpointResolved(String breakpointId, JsonObject location) {
-        log.debug("Breakpoint resolved: {} at {}", breakpointId, location);
-        // Could notify listener about breakpoint verification
+    public void onTerminated() {
+        log.info("DAP terminated");
+        ready = false;
+
+        if (listener != null) {
+            listener.onTerminated(this);
+        }
     }
 
     @Override
-    public void onDisconnected(int code, String reason, boolean remote) {
-        log.info("CDP disconnected: code={}, reason={}", code, reason);
+    public void onOutput(JsonObject body) {
+        String category = body.has("category") ? body.get("category").getAsString() : "console";
+        String output = body.has("output") ? body.get("output").getAsString() : "";
+
+        log.debug("DAP output [{}]: {}", category, output.trim());
+
+        if (listener != null) {
+            listener.onOutput(this, category, output);
+        }
+    }
+
+    @Override
+    public void onLoadedSource(JsonObject body) {
+        if (!body.has("source")) return;
+
+        JsonObject source = body.getAsJsonObject("source");
+        int sourceRef = source.has("sourceReference") ? source.get("sourceReference").getAsInt() : 0;
+        String path = source.has("path") ? source.get("path").getAsString() : null;
+        String name = source.has("name") ? source.get("name").getAsString() : null;
+
+        log.debug("DAP source loaded: ref={}, path={}, name={}", sourceRef, path, name);
+
+        if (sourceRef > 0 || path != null) {
+            SourceInfo info = new SourceInfo(sourceRef, path, name);
+            if (sourceRef > 0) {
+                sources.put(sourceRef, info);
+            }
+            if (path != null && !path.isEmpty()) {
+                String normalized = normalizePath(path);
+                pathToSourceRef.put(normalized, sourceRef);
+            }
+        }
+    }
+
+    @Override
+    public void onDisconnected(String reason) {
+        log.info("DAP disconnected: reason={}", reason);
         ready = false;
 
         if (listener != null) {
@@ -480,26 +586,19 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
 
     @Override
     public void onError(Exception error) {
-        log.error("CDP error", error);
+        log.error("DAP error", error);
 
         if (listener != null) {
-            listener.onOutput(this, "stderr", "CDP error: " + error.getMessage());
+            listener.onOutput(this, "stderr", "DAP error: " + error.getMessage());
         }
     }
 
     // ========== Helper Methods ==========
 
     private void clearPauseState() {
-        currentCallFrames = null;
+        currentStackFrames = null;
         currentPauseReason = null;
-        frameIdToCdpId.clear();
-        cdpIdToFrameId.clear();
-        varRefToObjectId.clear();
-    }
-
-    private String findScriptIdForPath(String filePath) {
-        String normalized = normalizePath(filePath);
-        return pathToScriptId.get(normalized);
+        varRefToDapRef.clear();
     }
 
     private String normalizePath(String path) {
@@ -533,78 +632,15 @@ public class JavaScriptBackend implements DebugBackend, CdpEventListener {
         };
     }
 
-    private Variable createVariable(String name, JsonObject remoteObject) {
-        String type = remoteObject.has("type") ? remoteObject.get("type").getAsString() : "undefined";
-        String subtype = remoteObject.has("subtype") ? remoteObject.get("subtype").getAsString() : null;
-
-        String displayValue;
-        int varRef = 0;
-
-        if ("undefined".equals(type)) {
-            displayValue = "undefined";
-        } else if ("object".equals(type)) {
-            if ("null".equals(subtype)) {
-                displayValue = "null";
-            } else {
-                String className = remoteObject.has("className") ?
-                    remoteObject.get("className").getAsString() : "Object";
-                displayValue = className;
-
-                // Objects can be expanded
-                if (remoteObject.has("objectId")) {
-                    varRef = nextVarRef.getAndIncrement();
-                    varRefToObjectId.put(varRef, remoteObject.get("objectId").getAsString());
-                }
-            }
-        } else if ("function".equals(type)) {
-            String desc = remoteObject.has("description") ?
-                remoteObject.get("description").getAsString() : "function";
-            // Truncate long function descriptions
-            displayValue = desc.length() > 50 ? desc.substring(0, 47) + "..." : desc;
-        } else {
-            // Primitives: string, number, boolean, symbol, bigint
-            displayValue = remoteObject.has("value") ?
-                remoteObject.get("value").toString() : type;
-        }
-
-        String displayType = subtype != null ? subtype : type;
-        return Variable.withChildren(name, displayValue, displayType, varRef);
-    }
-
-    private EvaluateResult createEvaluateResult(JsonObject remoteObject) {
-        String type = remoteObject.has("type") ? remoteObject.get("type").getAsString() : "undefined";
-
-        String displayValue;
-        int varRef = 0;
-
-        if ("object".equals(type) && remoteObject.has("objectId")) {
-            String className = remoteObject.has("className") ?
-                remoteObject.get("className").getAsString() : "Object";
-            displayValue = className;
-            varRef = nextVarRef.getAndIncrement();
-            varRefToObjectId.put(varRef, remoteObject.get("objectId").getAsString());
-        } else if (remoteObject.has("value")) {
-            displayValue = remoteObject.get("value").toString();
-        } else if (remoteObject.has("description")) {
-            displayValue = remoteObject.get("description").getAsString();
-        } else {
-            displayValue = type;
-        }
-
-        return EvaluateResult.withChildren(displayValue, type, varRef);
-    }
-
     // ========== Inner Classes ==========
 
     /**
-     * Information about a loaded JavaScript script.
+     * Information about a loaded JavaScript source file.
      */
-    private record ScriptInfo(
-        String scriptId,
-        String url,
-        int startLine,
-        int endLine,
-        String hash
+    private record SourceInfo(
+        int sourceReference,
+        String path,
+        String name
     ) {}
 }
 

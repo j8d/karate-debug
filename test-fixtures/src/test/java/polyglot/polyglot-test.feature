@@ -13,20 +13,26 @@ Feature: Polyglot Debugging Test
     
     # Call Java to validate the order
     # BREAKPOINT HERE - before Java call
+    * print 'Before JavaHelper.validateOrder()'
     * def validation = JavaHelper.validateOrder(order)
+    * print 'After JavaHelper.validateOrder()'
     * match validation.valid == true
     * match validation.itemCount == 2
     
     # Call JavaScript to process the order
     # BREAKPOINT HERE - before JavaScript call
+    * print 'Before jsHelper.processOrder()'
     * def processed = jsHelper.processOrder(order)
+    * print 'After jsHelper.processOrder()'
     * match processed.orderId == 'ORD-001'
     * match processed.itemCount == 2
     * match processed.total == 45.50
     
     # Call Java to calculate tax
     # BREAKPOINT HERE - before tax calculation
+    * print 'Before JavaHelper.calculateTax()'
     * def totalWithTax = JavaHelper.calculateTax(processed.total, 0.08)
+    * print 'After JavaHelper.calculateTax()'
     * print 'Total with tax:', totalWithTax
     
     # Call Java to generate confirmation

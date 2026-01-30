@@ -245,6 +245,9 @@ public class PolyglotDapSession implements MultiplexerEventListener {
     }
 
     private void handleLaunch(JsonObject request, JsonObject args) {
+        // Debug: log all args received from VS Code
+        log.info("handleLaunch received args: {}", args);
+
         // Parse launch arguments
         featurePath = args.has("feature") ? args.get("feature").getAsString() : null;
         enableJavaDebugging = args.has("enableJavaDebugging") && args.get("enableJavaDebugging").getAsBoolean();

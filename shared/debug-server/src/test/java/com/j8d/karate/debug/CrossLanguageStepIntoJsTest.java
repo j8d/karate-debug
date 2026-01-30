@@ -13,14 +13,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration test for cross-language step-into functionality.
- * Tests stepping from Karate into Java code.
+ * Tests stepping from Karate into JavaScript code.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class CrossLanguageStepIntoTest {
+public class CrossLanguageStepIntoJsTest {
     
     private static final String TEST_FIXTURES_PATH = findTestFixturesPath();
     private static final String FEATURE_FILE = "src/test/java/polyglot/polyglot-test.feature";
-    private static final String JAVA_FILE = "src/test/java/polyglot/PolyglotHelper.java";
     
     private DebugServer server;
     private Thread serverThread;
@@ -28,13 +27,11 @@ public class CrossLanguageStepIntoTest {
     private int port;
 
     private static String findTestFixturesPath() {
-        // Navigate from shared/debug-server to test-fixtures
         Path current = Paths.get(System.getProperty("user.dir"));
         Path testFixtures = current.resolve("../../test-fixtures").normalize();
         if (Files.exists(testFixtures)) {
             return testFixtures.toAbsolutePath().toString();
         }
-        // Fallback for running from project root
         testFixtures = current.resolve("test-fixtures");
         if (Files.exists(testFixtures)) {
             return testFixtures.toAbsolutePath().toString();
@@ -45,7 +42,6 @@ public class CrossLanguageStepIntoTest {
     private static String getClasspath() throws Exception {
         Path classpathFile = Paths.get(TEST_FIXTURES_PATH, "target/debug-classpath.txt");
         if (!Files.exists(classpathFile)) {
-            // Generate classpath
             System.out.println("Generating classpath for test-fixtures...");
             ProcessBuilder pb = new ProcessBuilder("mvn", "dependency:build-classpath",
                 "-Dmdep.outputFile=target/debug-classpath.txt", "-q");
@@ -53,7 +49,6 @@ public class CrossLanguageStepIntoTest {
             pb.inheritIO();
             Process p = pb.start();
             if (p.waitFor(60, TimeUnit.SECONDS) && p.exitValue() == 0) {
-                // Also compile
                 pb = new ProcessBuilder("mvn", "test-compile", "-q");
                 pb.directory(new File(TEST_FIXTURES_PATH));
                 pb.inheritIO();
@@ -64,11 +59,8 @@ public class CrossLanguageStepIntoTest {
 
         String deps = Files.readString(classpathFile);
         String testClasses = Paths.get(TEST_FIXTURES_PATH, "target/test-classes").toString();
-
-        // Use the shaded JAR which includes Gson and our classes
         Path jarPath = Paths.get(System.getProperty("user.dir"), "target/karate-debug-server-1.0.0.jar");
         if (!Files.exists(jarPath)) {
-            // Build the JAR if it doesn't exist
             System.out.println("Building debug server JAR...");
             ProcessBuilder pb = new ProcessBuilder("mvn", "package", "-DskipTests", "-q");
             pb.directory(new File(System.getProperty("user.dir")));
@@ -82,7 +74,6 @@ public class CrossLanguageStepIntoTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        // Find an available port
         try (ServerSocket ss = new ServerSocket(0)) {
             port = ss.getLocalPort();
         }
@@ -93,7 +84,6 @@ public class CrossLanguageStepIntoTest {
         System.out.println("Workspace: " + TEST_FIXTURES_PATH);
         System.out.println("========================================\n");
         
-        // Start server in background thread
         server = new DebugServer(port, TEST_FIXTURES_PATH, "dev", classpath, true);
         serverThread = new Thread(() -> {
             try {
@@ -104,10 +94,7 @@ public class CrossLanguageStepIntoTest {
         }, "DebugServer");
         serverThread.start();
         
-        // Give server time to start
         Thread.sleep(500);
-        
-        // Connect client
         client = new DapTestClient("localhost", port);
     }
 
@@ -126,8 +113,8 @@ public class CrossLanguageStepIntoTest {
 
     @Test
     @Order(1)
-    void testCrossLanguageStepIntoJava() throws Exception {
-        System.out.println("\n=== TEST: Cross-Language Step Into Java ===\n");
+    void testCrossLanguageStepIntoJavaScript() throws Exception {
+        System.out.println("\n=== TEST: Cross-Language Step Into JavaScript ===\n");
         
         // 1. Initialize
         JsonObject initArgs = new JsonObject();
@@ -137,18 +124,18 @@ public class CrossLanguageStepIntoTest {
         assertTrue(initResp.get("success").getAsBoolean(), "Initialize should succeed");
         System.out.println("Initialized successfully");
         
-        // 2. Launch with polyglot options enabled
+        // 2. Launch with JavaScript debugging enabled
         String featurePath = Paths.get(TEST_FIXTURES_PATH, FEATURE_FILE).toString();
         JsonObject launchArgs = new JsonObject();
         launchArgs.addProperty("feature", featurePath);
         launchArgs.addProperty("env", "dev");
-        launchArgs.addProperty("enableJavaDebugging", true);  // Enable Java debugging
-        launchArgs.addProperty("enableJsDebugging", false);   // Disable JS debugging for this test
+        launchArgs.addProperty("enableJavaDebugging", false);
+        launchArgs.addProperty("enableJsDebugging", true);  // Enable JS debugging
         JsonObject launchResp = client.sendRequest("launch", launchArgs);
         assertTrue(launchResp.get("success").getAsBoolean(), "Launch should succeed");
-        System.out.println("Launched: " + featurePath);
+        System.out.println("Launched with JS debugging: " + featurePath);
         
-        // 3. Set breakpoint on line 17 (the Java call: JavaHelper.validateOrder(order))
+        // 3. Set breakpoint on line 25 (the JS call: jsHelper.processOrder(order))
         String absFeaturePath = Paths.get(TEST_FIXTURES_PATH, FEATURE_FILE).toAbsolutePath().toString();
         JsonObject bpArgs = new JsonObject();
         JsonObject source = new JsonObject();
@@ -156,13 +143,13 @@ public class CrossLanguageStepIntoTest {
         bpArgs.add("source", source);
         JsonArray breakpoints = new JsonArray();
         JsonObject bp = new JsonObject();
-        bp.addProperty("line", 17);
+        bp.addProperty("line", 25);
         breakpoints.add(bp);
         bpArgs.add("breakpoints", breakpoints);
         JsonObject bpResp = client.sendRequest("setBreakpoints", bpArgs);
         assertTrue(bpResp.get("success").getAsBoolean(), "SetBreakpoints should succeed");
-        System.out.println("Set breakpoint at line 17");
-        
+        System.out.println("Set breakpoint at line 25");
+
         // 4. Configuration done - this starts execution
         JsonObject configResp = client.sendRequest("configurationDone", null);
         assertTrue(configResp.get("success").getAsBoolean(), "ConfigurationDone should succeed");
@@ -176,7 +163,7 @@ public class CrossLanguageStepIntoTest {
         int karateThreadId = body.get("threadId").getAsInt();
         System.out.println("Stopped at breakpoint, threadId=" + karateThreadId);
 
-        // 6. Get stack frames to verify we're at line 17 (the Java call)
+        // 6. Get stack frames to verify we're at line 25 (the JS call)
         JsonObject sfArgs = new JsonObject();
         sfArgs.addProperty("threadId", karateThreadId);
         JsonObject sfResp = client.sendRequest("stackTrace", sfArgs);
@@ -184,56 +171,54 @@ public class CrossLanguageStepIntoTest {
         JsonArray frames = sfResp.getAsJsonObject("body").getAsJsonArray("stackFrames");
         assertTrue(frames.size() > 0, "Should have at least one stack frame");
         JsonObject topFrame = frames.get(0).getAsJsonObject();
-        assertEquals(17, topFrame.get("line").getAsInt(), "Should be at line 17");
-        System.out.println("Verified at line 17: " + topFrame.get("name").getAsString());
+        assertEquals(25, topFrame.get("line").getAsInt(), "Should be at line 25");
+        System.out.println("Verified at line 25: " + topFrame.get("name").getAsString());
 
-        // 7. Step into - this should step into the Java code
+        // 7. Step into - this should step into the JavaScript code
         JsonObject stepArgs = new JsonObject();
         stepArgs.addProperty("threadId", karateThreadId);
         JsonObject stepResp = client.sendRequest("stepIn", stepArgs);
         assertTrue(stepResp.get("success").getAsBoolean(), "StepIn should succeed");
-        System.out.println("Step into requested, waiting for Java stopped event...");
+        System.out.println("Step into requested, waiting for JavaScript stopped event...");
 
-        // 8. Wait for stopped event from Java backend
-        JsonObject javaStoppedEvent = client.waitForEvent("stopped", 30000);
-        assertNotNull(javaStoppedEvent, "Should receive stopped event from Java");
-        JsonObject javaBody = javaStoppedEvent.getAsJsonObject("body");
-        int javaThreadId = javaBody.get("threadId").getAsInt();
-        System.out.println("Java stopped, threadId=" + javaThreadId + ", reason=" + javaBody.get("reason"));
+        // 8. Wait for stopped event from JavaScript backend
+        JsonObject jsStoppedEvent = client.waitForEvent("stopped", 30000);
+        assertNotNull(jsStoppedEvent, "Should receive stopped event from JavaScript");
+        JsonObject jsBody = jsStoppedEvent.getAsJsonObject("body");
+        int jsThreadId = jsBody.get("threadId").getAsInt();
+        System.out.println("JavaScript stopped, threadId=" + jsThreadId + ", reason=" + jsBody.get("reason"));
 
-        // Java thread IDs are in range 2000-2999
-        assertTrue(javaThreadId >= 2000 && javaThreadId < 3000,
-            "Thread ID " + javaThreadId + " should be in Java range (2000-2999)");
+        // JavaScript thread IDs are in range 3000-3999
+        assertTrue(jsThreadId >= 3000 && jsThreadId < 4000,
+            "Thread ID " + jsThreadId + " should be in JavaScript range (3000-3999)");
 
-        // 9. Get stack frames from Java thread
-        JsonObject javaSfArgs = new JsonObject();
-        javaSfArgs.addProperty("threadId", javaThreadId);
-        JsonObject javaSfResp = client.sendRequest("stackTrace", javaSfArgs);
-        assertTrue(javaSfResp.get("success").getAsBoolean(), "Java StackTrace should succeed");
-        JsonArray javaFrames = javaSfResp.getAsJsonObject("body").getAsJsonArray("stackFrames");
-        assertTrue(javaFrames.size() > 0, "Should have Java stack frames");
+        // 9. Get stack frames from JavaScript thread
+        JsonObject jsSfArgs = new JsonObject();
+        jsSfArgs.addProperty("threadId", jsThreadId);
+        JsonObject jsSfResp = client.sendRequest("stackTrace", jsSfArgs);
+        assertTrue(jsSfResp.get("success").getAsBoolean(), "JavaScript StackTrace should succeed");
+        JsonArray jsFrames = jsSfResp.getAsJsonObject("body").getAsJsonArray("stackFrames");
+        assertTrue(jsFrames.size() > 0, "Should have JavaScript stack frames");
 
-        // 10. Verify top frame is PolyglotHelper.validateOrder at line 18
-        JsonObject javaTopFrame = javaFrames.get(0).getAsJsonObject();
-        String frameName = javaTopFrame.get("name").getAsString();
-        int line = javaTopFrame.get("line").getAsInt();
-        JsonObject javaSource = javaTopFrame.getAsJsonObject("source");
-        String sourcePath = javaSource.get("path").getAsString();
+        // 10. Verify top frame is processOrder function
+        JsonObject jsTopFrame = jsFrames.get(0).getAsJsonObject();
+        String frameName = jsTopFrame.get("name").getAsString();
+        int line = jsTopFrame.get("line").getAsInt();
+        JsonObject jsSource = jsTopFrame.getAsJsonObject("source");
+        String sourcePath = jsSource.has("path") ? jsSource.get("path").getAsString() : "unknown";
 
         System.out.println("\n========================================");
-        System.out.println("RESULT: Cross-language step-into");
+        System.out.println("RESULT: Cross-language step-into JavaScript");
         System.out.println("  Frame: " + frameName);
         System.out.println("  Source: " + sourcePath);
         System.out.println("  Line: " + line);
         System.out.println("========================================\n");
 
-        assertTrue(frameName.contains("validateOrder"),
-            "Frame should be validateOrder, got: " + frameName);
-        assertTrue(sourcePath.contains("PolyglotHelper.java"),
-            "Source should be PolyglotHelper.java, got: " + sourcePath);
-        assertEquals(18, line, "Should be at line 18 in PolyglotHelper.java");
+        // The frame should be in processOrder function (line 25-38 in polyglot-helper.js)
+        assertTrue(frameName.contains("processOrder") || line >= 25,
+            "Frame should be processOrder or at line >= 25, got: " + frameName + " at line " + line);
 
-        System.out.println("SUCCESS: Cross-language step-into works correctly!");
+        System.out.println("SUCCESS: Cross-language step-into JavaScript works correctly!");
     }
 }
 

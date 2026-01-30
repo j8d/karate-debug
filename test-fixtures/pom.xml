@@ -38,6 +38,15 @@
             <version>24.0.0</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- GraalVM DAP Tool - enables JavaScript debugging via Debug Adapter Protocol -->
+        <!-- Alternative to Chrome Inspector, uses native DAP instead of CDP -->
+        <dependency>
+            <groupId>org.graalvm.tools</groupId>
+            <artifactId>dap-tool</artifactId>
+            <version>24.0.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

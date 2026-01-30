@@ -137,12 +137,18 @@ public class DebugCoordinator {
         // Start child process
         state = CoordinatorState.CHILD_STARTING;
         processManager = new ChildProcessManager(config);
+
+        // Register listener for late DAP port discovery (for dynamic port case)
+        if (config.isJsDebuggingEnabled()) {
+            processManager.setDapDiscoveryListener(this::onDapPortDiscovered);
+        }
+
         processInfo = processManager.start();
         state = CoordinatorState.CHILD_READY;
-        
-        log.info("Child process ready: IPC={}, JDWP={}, CDP={}", 
-            processInfo.getIpcPort(), processInfo.getJdwpPort(), processInfo.getCdpPort());
-        
+
+        log.info("Child process ready: IPC={}, JDWP={}, JS-DAP={}",
+            processInfo.getIpcPort(), processInfo.getJdwpPort(), processInfo.getJsDapPort());
+
         // Create and register backends
         createBackends();
         
@@ -163,11 +169,11 @@ public class DebugCoordinator {
         multiplexer.registerBackend(karateBackend);
         log.debug("Created KarateBackend");
 
-        // Create JavaScript backend if CDP is available
+        // Create JavaScript backend if DAP is available
         if (processInfo.hasJsDebugging()) {
-            jsBackend = new JavaScriptBackend(processInfo.getCdpWebSocketUrl());
+            jsBackend = new JavaScriptBackend(processInfo.getJsDapPort());
             multiplexer.registerBackend(jsBackend);
-            log.debug("Created JavaScriptBackend for {}", processInfo.getCdpWebSocketUrl());
+            log.debug("Created JavaScriptBackend for DAP port {}", processInfo.getJsDapPort());
         }
 
         // Create Java backend if JDWP is available
@@ -196,6 +202,37 @@ public class DebugCoordinator {
         // Backends are already initialized via registerBackend() in createBackends().
         // This method exists for any future connection/start logic that may be needed.
         log.debug("All backends registered and initialized");
+    }
+
+    /**
+     * Callback for late DAP port discovery.
+     * Called when GraalVM DAP server starts (typically when karate-config.js runs).
+     * Creates the JavaScript backend if it wasn't created during initial startup.
+     */
+    private void onDapPortDiscovered(int port) {
+        if (jsBackend != null) {
+            log.debug("DAP port discovered but JavaScriptBackend already exists");
+            return;
+        }
+
+        if (port <= 0) {
+            log.warn("Invalid DAP port discovered: {}", port);
+            return;
+        }
+
+        log.info("Late-creating JavaScriptBackend for DAP port {}", port);
+        jsBackend = new JavaScriptBackend(port);
+        multiplexer.registerBackend(jsBackend);
+
+        // Since the multiplexer is already started, we need to explicitly start the backend
+        // to connect the DAP client. The normal start flow happens during configurationDone,
+        // but this backend was registered after that.
+        if (state.ordinal() >= CoordinatorState.BACKENDS_READY.ordinal()) {
+            log.info("Starting late-registered JavaScriptBackend");
+            jsBackend.start();
+        }
+
+        log.info("JavaScriptBackend ready for JavaScript debugging");
     }
 
     // ========== Breakpoint Management ==========
