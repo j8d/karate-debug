@@ -40,7 +40,7 @@ import com.j8d.karate.debug.process.ChildProcessConfig;
  * in a single unified session. This spawns Karate in a child process with
  * debug agents for all three languages.
  */
-public class PolyglotDapSession implements MultiplexerEventListener {
+public class PolyglotDapSession implements MultiplexerEventListener, OutputEventSender {
 
     private static final Logger log = LoggerFactory.getLogger(PolyglotDapSession.class);
     private static final String CONTENT_LENGTH = "Content-Length: ";
@@ -93,6 +93,9 @@ public class PolyglotDapSession implements MultiplexerEventListener {
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             writer = socket.getOutputStream();
             running = true;
+
+            // Register this session for DAP output events (so logback messages go to Debug Console)
+            DapOutputAppender.setSession(this);
 
             while (running) {
                 JsonObject message = readMessage();
@@ -685,6 +688,9 @@ public class PolyglotDapSession implements MultiplexerEventListener {
     private void cleanup() {
         running = false;
 
+        // Unregister session from DAP output appender
+        DapOutputAppender.clearSession();
+
         if (coordinator != null) {
             try {
                 coordinator.stop();
@@ -735,6 +741,19 @@ public class PolyglotDapSession implements MultiplexerEventListener {
         JsonObject body = new JsonObject();
         body.addProperty("category", category);
         body.addProperty("output", text);
+        sendEvent("output", body);
+    }
+
+    /**
+     * Send an output event to the IDE Debug Console.
+     * @param category "stdout", "stderr", or "console"
+     * @param text The output text (can include ANSI color codes)
+     */
+    @Override
+    public void sendOutputEvent(String category, String text) {
+        JsonObject body = new JsonObject();
+        body.addProperty("category", category);
+        body.addProperty("output", text + "\n");
         sendEvent("output", body);
     }
 

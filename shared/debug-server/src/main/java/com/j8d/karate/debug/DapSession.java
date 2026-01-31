@@ -19,7 +19,7 @@ import com.google.gson.JsonObject;
  * Handles a single DAP (Debug Adapter Protocol) session.
  * Implements the JSON-based message protocol per DAP specification.
  */
-public class DapSession {
+public class DapSession implements OutputEventSender {
     private static final Logger logger = LoggerFactory.getLogger(DapSession.class);
     private static final String CONTENT_LENGTH = "Content-Length: ";
 
@@ -164,6 +164,7 @@ public class DapSession {
      * @param category "stdout", "stderr", or "console"
      * @param text The output text (can include ANSI color codes)
      */
+    @Override
     public void sendOutputEvent(String category, String text) {
         JsonObject body = new JsonObject();
         body.addProperty("category", category);

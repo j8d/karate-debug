@@ -32,20 +32,20 @@ public class DapOutputAppender extends AppenderBase<ILoggingEvent> {
     private static final String GRAY = "\u001B[90m";
     private static final String BOLD = "\u001B[1m";
 
-    private static volatile DapSession session;
+    private static volatile OutputEventSender outputSender;
 
-    public static void setSession(DapSession dapSession) {
-        session = dapSession;
+    public static void setSession(OutputEventSender sender) {
+        outputSender = sender;
     }
 
     public static void clearSession() {
-        session = null;
+        outputSender = null;
     }
 
     @Override
     protected void append(ILoggingEvent event) {
-        DapSession currentSession = session;
-        if (currentSession == null) {
+        OutputEventSender sender = outputSender;
+        if (sender == null) {
             return;
         }
 
@@ -53,7 +53,7 @@ public class DapOutputAppender extends AppenderBase<ILoggingEvent> {
         String coloredMessage = applyColor(message, event);
         String category = event.getLevel().isGreaterOrEqual(Level.ERROR) ? "stderr" : "stdout";
 
-        currentSession.sendOutputEvent(category, coloredMessage);
+        sender.sendOutputEvent(category, coloredMessage);
     }
 
     private String formatMessage(ILoggingEvent event) {
