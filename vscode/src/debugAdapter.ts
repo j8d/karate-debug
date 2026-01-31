@@ -63,9 +63,12 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         // Start our custom Karate debug server
         const javaDebugPort = config.javaDebugPort || 0;
         const jsDebugPort = config.jsDebugPort || 0;
-        const enablePolyglotDebugging = config.enablePolyglotDebugging || false;
         const enableJavaDebugging = config.enableJavaDebugging || false;
         const enableJsDebugging = config.enableJsDebugging || false;
+
+        // Infer polyglot mode from language flags - if either Java or JS debugging is enabled,
+        // we need the polyglot architecture (parent-child process model with coordinator)
+        const enablePolyglotDebugging = enableJavaDebugging || enableJsDebugging;
 
         // Track the JS debug port so we can clean it up on next session
         this.lastJsDebugPort = jsDebugPort;
