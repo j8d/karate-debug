@@ -16,7 +16,8 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <karate.version>1.5.2</karate.version>
+        <!-- Using instrumented Karate fork for CI debugging -->
+        <karate.version>debug-scenario-runtime-SNAPSHOT</karate.version>
         <!--
              GraalVM version for dap-tool dependency.
              Note: Karate 1.5.2 bundles GraalJS/polyglot 24.0.0, but we use dap-tool 25.0.2
@@ -31,9 +32,9 @@
     </properties>
 
     <dependencies>
-        <!-- Karate Core - compile scope (needed for both main and test) -->
+        <!-- Karate Core - using instrumented fork from j8d-org for CI debugging -->
         <dependency>
-            <groupId>io.karatelabs</groupId>
+            <groupId>com.github.j8d-org.karate</groupId>
             <artifactId>karate-core</artifactId>
             <version>${karate.version}</version>
         </dependency>
@@ -99,6 +100,14 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <!-- JitPack repository for instrumented Karate fork -->
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>

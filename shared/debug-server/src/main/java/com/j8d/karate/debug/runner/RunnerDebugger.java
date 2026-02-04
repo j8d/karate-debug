@@ -248,6 +248,9 @@ public class RunnerDebugger implements RuntimeHook {
     @Override
     public boolean beforeScenario(ScenarioRuntime sr) {
         currentRuntime = sr;
+        // Use System.out to bypass any logging configuration issues
+        System.out.println("[HOOK] beforeScenario CALLED: " + sr.scenario.getName() +
+            " (dryRun=" + sr.dryRun + ", hookInstance=" + System.identityHashCode(this) + ")");
         log.info("beforeScenario CALLED: {} (dryRun={}) - returning true",
             sr.scenario.getName(), sr.dryRun);
         return true;
