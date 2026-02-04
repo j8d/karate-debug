@@ -120,9 +120,9 @@ Control which code is automatically skipped when stepping through Java code:
 
 | Property | Description | Default |
 |----------|-------------|---------|
-| `skipJdkClasses` | Skip JDK core classes (java.*, javax.*, jdk.*, sun.*, com.sun.*) when stepping | `false` |
-| `skipKarateFramework` | Skip Karate framework classes (com.intuit.karate.*) when stepping | `false` |
-| `skipKarateDependencies` | Skip Karate's third-party dependencies (jsonpath, netty, slf4j, etc.) when stepping | `false` |
+| `skipJdkClasses` | Skip JDK core classes (java.*, javax.*, jdk.*, sun.*, com.sun.*) when stepping | `true` |
+| `skipKarateFramework` | Skip Karate framework classes (com.intuit.karate.*) when stepping | `true` |
+| `skipKarateDependencies` | Skip Karate's third-party dependencies (jsonpath, netty, slf4j, etc.) when stepping | `true` |
 
 When step filtering is enabled, stepping into framework code will automatically step out and return to user code.
 

@@ -241,6 +241,10 @@ public class BytecodeLoader {
     /**
      * Attempts to download a sources JAR from Maven Central.
      * Only works for JARs in the Maven local repository (.m2/repository).
+     *
+     * Note: This makes an outbound HTTP request to Maven Central. In environments
+     * without internet access, this will fail silently after a timeout (5s connect,
+     * 10s read). Consider making this opt-in via a launch config setting in the future.
      */
     private void downloadSourcesJar(String jarPath, String sourcesJarPath) {
         // Parse Maven coordinates from the path
@@ -258,13 +262,13 @@ public class BytecodeLoader {
         String sourcesUrl = String.format("%s/%s/%s/%s/%s-%s-sources.jar",
                 MAVEN_CENTRAL_URL, groupPath, artifactId, version, artifactId, version);
 
-        log.info("Downloading sources JAR from: {}", sourcesUrl);
+        log.info("Attempting to download sources JAR from Maven Central: {}", sourcesUrl);
 
         try {
             URL url = new URL(sourcesUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(10000);
+            conn.setConnectTimeout(5000);  // 5 second connect timeout
+            conn.setReadTimeout(10000);    // 10 second read timeout
             conn.setRequestProperty("User-Agent", "karate-debug/1.0");
 
             int responseCode = conn.getResponseCode();
@@ -280,9 +284,16 @@ public class BytecodeLoader {
                 Files.move(tempFile, targetPath, StandardCopyOption.REPLACE_EXISTING);
                 log.info("Downloaded sources JAR: {}", sourcesJarPath);
             } else {
-                log.debug("Sources JAR not available (HTTP {}): {}", responseCode, sourcesUrl);
+                log.info("Sources JAR not available on Maven Central (HTTP {}), skipping: {}",
+                        responseCode, artifactId + "-" + version);
             }
             conn.disconnect();
+        } catch (java.net.SocketTimeoutException e) {
+            log.info("Timeout downloading sources JAR (network may be unavailable): {}-{}",
+                    artifactId, version);
+        } catch (java.net.UnknownHostException e) {
+            log.info("Cannot reach Maven Central (no network?), skipping sources download for: {}-{}",
+                    artifactId, version);
         } catch (Exception e) {
             log.debug("Failed to download sources JAR: {} - {}", sourcesUrl, e.getMessage());
         }

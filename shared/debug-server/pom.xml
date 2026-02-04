@@ -17,6 +17,16 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <karate.version>1.5.2</karate.version>
+        <!--
+             GraalVM version for dap-tool dependency.
+             Note: Karate 1.5.2 bundles GraalJS/polyglot 24.0.0, but we use dap-tool 25.0.2
+             because it's the latest available version with the DAP server implementation.
+             This version mismatch means we cannot use dap-tool's DAP server directly with
+             Karate's polyglot engine (causes NoSuchMethodError). Instead, we use dap-tool
+             only for bundling/availability purposes, while actual JS debugging is done via
+             Chrome DevTools Protocol (CDP) with Karate's built-in GraalJS engine.
+             See CrossLanguageStepIntoJsTest.java and GraalDapSourceTest.java for details.
+        -->
         <graalvm.version>25.0.2</graalvm.version>
     </properties>
 

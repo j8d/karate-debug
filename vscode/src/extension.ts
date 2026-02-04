@@ -18,9 +18,9 @@ const DEFAULT_KARATE_CONFIG: vscode.DebugConfiguration = {
     feature: '${file}',
     enableJavaDebugging: true,
     enableJsDebugging: true,
-    skipJdkClasses: false,
-    skipKarateFramework: false,
-    skipKarateDependencies: false
+    skipJdkClasses: true,
+    skipKarateFramework: true,
+    skipKarateDependencies: true
 };
 
 /**
