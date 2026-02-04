@@ -362,7 +362,7 @@ async function showLicenseInfo(): Promise<void> {
             'Contact Developer'
         );
         if (action === 'Manage Subscription') {
-            licenseManager.openSubscriptionPortal();
+            await licenseManager.openSubscriptionPortal();
         } else if (action === 'Contact Developer') {
             vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?contact=general&ide=vscode'));
         }
@@ -373,7 +373,7 @@ async function showLicenseInfo(): Promise<void> {
             'Contact Developer'
         );
         if (action === 'Purchase License') {
-            licenseManager.startCheckout();
+            await licenseManager.startCheckout();
         } else if (action === 'Contact Developer') {
             vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?contact=general&ide=vscode'));
         }
@@ -385,9 +385,9 @@ async function showLicenseInfo(): Promise<void> {
             'Contact Developer'
         );
         if (action === 'Purchase License') {
-            licenseManager.startCheckout();
+            await licenseManager.startCheckout();
         } else if (action === 'Sign In') {
-            licenseManager.login();
+            await licenseManager.login();
         } else if (action === 'Contact Developer') {
             vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?contact=general&ide=vscode'));
         }

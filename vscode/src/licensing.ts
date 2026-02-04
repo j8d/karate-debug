@@ -353,11 +353,13 @@ export class LicenseManager {
 
         await this.context.globalState.update('userId', undefined);
         await this.context.globalState.update('githubUsername', undefined);
-        await this.context.globalState.update('trialStartTimestamp', undefined);
+        // Note: Don't clear trialStartTimestamp - we want to preserve local trial tracking
 
-        this.currentStatus = { isValid: false, status: 'none' };
-        this.updateStatusBar(this.currentStatus);
         vscode.window.showInformationMessage('Logged out of Karate Debug');
+
+        // Re-check anonymous trial status after logout
+        // This ensures the status bar shows correct trial/expired state instead of 'none'
+        await this.startOrCheckAnonymousTrial();
     }
 
     async validateLicense(): Promise<LicenseStatus> {
