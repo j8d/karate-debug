@@ -17,6 +17,7 @@ import com.intuit.karate.Match;
 import com.intuit.karate.Results;
 import com.intuit.karate.Runner;
 import com.intuit.karate.RuntimeHook;
+import com.intuit.karate.core.FeatureRuntime;
 import com.intuit.karate.core.ScenarioRuntime;
 import com.intuit.karate.core.Step;
 import com.intuit.karate.core.StepResult;
@@ -224,15 +225,26 @@ public class RunnerDebugger implements RuntimeHook {
     // ========== RuntimeHook Implementation ==========
 
     @Override
+    public boolean beforeFeature(FeatureRuntime fr) {
+        log.debug("beforeFeature: {}", fr.featureCall.feature.getResource().getRelativePath());
+        return true;
+    }
+
+    @Override
+    public void afterFeature(FeatureRuntime fr) {
+        log.debug("afterFeature: {}", fr.featureCall.feature.getResource().getRelativePath());
+    }
+
+    @Override
     public boolean beforeScenario(ScenarioRuntime sr) {
         currentRuntime = sr;
-        log.trace("Before scenario: {}", sr.scenario.getName());
+        log.debug("beforeScenario: {} (returning true)", sr.scenario.getName());
         return true;
     }
 
     @Override
     public void afterScenario(ScenarioRuntime sr) {
-        log.debug("After scenario: {}", sr.scenario.getName());
+        log.debug("afterScenario: {}", sr.scenario.getName());
     }
 
     @Override
