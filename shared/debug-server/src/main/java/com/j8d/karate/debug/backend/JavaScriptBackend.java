@@ -38,8 +38,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
     // Reverse lookup: normalized path -> sourceReference
     private final Map<String, Integer> pathToSourceRef = new ConcurrentHashMap<>();
 
-    // Breakpoint tracking: our breakpoint ID -> verified status
-    private final Map<Integer, Boolean> breakpointVerified = new ConcurrentHashMap<>();
+    // Breakpoint ID generator
     private final AtomicInteger nextBreakpointId = new AtomicInteger(1);
 
     // Current pause state
@@ -235,7 +234,6 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                         results.add(Breakpoint.unverified(bpId, line, filePath, message));
                         log.debug("Breakpoint not verified: {}:{} - {}", filePath, line, message);
                     }
-                    breakpointVerified.put(bpId, verified);
                 }
             }
         } catch (Exception e) {
