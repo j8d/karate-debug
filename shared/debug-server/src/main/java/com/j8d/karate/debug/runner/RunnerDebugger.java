@@ -226,25 +226,36 @@ public class RunnerDebugger implements RuntimeHook {
 
     @Override
     public boolean beforeFeature(FeatureRuntime fr) {
-        log.debug("beforeFeature: {}", fr.featureCall.feature.getResource().getRelativePath());
+        log.info("beforeFeature: {} (suite.dryRun={}, suite.hooks.size={})",
+            fr.featureCall.feature.getResource().getRelativePath(),
+            fr.suite.dryRun,
+            fr.suite.hooks.size());
+        // Log hook instances to verify this hook is in the list
+        int idx = 0;
+        for (com.intuit.karate.RuntimeHook h : fr.suite.hooks) {
+            log.info("beforeFeature: suite.hooks[{}] = {} (isThis={})",
+                idx++, System.identityHashCode(h), h == this);
+        }
         return true;
     }
 
     @Override
     public void afterFeature(FeatureRuntime fr) {
-        log.debug("afterFeature: {}", fr.featureCall.feature.getResource().getRelativePath());
+        log.info("afterFeature: {}", fr.featureCall.feature.getResource().getRelativePath());
     }
 
     @Override
     public boolean beforeScenario(ScenarioRuntime sr) {
         currentRuntime = sr;
-        log.debug("beforeScenario: {} (returning true)", sr.scenario.getName());
+        log.info("beforeScenario CALLED: {} (dryRun={}) - returning true",
+            sr.scenario.getName(), sr.dryRun);
         return true;
     }
 
     @Override
     public void afterScenario(ScenarioRuntime sr) {
-        log.debug("afterScenario: {}", sr.scenario.getName());
+        log.info("afterScenario CALLED: {} (dryRun={})",
+            sr.scenario.getName(), sr.dryRun);
     }
 
     @Override
