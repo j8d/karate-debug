@@ -13,8 +13,8 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Using instrumented Karate fork for CI debugging -->
-        <karate.version>eb256a408</karate.version>
+        <!-- Using instrumented Karate fork with GraalVM 25.0.2 -->
+        <karate.version>9370080b0</karate.version>
     </properties>
 
     <dependencies>

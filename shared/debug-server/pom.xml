@@ -16,9 +16,9 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Using instrumented Karate fork for CI debugging -->
+        <!-- Using instrumented Karate fork with GraalVM 25.0.2 -->
         <!-- Use commit hash for JitPack to ensure we get our instrumented version -->
-        <karate.version>eb256a408</karate.version>
+        <karate.version>9370080b0</karate.version>
         <!--
              GraalVM version for dap-tool dependency.
              Note: Karate 1.5.2 bundles GraalJS/polyglot 24.0.0, but we use dap-tool 25.0.2
