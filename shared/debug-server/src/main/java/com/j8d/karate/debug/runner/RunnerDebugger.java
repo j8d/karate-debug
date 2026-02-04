@@ -168,8 +168,9 @@ public class RunnerDebugger implements RuntimeHook {
         }
 
         String normalizedPath = normalizeSourcePath(filePath);
-        log.trace("Storing breakpoint with key: {}", normalizedPath);
+        log.debug("Storing breakpoint with key: {} (original: {})", normalizedPath, filePath);
         breakpoints.put(normalizedPath, breakpointMap);
+        log.debug("Breakpoints map now has keys: {}", breakpoints.keySet());
 
         JsonObject response = new JsonObject();
         response.add("breakpoints", result);
@@ -241,8 +242,9 @@ public class RunnerDebugger implements RuntimeHook {
         String sourcePath = normalizeSourcePath(relativePath);
         int line = step.getLine();
 
-        log.trace("beforeStep: line={}, relativePath={}, normalizedPath={}", line, relativePath, sourcePath);
-        log.trace("beforeStep: breakpoints keys={}", breakpoints.keySet());
+        // Debug logging at DEBUG level (not TRACE) to see what's happening
+        log.debug("beforeStep: line={}, relativePath={}, normalizedPath={}", line, relativePath, sourcePath);
+        log.debug("beforeStep: breakpoints keys={}", breakpoints.keySet());
 
         boolean shouldPause = false;
         String pauseReason = "breakpoint";
@@ -590,6 +592,7 @@ public class RunnerDebugger implements RuntimeHook {
     private String normalizeSourcePath(String path) {
         File file = new File(path);
         if (file.isAbsolute()) {
+            log.debug("normalizeSourcePath: {} is absolute, returning as-is", path);
             return file.getAbsolutePath();
         }
         String[] sourceRoots = {
@@ -600,11 +603,14 @@ public class RunnerDebugger implements RuntimeHook {
         };
         for (String root : sourceRoots) {
             File resolved = new File(workspaceRoot, root + path);
+            log.debug("normalizeSourcePath: trying {} -> exists={}", resolved.getAbsolutePath(), resolved.exists());
             if (resolved.exists()) {
                 return resolved.getAbsolutePath();
             }
         }
-        return new File(workspaceRoot, path).getAbsolutePath();
+        String fallback = new File(workspaceRoot, path).getAbsolutePath();
+        log.debug("normalizeSourcePath: no source root matched for {}, using fallback: {}", path, fallback);
+        return fallback;
     }
 
     private String toClasspathPath(String absolutePath) {
