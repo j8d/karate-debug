@@ -377,11 +377,12 @@ public class DebugCoordinator {
             return;
         }
 
-        // Start all backends first (connects JDI, etc.)
-        multiplexer.start();
-
-        // Apply any remaining queued breakpoints (now that backends are connected)
+        // Apply queued breakpoints BEFORE starting execution
+        // This ensures breakpoints are set in the child before it starts running
         applyQueuedBreakpoints();
+
+        // Now start the backends (this sends START to the child)
+        multiplexer.start();
 
         state = CoordinatorState.RUNNING;
         log.debug("Execution started");

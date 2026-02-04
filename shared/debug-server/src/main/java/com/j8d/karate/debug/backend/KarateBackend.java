@@ -299,7 +299,14 @@ public class KarateBackend implements DebugBackend {
                 }
             }
             case IpcEvents.BREAKPOINT_RESOLVED -> {
-                // TODO: Handle breakpoint resolution
+                int bpId = body.get("id").getAsInt();
+                int line = body.get("line").getAsInt();
+                String source = body.has("source") ? body.get("source").getAsString() : null;
+                Breakpoint bp = new Breakpoint(bpId, true, line, source, null);
+                log.debug("Received breakpoint resolved event: id={}, line={}", bpId, line);
+                if (listener != null) {
+                    listener.onBreakpointResolved(this, bp);
+                }
             }
             default -> log.warn("Unknown IPC event: {}", eventName);
         }

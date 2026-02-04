@@ -63,8 +63,21 @@ public class RunnerCommandHandler implements IpcServerHandler {
         if (!pendingBreakpoints.isEmpty()) {
             log.debug("Applying {} pending breakpoint files", pendingBreakpoints.size());
             for (java.util.Map.Entry<String, JsonArray> entry : pendingBreakpoints.entrySet()) {
-                log.debug("Applying pending breakpoints for: {}", entry.getKey());
-                debugger.setBreakpoints(entry.getKey(), entry.getValue());
+                String filePath = entry.getKey();
+                JsonArray breakpointsArray = entry.getValue();
+                log.debug("Applying pending breakpoints for: {}", filePath);
+                JsonObject result = debugger.setBreakpoints(filePath, breakpointsArray);
+
+                // Send breakpoint resolved events for each verified breakpoint
+                if (result != null && result.has("breakpoints")) {
+                    JsonArray verifiedBps = result.getAsJsonArray("breakpoints");
+                    for (int i = 0; i < verifiedBps.size(); i++) {
+                        JsonObject bp = verifiedBps.get(i).getAsJsonObject();
+                        if (bp.has("verified") && bp.get("verified").getAsBoolean()) {
+                            sendBreakpointResolvedEvent(bp);
+                        }
+                    }
+                }
             }
             pendingBreakpoints.clear();
         }
@@ -72,6 +85,18 @@ public class RunnerCommandHandler implements IpcServerHandler {
         debugger.start();
 
         return null; // Simple acknowledgment
+    }
+
+    private void sendBreakpointResolvedEvent(JsonObject bp) {
+        JsonObject eventBody = new JsonObject();
+        eventBody.addProperty("id", bp.get("id").getAsInt());
+        eventBody.addProperty("verified", true);
+        eventBody.addProperty("line", bp.get("line").getAsInt());
+        if (bp.has("source")) {
+            eventBody.addProperty("source", bp.get("source").getAsString());
+        }
+        runner.getIpcServer().sendEvent(com.j8d.karate.debug.ipc.IpcEvents.BREAKPOINT_RESOLVED, eventBody);
+        log.debug("Sent breakpoint resolved event for line {}", bp.get("line").getAsInt());
     }
 
     private JsonObject handleStop(JsonObject body) {
