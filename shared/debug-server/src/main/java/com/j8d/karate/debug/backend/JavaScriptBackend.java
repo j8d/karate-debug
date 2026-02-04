@@ -110,7 +110,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
     @Override
     public void start() {
-        log.info("Starting JavaScriptBackend, connecting to DAP port {}", dapPort);
+        log.trace("Starting JavaScriptBackend, connecting to DAP port {}", dapPort);
 
         dapClient.connect("127.0.0.1", dapPort)
             .thenCompose(v -> {
@@ -128,7 +128,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                 return dapClient.send("initialize", initArgs);
             })
             .thenCompose(capabilities -> {
-                log.debug("DAP capabilities: {}", capabilities);
+                log.trace("DAP capabilities: {}", capabilities);
                 // Send attach request to attach to the running JS context
                 JsonObject attachArgs = new JsonObject();
                 return dapClient.send("attach", attachArgs);
@@ -138,7 +138,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                 return dapClient.send("configurationDone", null);
             })
             .thenAccept(v -> {
-                log.info("JavaScriptBackend ready");
+                log.debug("JavaScriptBackend ready");
                 ready = true;
             })
             .exceptionally(e -> {
@@ -190,13 +190,13 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
             if (sourceRef.isPresent()) {
                 // Use sourceReference for "Unnamed" sources that we've matched
                 source.addProperty("sourceReference", sourceRef.get());
-                log.debug("Setting breakpoints using sourceReference={} for {}", sourceRef.get(), filePath);
+                log.trace("Setting breakpoints using sourceReference={} for {}", sourceRef.get(), filePath);
             } else {
                 // No sourceRef mapping yet - store as pending and try path-based
                 // The breakpoints will be re-applied once the source is loaded and matched
                 String normalizedPath = normalizePath(filePath);
                 pendingBreakpoints.put(normalizedPath, new ArrayList<>(breakpoints));
-                log.debug("Storing {} pending breakpoints for {} (no sourceRef mapping yet)",
+                log.trace("Storing {} pending breakpoints for {} (no sourceRef mapping yet)",
                         breakpoints.size(), filePath);
 
                 // Fall back to path-based breakpoints (likely won't verify but we try anyway)
@@ -325,7 +325,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
         scriptEntryCatchingEnabled = true;
         pendingStepIn = true;
 
-        log.debug("Enabled script entry catching for cross-language step-into");
+        log.trace("Enabled script entry catching for cross-language step-into");
 
         // Try to pause immediately when JS starts executing
         try {
@@ -333,7 +333,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
             args.addProperty("threadId", currentThreadId);
             dapClient.send("pause", args);
         } catch (Exception e) {
-            log.debug("Could not send pause request: {}", e.getMessage());
+            log.trace("Could not send pause request: {}", e.getMessage());
         }
     }
 
@@ -347,7 +347,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
         pendingStepIn = false;
         scriptEntryCatchingEnabled = false;
-        log.debug("Disabled script entry catching");
+        log.trace("Disabled script entry catching");
     }
 
     // ========== Inspection ==========
@@ -382,7 +382,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                     if (mappedPath.isPresent()) {
                         sourcePath = mappedPath.get().toString();
                         sourceName = mappedPath.get().getFileName().toString();
-                        log.debug("Translated 'Unnamed' source ref={} to {}", sourceRef, sourcePath);
+                        log.trace("Translated 'Unnamed' source ref={} to {}", sourceRef, sourcePath);
                     } else {
                         sourcePath = source.has("path") ? source.get("path").getAsString() : "Unnamed";
                         sourceName = "Unnamed";
@@ -532,7 +532,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
         String reason = body.has("reason") ? body.get("reason").getAsString() : "unknown";
         int threadId = body.has("threadId") ? body.get("threadId").getAsInt() : 1;
 
-        log.debug("DAP stopped: reason={}, threadId={}", reason, threadId);
+        log.trace("DAP stopped: reason={}, threadId={}", reason, threadId);
 
         // Fetch stack frames asynchronously to avoid blocking the DAP reader thread
         // (calling sendSync from the reader thread would cause deadlock)
@@ -577,24 +577,24 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                             if (scriptEntryCatchingEnabled) {
                                 // Cross-language step-into: step INTO the inline snippet to reach the function body
                                 // This is needed because GraalVM DAP only stops on script entry, not function entry
-                                log.debug("Stepping into inline snippet to reach function body");
+                                log.trace("Stepping into inline snippet to reach function body");
                                 shouldStepInto = true;
                             } else {
                                 // Not in step mode - just skip
-                                log.debug("Auto-continuing past inline snippet (not mapped to file)");
+                                log.trace("Auto-continuing past inline snippet (not mapped to file)");
                             }
                         } else if (isSteppingInJs) {
                             // We're stepping within JS - pause
-                            log.debug("Pausing: stepping in JS");
+                            log.trace("Pausing: stepping in JS");
                             shouldPause = true;
                         } else if (scriptEntryCatchingEnabled) {
                             // Cross-language step-into - pause on user files only
-                            log.debug("Pausing: cross-language step-into on mapped file");
+                            log.trace("Pausing: cross-language step-into on mapped file");
                             shouldPause = true;
                         } else {
                             // Not stepping, not cross-language - this is just script initialization
                             // TODO: Check for breakpoints at this line
-                            log.debug("Auto-continuing: not stepping, script initialization");
+                            log.trace("Auto-continuing: not stepping, script initialization");
                         }
 
                         if (shouldStepInto) {
@@ -624,7 +624,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
                     // If we're in cross-language step mode and stopped, disable it now
                     if (scriptEntryCatchingEnabled) {
-                        log.debug("Cross-language step-into caught JavaScript execution");
+                        log.trace("Cross-language step-into caught JavaScript execution");
                         scriptEntryCatchingEnabled = false;
                         pendingStepIn = false;
                     }
@@ -643,14 +643,41 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
             // Notify listener after stack frames are fetched
             if (listener != null) {
-                listener.onStopped(this, threadId, reason, description);
+                // Build a better description with source path and line number (like Java does)
+                String stoppedDescription = description;
+                if (currentStackFrames != null && currentStackFrames.size() > 0) {
+                    JsonObject topFrame = currentStackFrames.get(0).getAsJsonObject();
+                    int line = topFrame.has("line") ? topFrame.get("line").getAsInt() : 0;
+
+                    // Try to get the source path
+                    String sourcePath = null;
+                    if (topFrame.has("source")) {
+                        JsonObject source = topFrame.getAsJsonObject("source");
+                        int sourceRef = source.has("sourceReference") ? source.get("sourceReference").getAsInt() : 0;
+                        String sourceName = source.has("name") ? source.get("name").getAsString() : null;
+
+                        if ("Unnamed".equals(sourceName) && sourceRef > 0 && sourceMatcher != null) {
+                            Optional<Path> mappedPath = sourceMatcher.getPathForSourceRef(sourceRef);
+                            if (mappedPath.isPresent()) {
+                                sourcePath = mappedPath.get().toString();
+                            }
+                        } else if (source.has("path")) {
+                            sourcePath = source.get("path").getAsString();
+                        }
+                    }
+
+                    if (sourcePath != null) {
+                        stoppedDescription = sourcePath + ":" + line;
+                    }
+                }
+                listener.onStopped(this, threadId, reason, stoppedDescription);
             }
         });
     }
 
     @Override
     public void onContinued(JsonObject body) {
-        log.debug("DAP continued");
+        log.trace("DAP continued");
         clearPauseState();
 
         if (listener != null) {
@@ -675,7 +702,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
         String category = body.has("category") ? body.get("category").getAsString() : "console";
         String output = body.has("output") ? body.get("output").getAsString() : "";
 
-        log.debug("DAP output [{}]: {}", category, output.trim());
+        log.trace("DAP output [{}]: {}", category, output.trim());
 
         if (listener != null) {
             listener.onOutput(this, category, output);
@@ -691,7 +718,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
         String path = source.has("path") ? source.get("path").getAsString() : null;
         String name = source.has("name") ? source.get("name").getAsString() : null;
 
-        log.debug("DAP source loaded: ref={}, path={}, name={}", sourceRef, path, name);
+        log.trace("DAP source loaded: ref={}, path={}, name={}", sourceRef, path, name);
 
         if (sourceRef > 0 || path != null) {
             SourceInfo info = new SourceInfo(sourceRef, path, name);
@@ -749,7 +776,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                         sources.put(sourceRef, new SourceInfo(sourceRef, filePath.toString(), filePath.getFileName().toString()));
                     }
 
-                    log.info("Matched 'Unnamed' source ref={} to file: {}", sourceRef, filePath);
+                    log.trace("Matched 'Unnamed' source ref={} to file: {}", sourceRef, filePath);
 
                     // Re-apply any pending breakpoints for this file
                     reapplyPendingBreakpoints(normalizedPath, sourceRef);
@@ -758,7 +785,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                     String preview = content.length() > 200
                         ? content.substring(0, 200) + "...[truncated]"
                         : content;
-                    log.debug("No match for 'Unnamed' source ref={} ({} chars): {}",
+                    log.trace("No match for 'Unnamed' source ref={} ({} chars): {}",
                         sourceRef, content.length(), preview);
                 }
             }
@@ -778,7 +805,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
     private void reapplyPendingBreakpoints(String normalizedPath, int sourceRef) {
         List<BreakpointRequest> pending = pendingBreakpoints.remove(normalizedPath);
         if (pending == null || pending.isEmpty()) {
-            log.debug("No pending breakpoints for {}", normalizedPath);
+            log.trace("No pending breakpoints for {}", normalizedPath);
             return;
         }
 

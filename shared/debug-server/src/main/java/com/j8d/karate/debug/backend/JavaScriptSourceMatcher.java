@@ -54,7 +54,7 @@ public class JavaScriptSourceMatcher {
      * Call this once at debug session start.
      */
     public void scanWorkspace() {
-        log.info("Scanning workspace for .js files: {}", workspaceRoot);
+        log.trace("Scanning workspace for .js files: {}", workspaceRoot);
         
         if (!Files.exists(workspaceRoot)) {
             log.warn("Workspace root does not exist: {}", workspaceRoot);
@@ -84,7 +84,7 @@ public class JavaScriptSourceMatcher {
                 
                 @Override
                 public FileVisitResult visitFileFailed(Path file, IOException exc) {
-                    log.debug("Failed to visit file: {}", file);
+                    log.trace("Failed to visit file: {}", file);
                     return FileVisitResult.CONTINUE;
                 }
             });
@@ -92,7 +92,7 @@ public class JavaScriptSourceMatcher {
             log.error("Error scanning workspace for .js files", e);
         }
         
-        log.info("Indexed {} JavaScript files", contentToPath.size());
+        log.trace("Indexed {} JavaScript files", contentToPath.size());
     }
     
     /**
@@ -107,9 +107,9 @@ public class JavaScriptSourceMatcher {
             contentToPath.put(content, normalizedPath);
             pathToContent.put(normalizedPath, content);
             
-            log.debug("Indexed JS file: {} ({} chars)", normalizedPath, content.length());
+            log.trace("Indexed JS file: {} ({} chars)", normalizedPath, content.length());
         } catch (IOException e) {
-            log.debug("Failed to read JS file: {}", file);
+            log.trace("Failed to read JS file: {}", file);
         }
     }
     
@@ -138,14 +138,14 @@ public class JavaScriptSourceMatcher {
      * @return The matching file path, or empty if no match found
      */
     public Optional<Path> matchContent(String content) {
-        log.debug("Attempting to match content ({} chars), starts with: {}",
+        log.trace("Attempting to match content ({} chars), starts with: {}",
                 content.length(),
                 content.substring(0, Math.min(50, content.length())).replace("\n", "\\n"));
 
         // Strategy 1: Exact match
         Path match = contentToPath.get(content);
         if (match != null) {
-            log.debug("Content matched to file (exact): {}", match);
+            log.trace("Content matched to file (exact): {}", match);
             return Optional.of(match);
         }
 
@@ -153,21 +153,21 @@ public class JavaScriptSourceMatcher {
         // Karate wraps content like: (originalContent\n) or (originalContent\n\n)
         if (content.startsWith("(") && content.endsWith(")")) {
             String unwrapped = content.substring(1, content.length() - 1);
-            log.debug("Trying unwrapped content ({} chars)", unwrapped.length());
+            log.trace("Trying unwrapped content ({} chars)", unwrapped.length());
 
             match = contentToPath.get(unwrapped);
             if (match != null) {
-                log.debug("Content matched to file (unwrapped parens): {}", match);
+                log.trace("Content matched to file (unwrapped parens): {}", match);
                 return Optional.of(match);
             }
 
             // Strategy 3: Strip trailing whitespace (newlines) from unwrapped content
             String trimmedEnd = unwrapped.stripTrailing();
-            log.debug("Trying trimmed content ({} chars)", trimmedEnd.length());
+            log.trace("Trying trimmed content ({} chars)", trimmedEnd.length());
 
             match = contentToPath.get(trimmedEnd);
             if (match != null) {
-                log.debug("Content matched to file (unwrapped + trimmed): {}", match);
+                log.trace("Content matched to file (unwrapped + trimmed): {}", match);
                 return Optional.of(match);
             }
 
@@ -176,13 +176,13 @@ public class JavaScriptSourceMatcher {
             for (Map.Entry<String, Path> entry : contentToPath.entrySet()) {
                 String fileContent = entry.getKey();
                 if (fileContent.stripTrailing().equals(trimmedEnd)) {
-                    log.debug("Content matched to file (both trimmed): {}", entry.getValue());
+                    log.trace("Content matched to file (both trimmed): {}", entry.getValue());
                     return Optional.of(entry.getValue());
                 }
             }
         }
 
-        log.debug("No match found for content ({} chars)", content.length());
+        log.trace("No match found for content ({} chars)", content.length());
         return Optional.empty();
     }
     
@@ -194,7 +194,7 @@ public class JavaScriptSourceMatcher {
         Path normalized = filePath.toAbsolutePath().normalize();
         sourceRefToPath.put(sourceReference, normalized);
         pathToSourceRef.put(normalized, sourceReference);
-        log.info("Registered source mapping: ref={} -> {}", sourceReference, normalized);
+        log.trace("Registered source mapping: ref={} -> {}", sourceReference, normalized);
     }
     
     /**

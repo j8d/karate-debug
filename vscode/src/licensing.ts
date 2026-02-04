@@ -601,15 +601,18 @@ export class LicenseManager {
 
     async showTrialExpiredMessage(): Promise<void> {
         const action = await vscode.window.showErrorMessage(
-            'Your Karate Debug trial has expired. Please purchase a license to continue.',
+            'Your Karate Debug trial has expired. Please purchase a license or sign in if you already have one.',
             'Purchase License',
-            'Learn More'
+            'Sign In',
+            'Contact Developer'
         );
 
         if (action === 'Purchase License') {
             await this.startCheckout();
-        } else if (action === 'Learn More') {
-            vscode.env.openExternal(vscode.Uri.parse('https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug'));
+        } else if (action === 'Sign In') {
+            await this.login();
+        } else if (action === 'Contact Developer') {
+            vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?contact=general&ide=vscode'));
         }
     }
 

@@ -108,7 +108,7 @@ public class RunnerDebugger implements RuntimeHook {
                     .backupReportDir(false)
                     .parallel(1);
 
-                log.debug("Karate execution completed. Passed: {}, Failed: {}",
+                log.info("Karate execution completed. Passed: {}, Failed: {}",
                     results.getScenariosPassed(), results.getScenariosFailed());
 
             } catch (Exception e) {
@@ -185,20 +185,17 @@ public class RunnerDebugger implements RuntimeHook {
     }
 
     public void stepOver(int threadId) {
-        log.debug("Step over thread {}", threadId);
         stepMode = StepMode.STEP_OVER;
         stepDepth = getCallDepth();
         resumeExecution();
     }
 
     public void stepInto(int threadId) {
-        log.debug("Step into thread {}", threadId);
         stepMode = StepMode.STEP_IN;
         resumeExecution();
     }
 
     public void stepOut(int threadId) {
-        log.debug("Step out thread {}", threadId);
         stepMode = StepMode.STEP_OUT;
         stepDepth = getCallDepth();
         resumeExecution();
@@ -244,15 +241,15 @@ public class RunnerDebugger implements RuntimeHook {
         String sourcePath = normalizeSourcePath(relativePath);
         int line = step.getLine();
 
-        log.debug("beforeStep: line={}, relativePath={}, normalizedPath={}", line, relativePath, sourcePath);
-        log.debug("beforeStep: breakpoints keys={}", breakpoints.keySet());
+        log.trace("beforeStep: line={}, relativePath={}, normalizedPath={}", line, relativePath, sourcePath);
+        log.trace("beforeStep: breakpoints keys={}", breakpoints.keySet());
 
         boolean shouldPause = false;
         String pauseReason = "breakpoint";
 
         // Check for breakpoint (with optional condition)
         Map<Integer, BreakpointInfo> fileBreakpoints = breakpoints.get(sourcePath);
-        log.debug("beforeStep: fileBreakpoints for path={} -> {}", sourcePath, fileBreakpoints);
+        log.trace("beforeStep: fileBreakpoints for path={} -> {}", sourcePath, fileBreakpoints);
         if (fileBreakpoints != null) {
             BreakpointInfo bp = fileBreakpoints.get(line);
             if (bp != null) {
@@ -340,10 +337,21 @@ public class RunnerDebugger implements RuntimeHook {
         paused = true;
         pauseLatch = new CountDownLatch(1);
 
-        log.info("Stopped: {} at line {}", reason, line);
+        // Build description with file:line info for user-friendly logging
+        // Always use filename (not feature title) for clearer output
+        String description = null;
+        if (step != null && step.getFeature() != null) {
+            String relativePath = step.getFeature().getResource().getRelativePath();
+            if (relativePath != null) {
+                int lastSlash = relativePath.lastIndexOf('/');
+                String fileName = lastSlash >= 0 ? relativePath.substring(lastSlash + 1) : relativePath;
+                description = fileName + ":" + line;
+            }
+        }
 
-        // Send stopped event via IPC
-        sendStopped(1, reason, null);
+        // Send stopped event via IPC with file:line description
+        // Note: User-facing log is in DapMultiplexer.onStopped()
+        sendStopped(1, reason, description);
 
         // Wait until resumed
         try {

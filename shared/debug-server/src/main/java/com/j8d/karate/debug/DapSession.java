@@ -53,9 +53,6 @@ public class DapSession implements OutputEventSender {
             writer = socket.getOutputStream();
             running = true;
 
-            // Register this session for DAP output events
-            DapOutputAppender.setSession(this);
-
             debugger = new KarateDebugger(this, workspaceRoot, karateEnv);
 
             // Register debugger with log breakpoint appender
@@ -121,17 +118,25 @@ public class DapSession implements OutputEventSender {
         return gson.fromJson(json, JsonObject.class);
     }
 
-    public synchronized void sendMessage(JsonObject message) {
-        try {
-            String json = gson.toJson(message);
-            String header = CONTENT_LENGTH + json.getBytes(StandardCharsets.UTF_8).length + "\r\n\r\n";
+    public void sendMessage(JsonObject message) {
+        // Serialize outside the lock to minimize lock hold time and avoid
+        // logging while holding the lock (which can cause deadlocks with logback's
+        // synchronized doAppend() when trace level is enabled)
+        String json = gson.toJson(message);
+        byte[] jsonBytes = json.getBytes(StandardCharsets.UTF_8);
+        byte[] header = (CONTENT_LENGTH + jsonBytes.length + "\r\n\r\n").getBytes(StandardCharsets.UTF_8);
 
-            logger.trace("Sending: {}", json);
-            writer.write(header.getBytes(StandardCharsets.UTF_8));
-            writer.write(json.getBytes(StandardCharsets.UTF_8));
-            writer.flush();
-        } catch (IOException e) {
-            logger.error("Error sending message", e);
+        // Log BEFORE acquiring the lock to avoid deadlock with logback's appender synchronization
+        logger.trace("Sending: {}", json);
+
+        synchronized (this) {
+            try {
+                writer.write(header);
+                writer.write(jsonBytes);
+                writer.flush();
+            } catch (IOException e) {
+                logger.error("Error sending message", e);
+            }
         }
     }
 
@@ -160,16 +165,15 @@ public class DapSession implements OutputEventSender {
     }
 
     /**
-     * Send an output event to the IDE. This appears in the Debug Console.
-     * @param category "stdout", "stderr", or "console"
-     * @param text The output text (can include ANSI color codes)
+     * Send output to stdout (captured by VS Code for Output tab).
+     * We don't send DAP output events to keep Debug Console clean.
+     * @param category "stdout", "stderr", or "console" (ignored)
+     * @param text The output text
      */
     @Override
     public void sendOutputEvent(String category, String text) {
-        JsonObject body = new JsonObject();
-        body.addProperty("category", category);
-        body.addProperty("output", text + "\n");
-        sendEvent("output", body);
+        // Output goes to stdout only (captured by VS Code for Output tab)
+        System.out.println(text);
     }
 
     private void handleMessage(JsonObject message) {
@@ -435,9 +439,6 @@ public class DapSession implements OutputEventSender {
 
         // Unregister debugger from log breakpoint appender
         LogBreakpointAppender.clearDebugger();
-
-        // Unregister session from DAP output appender
-        DapOutputAppender.clearSession();
 
         try {
             if (socket != null) socket.close();

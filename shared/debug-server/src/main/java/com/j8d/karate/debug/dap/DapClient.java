@@ -73,7 +73,7 @@ public class DapClient {
             // Start reader thread
             startReaderThread(socket.getInputStream());
             
-            log.info("DAP connected to {}:{}", host, port);
+            log.trace("DAP connected to {}:{}", host, port);
             connectFuture.complete(null);
         } catch (Exception e) {
             log.error("Failed to connect to DAP server at {}:{}", host, port, e);
@@ -155,7 +155,7 @@ public class DapClient {
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
         String header = CONTENT_LENGTH + bytes.length + "\r\n\r\n";
 
-        log.debug("DAP send: {}", json);
+        log.trace("DAP send: {}", json);
 
         synchronized (outputStream) {
             outputStream.write(header.getBytes(StandardCharsets.UTF_8));
@@ -195,7 +195,6 @@ public class DapClient {
 
     private String readMessage(BufferedInputStream in) throws IOException {
         // Read headers until we find Content-Length
-        StringBuilder headerBuilder = new StringBuilder();
         int contentLength = -1;
 
         while (true) {
@@ -207,7 +206,12 @@ public class DapClient {
                 break;  // End of headers
             }
             if (line.startsWith(CONTENT_LENGTH)) {
-                contentLength = Integer.parseInt(line.substring(CONTENT_LENGTH.length()).trim());
+                String lengthValue = line.substring(CONTENT_LENGTH.length()).trim();
+                try {
+                    contentLength = Integer.parseInt(lengthValue);
+                } catch (NumberFormatException e) {
+                    throw new IOException("Invalid Content-Length header: '" + line + "'", e);
+                }
             }
         }
 
@@ -250,7 +254,7 @@ public class DapClient {
     }
 
     private void handleMessage(String message) {
-        log.debug("DAP recv: {}", message);
+        log.trace("DAP recv: {}", message);
 
         try {
             JsonObject json = gson.fromJson(message, JsonObject.class);
@@ -259,7 +263,7 @@ public class DapClient {
             switch (type) {
                 case "response" -> handleResponse(json);
                 case "event" -> handleEvent(json);
-                default -> log.debug("Unknown DAP message type: {}", type);
+                default -> log.trace("Unknown DAP message type: {}", type);
             }
         } catch (Exception e) {
             log.error("Failed to parse DAP message: {}", message, e);
@@ -297,7 +301,7 @@ public class DapClient {
             case "terminated" -> listener.onTerminated();
             case "output" -> listener.onOutput(body);
             case "loadedSource" -> listener.onLoadedSource(body);
-            default -> log.debug("Unhandled DAP event: {}", event);
+            default -> log.trace("Unhandled DAP event: {}", event);
         }
     }
 

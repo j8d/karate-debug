@@ -43,7 +43,7 @@ Feature: Polyglot Debugging Test
 
   Scenario: Test JavaScript string formatting
     # BREAKPOINT HERE - test Karate debugging
-    * def amount = 123.456
+    * def amount = 123.455
     
     # Call JavaScript to format currency
     * def formatted = jsHelper.formatCurrency(amount)
@@ -60,4 +60,3 @@ Feature: Polyglot Debugging Test
     * match validation.hasId == false
     * match validation.hasItems == false
     * print 'Validation result:', validation
-

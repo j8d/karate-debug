@@ -4,21 +4,18 @@
     <!-- Uses custom encoder to add [karate.log] prefix to karate.log() output -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="com.j8d.karate.debug.KarateLogEncoder">
-            <pattern>%msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
     <!-- Log breakpoint appender - monitors logs for breakpoint patterns -->
     <appender name="LOG_BREAKPOINT" class="com.j8d.karate.debug.LogBreakpointAppender"/>
 
-    <!-- DAP output appender - sends logs to VS Code Debug Console with ANSI colors -->
-    <appender name="DAP_OUTPUT" class="com.j8d.karate.debug.DapOutputAppender"/>
+    <!-- Our debug server classes - level set programmatically via setLogLevel() -->
+    <logger name="com.j8d.karate.debug"/>
 
-    <!-- Our debug server classes - DEBUG level to see debugging details -->
-    <logger name="com.j8d.karate.debug" level="DEBUG"/>
-
-    <!-- Karate framework - DEBUG to see HTTP traffic and print statements -->
-    <logger name="com.intuit.karate" level="DEBUG"/>
+    <!-- Karate framework - level set programmatically via setLogLevel() -->
+    <logger name="com.intuit.karate"/>
 
     <!-- JSON Path - WARN to reduce noise from path evaluation -->
     <logger name="com.jayway.jsonpath" level="WARN"/>
@@ -35,7 +32,6 @@
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="LOG_BREAKPOINT"/>
-        <appender-ref ref="DAP_OUTPUT"/>
     </root>
 </configuration>
 

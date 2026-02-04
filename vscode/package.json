@@ -2,7 +2,7 @@
   "name": "karate-debug",
   "displayName": "Karate Debug",
   "description": "Debug Karate API tests with breakpoints, step-through debugging, and an integrated test explorer. Features CodeLens buttons, environment switching, and full Karate DSL syntax highlighting.",
-  "version": "0.6.12",
+  "version": "0.7.0",
   "publisher": "j8d",
   "author": {
     "name": "j8d"
@@ -139,6 +139,23 @@
                 "type": "boolean",
                 "description": "Skip Karate's third-party dependencies (com.jayway.jsonpath.*, io.netty.*, org.slf4j.*, etc.) when stepping in Java code. Set to false to step through all library code that Karate uses internally.",
                 "default": true
+              },
+              "internalConsoleOptions": {
+                "type": "string",
+                "enum": ["neverOpen", "openOnFirstSessionStart", "openOnSessionStart"],
+                "description": "Controls when the Debug Console should open. Use 'neverOpen' to keep focus on the Output tab.",
+                "default": "neverOpen"
+              },
+              "javaSourcePaths": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Additional directories containing Java source files. Use this to enable inline variable display for JDK, Karate, or other library sources. Paths can be directories or .zip/.jar files containing sources.",
+                "default": []
+              },
+              "autoDetectJdkSources": {
+                "type": "boolean",
+                "description": "Automatically detect and use JDK source files (src.zip) from the Java installation. Enables inline variable display when stepping into JDK classes.",
+                "default": true
               }
             }
           }
@@ -268,7 +285,7 @@
           "items": {
             "type": "string"
           },
-          "default": [],
+          "default": ["THYMELEAF"],
           "description": "Log lines containing any of these strings will be hidden from output."
         },
         "karateDebug.logBreakpoints": {

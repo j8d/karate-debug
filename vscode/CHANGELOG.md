@@ -5,19 +5,35 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.12] - 2026-01-22
+## [0.7.0] - 2026-02-04
 
 ### Added
-- Syntax highlighting in Debug Console output (errors in red, warnings in yellow, Karate output in green)
-- Clickable file references in feature files with permanent underlines and smart navigation:
+- Log breakpoints - pause execution when specified strings appear in log output (e.g., 'NullPointerException', 'ERROR'). Configure via `karateDebug.logBreakpoints` setting.
+- Clickable file references in feature files with Cmd/Ctrl+Click navigation:
   - `classpath:path/to/file.feature` - Click to open the referenced file
   - `read('path/to/file.json')` - Works with or without classpath: prefix
   - `read('/path/to/file.json')` - Leading slash paths are supported
   - `read('@tagName')` - Jump to a tag in the current file
   - `file.feature@tagName` - Open file and jump to the specified tag
   - Smart tooltips show "Jump to @tag" for same-file references or "Open file and jump to @tag" for cross-file references
-- Log breakpoints - pause execution when specified strings appear in log output (e.g., 'NullPointerException', 'ERROR')
-- Log filter setting to hide log lines containing specified strings (e.g., THYMELEAF, HikariPool)
+- Log filter setting to hide log lines containing specified strings. Configure via `karateDebug.logFilter.exclude` setting. Defaults to filtering THYMELEAF logs.
+- Polyglot debugging with unified Karate, JavaScript, and Java debugging in a single session
+- Inline variable values displayed next to code during debugging
+- Step filtering options to skip JDK, Karate framework, and dependency classes
+
+### Changed
+- Debug sessions now automatically open the feature file and scroll to the scenario line
+- JavaScript debugging is now enabled by default with bundled GraalVM DAP tool
+- Launch configuration migration automatically updates old Karate configurations to the new format
+
+### Fixed
+- IpcServer now logs error when message queue is full instead of silently dropping messages
+- DapClient now properly catches NumberFormatException when parsing Content-Length header
+- DapClient removed unused `headerBuilder` variable
+- ChildProcessManager now handles NumberFormatException when parsing JDWP, DAP, and IPC ports from child process output
+- Removed unused `category` parameter from `forwardToDebugConsole` method
+- Removed dead code: unused `outputSender` field and related methods in ChildProcessManager and DebugCoordinator
+- Port cleanup now uses graceful shutdown (SIGTERM) before force kill (SIGKILL) and skips on Windows where lsof is unavailable
 
 ## [0.6.11] - 2026-01-22
 

@@ -94,7 +94,7 @@ public class CrossLanguageStepIntoTest {
         System.out.println("========================================\n");
         
         // Start server in background thread
-        server = new DebugServer(port, TEST_FIXTURES_PATH, "dev", classpath, true);
+        server = new DebugServer(port, TEST_FIXTURES_PATH, "dev", classpath, "debug", true, null);
         serverThread = new Thread(() -> {
             try {
                 server.start();

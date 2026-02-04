@@ -84,7 +84,7 @@ public class CrossLanguageStepIntoJsTest {
         System.out.println("Workspace: " + TEST_FIXTURES_PATH);
         System.out.println("========================================\n");
         
-        server = new DebugServer(port, TEST_FIXTURES_PATH, "dev", classpath, true);
+        server = new DebugServer(port, TEST_FIXTURES_PATH, "dev", classpath, "debug", true, null);
         serverThread = new Thread(() -> {
             try {
                 server.start();
@@ -188,9 +188,9 @@ public class CrossLanguageStepIntoJsTest {
         int jsThreadId = jsBody.get("threadId").getAsInt();
         System.out.println("JavaScript stopped, threadId=" + jsThreadId + ", reason=" + jsBody.get("reason"));
 
-        // JavaScript thread IDs are in range 3000-3999
-        assertTrue(jsThreadId >= 3000 && jsThreadId < 4000,
-            "Thread ID " + jsThreadId + " should be in JavaScript range (3000-3999)");
+        // JavaScript thread IDs are in range 1000-1999 (per IdRange.JAVASCRIPT_THREADS)
+        assertTrue(jsThreadId >= 1000 && jsThreadId < 2000,
+            "Thread ID " + jsThreadId + " should be in JavaScript range (1000-1999)");
 
         // 9. Get stack frames from JavaScript thread
         JsonObject jsSfArgs = new JsonObject();

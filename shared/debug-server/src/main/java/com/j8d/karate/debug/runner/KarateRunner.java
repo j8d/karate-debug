@@ -8,6 +8,8 @@ import java.util.Scanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ch.qos.logback.classic.Level;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -46,13 +48,42 @@ public class KarateRunner {
     public static void main(String[] args) {
         KarateRunner runner = new KarateRunner();
         runner.parseArgs(args);
-        
+
+        // Apply log level before starting (must be done after parsing args)
+        setLogLevel(runner.logLevel);
+
         try {
             runner.start();
         } catch (Exception e) {
             log.error("Failed to start KarateRunner", e);
             System.exit(1);
         }
+    }
+
+    private static void setLogLevel(String levelName) {
+        Level level = switch (levelName.toLowerCase()) {
+            case "error" -> Level.ERROR;
+            case "warn" -> Level.WARN;
+            case "info" -> Level.INFO;
+            case "debug" -> Level.DEBUG;
+            case "trace" -> Level.TRACE;
+            default -> Level.INFO;
+        };
+
+        // Set ROOT logger level - this affects all loggers
+        ch.qos.logback.classic.Logger rootLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        rootLogger.setLevel(level);
+
+        // Set log level for our debug server classes
+        ch.qos.logback.classic.Logger debugLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.j8d.karate.debug");
+        debugLogger.setLevel(level);
+
+        // Set log level for Karate framework
+        ch.qos.logback.classic.Logger karateLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.intuit.karate");
+        karateLogger.setLevel(level);
     }
     
     private void parseArgs(String[] args) {
@@ -94,14 +125,14 @@ public class KarateRunner {
         System.out.println("IPC_PORT=" + ipcPort);
         System.out.flush();
         
-        log.info("IPC server started on port {}", ipcPort);
-        
+        log.debug("IPC server started on port {}", ipcPort);
+
         // Wait for parent to connect, then send ready event
         waitForConnectionAndSendReady();
-        
+
         // Keep running until stopped
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            log.info("Shutdown hook triggered");
+            log.debug("Shutdown hook triggered");
             ipcServer.stop();
         }));
         
@@ -151,7 +182,7 @@ public class KarateRunner {
             }
         }
         
-        log.info("Sending ready event: {}", body);
+        log.debug("Sending ready event: {}", body);
         ipcServer.sendEvent(IpcEvents.READY, body);
     }
     
@@ -183,7 +214,7 @@ public class KarateRunner {
             try {
                 String portStr = jdwpAddress.substring(jdwpAddress.lastIndexOf(':') + 1);
                 int port = Integer.parseInt(portStr);
-                log.info("Discovered JDWP port: {}", port);
+                log.debug("Discovered JDWP port: {}", port);
                 return port;
             } catch (NumberFormatException e) {
                 log.warn("Could not parse JDWP port from: {}", jdwpAddress);
@@ -256,7 +287,7 @@ public class KarateRunner {
                             ? target.get("description").getAsString()
                             : null;
 
-                        log.info("Discovered CDP: port={}, wsUrl={}", port, wsUrl);
+                        log.debug("Discovered CDP: port={}, wsUrl={}", port, wsUrl);
                         return new CdpInfo(port, wsUrl, description);
                     }
                 }

@@ -86,7 +86,8 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
             jsDebugPort,
             enablePolyglotDebugging,
             enableJavaDebugging,
-            enableJsDebugging
+            enableJsDebugging,
+            config
         );
 
         // If Java debug port is specified, notify user
@@ -154,14 +155,42 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
     }
 
     /**
-     * Kill any process listening on the specified port (macOS/Linux only)
+     * Kill any process listening on the specified port.
+     * Uses platform-specific commands and attempts graceful shutdown first.
      */
     private killProcessOnPort(port: number): void {
+        // Skip on Windows - different process model and commands
+        if (process.platform === 'win32') {
+            return;
+        }
+
         try {
-            // Use lsof to find and kill processes on the port
-            execSync(`lsof -ti:${port} | xargs kill -9 2>/dev/null`, { stdio: 'ignore' });
+            // Find PIDs listening on the port (macOS/Linux)
+            const result = execSync(`lsof -ti:${port} 2>/dev/null`, { encoding: 'utf8' });
+            const pids = result.trim().split('\n').filter(pid => pid.length > 0);
+
+            for (const pid of pids) {
+                try {
+                    // Try graceful shutdown first (SIGTERM)
+                    execSync(`kill -15 ${pid} 2>/dev/null`, { stdio: 'ignore' });
+
+                    // Give it a moment to shut down gracefully
+                    execSync('sleep 0.5', { stdio: 'ignore' });
+
+                    // Check if still running, force kill if necessary
+                    try {
+                        execSync(`kill -0 ${pid} 2>/dev/null`, { stdio: 'ignore' });
+                        // Process still exists, force kill
+                        execSync(`kill -9 ${pid} 2>/dev/null`, { stdio: 'ignore' });
+                    } catch {
+                        // Process already terminated - good
+                    }
+                } catch {
+                    // Ignore errors for individual PIDs
+                }
+            }
         } catch {
-            // Ignore errors - port may already be free
+            // Ignore errors - port may already be free or lsof not available
         }
     }
 
@@ -209,7 +238,8 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         jsDebugPort: number = 0,
         enablePolyglotDebugging: boolean = false,
         enableJavaDebugging: boolean = false,
-        enableJsDebugging: boolean = false
+        enableJsDebugging: boolean = false,
+        debugConfig?: vscode.DebugConfiguration
     ): Promise<ChildProcess> {
         const config = vscode.workspace.getConfiguration('karateRunner');
 
@@ -277,6 +307,15 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         if (enablePolyglotDebugging) {
             args.push('--polyglot');
             args.push('--classpath', fullClasspath);
+        }
+
+        // Collect and pass Java source paths for inline variable display
+        if (debugConfig) {
+            const sourcePaths = this.collectJavaSourcePaths(javaPath, debugConfig);
+            if (sourcePaths.length > 0) {
+                // Pass source paths as a semicolon-separated list (works on all platforms)
+                args.push('--source-paths', sourcePaths.join(';'));
+            }
         }
 
         this.log(`Starting Karate debug server on port ${port}`);
@@ -439,6 +478,65 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         // Fallback to java on PATH
         this.log('Using java from PATH');
         return 'java';
+    }
+
+    /**
+     * Find the JDK source archive (src.zip) from the Java installation.
+     * Returns the path to src.zip if found, or null if not available.
+     */
+    private findJdkSources(javaPath: string): string | null {
+        // Get the Java home directory from the java executable path
+        // javaPath is like /path/to/jdk/bin/java, so we go up two levels
+        const javaHome = path.dirname(path.dirname(javaPath));
+
+        // Check for src.zip in common locations
+        const srcZipLocations = [
+            path.join(javaHome, 'lib', 'src.zip'),      // Standard location for JDK 9+
+            path.join(javaHome, 'src.zip'),             // Some JDK distributions
+            path.join(javaHome, 'src', 'src.zip'),      // Alternative location
+        ];
+
+        for (const srcZip of srcZipLocations) {
+            if (fs.existsSync(srcZip)) {
+                this.log(`Found JDK sources: ${srcZip}`);
+                return srcZip;
+            }
+        }
+
+        this.log(`JDK sources (src.zip) not found in ${javaHome}`);
+        return null;
+    }
+
+    /**
+     * Collect all Java source paths for the debug session.
+     * Includes user-configured paths and auto-detected JDK sources.
+     */
+    private collectJavaSourcePaths(javaPath: string, config: vscode.DebugConfiguration): string[] {
+        const sourcePaths: string[] = [];
+        const karateDebugConfig = vscode.workspace.getConfiguration('karateDebug');
+
+        // Add user-configured source paths
+        const userSourcePaths = config.javaSourcePaths || karateDebugConfig.get<string[]>('javaSourcePaths', []);
+        for (const p of userSourcePaths) {
+            if (fs.existsSync(p)) {
+                sourcePaths.push(p);
+                this.log(`Added user source path: ${p}`);
+            } else {
+                this.log(`Warning: Source path not found: ${p}`);
+            }
+        }
+
+        // Auto-detect JDK sources if enabled
+        const autoDetect = config.autoDetectJdkSources !== false &&
+                          karateDebugConfig.get<boolean>('autoDetectJdkSources', true);
+        if (autoDetect) {
+            const jdkSources = this.findJdkSources(javaPath);
+            if (jdkSources) {
+                sourcePaths.push(jdkSources);
+            }
+        }
+
+        return sourcePaths;
     }
 
     private async getMavenClasspath(workspaceRoot: string): Promise<string> {

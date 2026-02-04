@@ -87,6 +87,23 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
      */
     public JavaBackend(String host, int port, String workspaceRoot,
                        boolean skipJdkClasses, boolean skipKarateFramework, boolean skipKarateDependencies) {
+        this(host, port, workspaceRoot, skipJdkClasses, skipKarateFramework, skipKarateDependencies, null);
+    }
+
+    /**
+     * Creates a JavaBackend with configurable step filtering and additional source paths.
+     *
+     * @param host The JDWP host
+     * @param port The JDWP port
+     * @param workspaceRoot The workspace root directory for resolving source paths
+     * @param skipJdkClasses Whether to auto-skip JDK core classes when stepping
+     * @param skipKarateFramework Whether to auto-skip Karate framework classes when stepping
+     * @param skipKarateDependencies Whether to auto-skip Karate's dependencies (jsonpath, netty, etc.)
+     * @param additionalSourcePaths Semicolon-separated list of additional source directories or archives (e.g., src.zip)
+     */
+    public JavaBackend(String host, int port, String workspaceRoot,
+                       boolean skipJdkClasses, boolean skipKarateFramework, boolean skipKarateDependencies,
+                       String additionalSourcePaths) {
         this.host = host;
         this.port = port;
         this.workspaceRoot = workspaceRoot;
@@ -101,6 +118,16 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
             sourcePaths.add(workspaceRoot + "/src/test/java");
             sourcePaths.add(workspaceRoot + "/src/main/kotlin");
             sourcePaths.add(workspaceRoot + "/src/test/kotlin");
+        }
+
+        // Add additional source paths (e.g., JDK src.zip, library sources)
+        if (additionalSourcePaths != null && !additionalSourcePaths.isEmpty()) {
+            for (String path : additionalSourcePaths.split(";")) {
+                if (!path.isEmpty()) {
+                    sourcePaths.add(path);
+                    log.trace("Added additional source path: {}", path);
+                }
+            }
         }
     }
 
@@ -118,12 +145,12 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
 
     @Override
     public void start() {
-        log.info("Starting JavaBackend, connecting to {}:{}", host, port);
+        log.trace("Starting JavaBackend, connecting to {}:{}", host, port);
 
         try {
             jdiClient.connect(host, port);
             ready = true;
-            log.info("JavaBackend ready");
+            log.trace("JavaBackend ready");
         } catch (IOException e) {
             log.error("Failed to connect to JVM", e);
         }
@@ -586,6 +613,10 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
         return fileName;
     }
 
+    // Cache for extracted source files from zip archives
+    private final Map<String, String> extractedSourceCache = new ConcurrentHashMap<>();
+    private java.io.File tempSourceDir;
+
     private String extractSourcePath(Location location) {
         String relativePath;
         try {
@@ -596,14 +627,79 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
 
         // Try to resolve to absolute path by searching source directories
         for (String sourceDir : sourcePaths) {
-            java.io.File file = new java.io.File(sourceDir, relativePath);
-            if (file.exists()) {
-                return file.getAbsolutePath();
+            java.io.File sourceDirFile = new java.io.File(sourceDir);
+
+            // Check if it's a directory
+            if (sourceDirFile.isDirectory()) {
+                java.io.File file = new java.io.File(sourceDir, relativePath);
+                if (file.exists()) {
+                    return file.getAbsolutePath();
+                }
+            }
+            // Check if it's a zip/jar file
+            else if (sourceDirFile.isFile() &&
+                     (sourceDir.endsWith(".zip") || sourceDir.endsWith(".jar"))) {
+                String extracted = tryExtractFromZip(sourceDirFile, relativePath);
+                if (extracted != null) {
+                    return extracted;
+                }
             }
         }
 
         // Fallback to relative path if not found
         return relativePath;
+    }
+
+    /**
+     * Try to extract a source file from a zip archive to a temp directory.
+     * Returns the absolute path to the extracted file, or null if not found.
+     * Extracted files are cached to avoid repeated extractions.
+     */
+    private String tryExtractFromZip(java.io.File zipFile, String relativePath) {
+        String cacheKey = zipFile.getAbsolutePath() + "!" + relativePath;
+
+        // Check cache first
+        String cached = extractedSourceCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(zipFile)) {
+            java.util.zip.ZipEntry entry = zip.getEntry(relativePath);
+            if (entry == null) {
+                return null;
+            }
+
+            // Create temp directory if needed
+            if (tempSourceDir == null) {
+                tempSourceDir = java.nio.file.Files.createTempDirectory("karate-debug-sources").toFile();
+                tempSourceDir.deleteOnExit();
+                log.debug("Created temp source directory: {}", tempSourceDir);
+            }
+
+            // Create the extracted file path, preserving package structure
+            java.io.File extractedFile = new java.io.File(tempSourceDir, relativePath);
+            extractedFile.getParentFile().mkdirs();
+
+            // Extract the source file
+            try (java.io.InputStream is = zip.getInputStream(entry);
+                 java.io.FileOutputStream fos = new java.io.FileOutputStream(extractedFile)) {
+                byte[] buffer = new byte[8192];
+                int len;
+                while ((len = is.read(buffer)) != -1) {
+                    fos.write(buffer, 0, len);
+                }
+            }
+
+            String extractedPath = extractedFile.getAbsolutePath();
+            extractedSourceCache.put(cacheKey, extractedPath);
+            log.trace("Extracted source from {}: {} -> {}", zipFile.getName(), relativePath, extractedPath);
+            return extractedPath;
+
+        } catch (IOException e) {
+            log.trace("Failed to extract {} from {}: {}", relativePath, zipFile.getName(), e.getMessage());
+            return null;
+        }
     }
 
     private String extractSourceName(Location location) {

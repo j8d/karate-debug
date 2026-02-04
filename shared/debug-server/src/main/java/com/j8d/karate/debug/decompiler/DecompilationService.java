@@ -28,7 +28,7 @@ public class DecompilationService {
     public DecompilationService(List<String> classpathEntries) {
         this.bytecodeLoader = new BytecodeLoader(classpathEntries);
         this.decompiler = new Decompiler();
-        log.info("DecompilationService initialized with {} classpath entries", classpathEntries.size());
+        log.debug("DecompilationService initialized with {} classpath entries", classpathEntries.size());
     }
 
     /**
@@ -57,7 +57,7 @@ public class DecompilationService {
         String source = bytecodeLoader.loadSourceFromSourcesJar(className);
         if (source != null) {
             sourceCache.put(className, source);
-            log.info("Loaded source from sources JAR for {} ({} chars)", className, source.length());
+            log.debug("Loaded source from sources JAR for {} ({} chars)", className, source.length());
             return source;
         }
 

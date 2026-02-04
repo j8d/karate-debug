@@ -128,7 +128,7 @@ public class BytecodeLoader {
             byte[] sourceBytes = loadBytesFromJar(sourcesJar, sourcePath);
             if (sourceBytes != null) {
                 String source = new String(sourceBytes, StandardCharsets.UTF_8);
-                log.info("Found source for {} in {}", className, sourcesJarPath);
+                log.debug("Found source for {} in {}", className, sourcesJarPath);
                 return source;
             }
         }
@@ -193,7 +193,7 @@ public class BytecodeLoader {
             byte[] sourceBytes = loadBytesFromJar(jdkSourceZip, fullPath);
             if (sourceBytes != null) {
                 String source = new String(sourceBytes, StandardCharsets.UTF_8);
-                log.info("Found JDK source for {} in src.zip (path: {})", sourcePath, fullPath);
+                log.debug("Found JDK source for {} in src.zip (path: {})", sourcePath, fullPath);
                 return source;
             }
         }

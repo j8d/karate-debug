@@ -27,7 +27,7 @@ public class RunnerCommandHandler implements IpcServerHandler {
     
     @Override
     public JsonObject handleCommand(String command, JsonObject body) throws Exception {
-        log.debug("Handling command: {} with body: {}", command, body);
+        log.trace("Handling command: {} with body: {}", command, body);
         
         return switch (command) {
             case IpcCommands.START -> handleStart(body);
@@ -54,7 +54,7 @@ public class RunnerCommandHandler implements IpcServerHandler {
     private final java.util.Map<String, JsonArray> pendingBreakpoints = new java.util.concurrent.ConcurrentHashMap<>();
 
     private JsonObject handleStart(JsonObject body) {
-        log.info("Starting Karate execution");
+        log.debug("Starting Karate execution");
 
         // Create debugger and start execution
         debugger = new RunnerDebugger(runner);
@@ -112,8 +112,6 @@ public class RunnerCommandHandler implements IpcServerHandler {
     
     private JsonObject handleStepOver(JsonObject body) {
         int threadId = body.get("threadId").getAsInt();
-        log.debug("Step over on thread: {}", threadId);
-        
         if (debugger != null) {
             debugger.stepOver(threadId);
         }
@@ -122,18 +120,14 @@ public class RunnerCommandHandler implements IpcServerHandler {
     
     private JsonObject handleStepInto(JsonObject body) {
         int threadId = body.get("threadId").getAsInt();
-        log.debug("Step into on thread: {}", threadId);
-        
         if (debugger != null) {
             debugger.stepInto(threadId);
         }
         return null;
     }
-    
+
     private JsonObject handleStepOut(JsonObject body) {
         int threadId = body.get("threadId").getAsInt();
-        log.debug("Step out on thread: {}", threadId);
-        
         if (debugger != null) {
             debugger.stepOut(threadId);
         }

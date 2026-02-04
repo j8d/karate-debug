@@ -60,7 +60,7 @@ public class IpcClient {
      * @throws IOException if connection fails
      */
     public void connect(String host, int port) throws IOException {
-        log.info("Connecting to IPC server at {}:{}", host, port);
+        log.trace("Connecting to IPC server at {}:{}", host, port);
         
         socket = new Socket(host, port);
         writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
@@ -72,7 +72,7 @@ public class IpcClient {
         readerThread.setDaemon(true);
         readerThread.start();
         
-        log.info("Connected to IPC server");
+        log.trace("Connected to IPC server");
         if (listener != null) {
             listener.onConnected();
         }
@@ -85,7 +85,7 @@ public class IpcClient {
         if (!connected) return;
         
         connected = false;
-        log.info("Disconnecting from IPC server");
+        log.trace("Disconnecting from IPC server");
         
         // Cancel all pending requests
         for (CompletableFuture<IpcMessage> future : pendingRequests.values()) {
@@ -96,7 +96,7 @@ public class IpcClient {
         try {
             if (socket != null) socket.close();
         } catch (IOException e) {
-            log.debug("Error closing socket", e);
+            log.trace("Error closing socket", e);
         }
         
         if (listener != null) {
@@ -147,7 +147,7 @@ public class IpcClient {
      */
     private synchronized void sendMessage(IpcMessage message) {
         String json = gson.toJson(message);
-        log.debug("IPC TX [thread={}]: {}", Thread.currentThread().getName(), json);
+        log.trace("IPC TX [thread={}]: {}", Thread.currentThread().getName(), json);
 
         try {
             byte[] bytes = (json + "\n").getBytes(StandardCharsets.UTF_8);
@@ -167,15 +167,15 @@ public class IpcClient {
      * The main read loop that runs in a background thread.
      */
     private void readLoop() {
-        log.info("Parent IPC reader thread started: {}", Thread.currentThread().getName());
+        log.trace("Parent IPC reader thread started: {}", Thread.currentThread().getName());
         try {
             String line;
             while (connected && (line = reader.readLine()) != null) {
-                log.debug("Parent IPC RX [thread={}]: {}", Thread.currentThread().getName(), line);
+                log.trace("Parent IPC RX [thread={}]: {}", Thread.currentThread().getName(), line);
                 handleMessage(line);
-                log.debug("Parent IPC reader finished handling message");
+                log.trace("Parent IPC reader finished handling message");
             }
-            log.info("Parent IPC reader loop exited: connected={}", connected);
+            log.trace("Parent IPC reader loop exited: connected={}", connected);
         } catch (IOException e) {
             if (connected) {
                 log.error("Error reading from IPC server", e);
@@ -184,7 +184,7 @@ public class IpcClient {
                 }
             }
         } finally {
-            log.info("Parent IPC reader thread ending");
+            log.trace("Parent IPC reader thread ending");
             if (connected) {
                 connected = false;
                 if (listener != null) {
@@ -200,6 +200,7 @@ public class IpcClient {
     private void handleMessage(String json) {
         try {
             IpcMessage message = gson.fromJson(json, IpcMessage.class);
+            log.trace("Parsed IPC message: type={}, event={}", message.getType(), message.getEvent());
 
             if (message.isResponse()) {
                 // Complete the pending request
@@ -219,8 +220,11 @@ public class IpcClient {
                 }
             } else if (message.isEvent()) {
                 // Dispatch event to listener
+                log.trace("Dispatching event '{}' to listener", message.getEvent());
                 if (listener != null) {
                     listener.onEvent(message);
+                } else {
+                    log.warn("No listener registered for event: {}", message.getEvent());
                 }
             } else {
                 log.warn("Received unexpected message type: {}", message.getType());

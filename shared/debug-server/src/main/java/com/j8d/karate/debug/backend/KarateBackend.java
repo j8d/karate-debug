@@ -72,7 +72,7 @@ public class KarateBackend implements DebugBackend {
     
     @Override
     public void start() {
-        log.info("Starting KarateBackend");
+        log.trace("Starting KarateBackend");
         
         // Send start command to child
         JsonObject body = new JsonObject();
@@ -82,7 +82,7 @@ public class KarateBackend implements DebugBackend {
     
     @Override
     public void stop() {
-        log.info("Stopping KarateBackend");
+        log.trace("Stopping KarateBackend");
         ready = false;
         
         try {
@@ -176,9 +176,9 @@ public class KarateBackend implements DebugBackend {
         body.addProperty("threadId", threadId);
 
         try {
-            log.debug("Sending getStackFrames IPC request for threadId={}", threadId);
+            log.trace("Sending getStackFrames IPC request for threadId={}", threadId);
             IpcMessage response = sendCommandSync(IpcCommands.GET_STACK_FRAMES, body);
-            log.debug("Received getStackFrames IPC response");
+            log.trace("Received getStackFrames IPC response");
             return parseStackFrames(response.getBody());
         } catch (Exception e) {
             log.error("Failed to get stack frames", e);

@@ -2,16 +2,15 @@
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/j8d.karate-debug?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
 [![GitHub Release](https://img.shields.io/github/v/release/j8d/karate-debug?logo=github)](https://github.com/j8d/karate-debug/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A lightweight VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) tests. Set breakpoints directly in your `.feature` files, step through scenarios, inspect variables, and run tests with a single click.
+A powerfull VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) tests. Set breakpoints directly in your `.feature` files, step through scenarios including Java and JavaScript code, inspect variables, and run tests with a single click.
 
-> **This is a new extension!** Feature requests, bug reports, and any other feedback or contributions are welcome! Please open an issue on [GitHub](https://github.com/j8d/karate-debug/issues).
+> **This is a new extension!** Feature requests, bug reports, and any other feedback or contributions are welcome! Feel free to [Contact Me](https://www.karatedebug.com/?contact=general&ide=vscode).
 
 ## Features
 
-### Breakpoint Debugging
-Set breakpoints in your `.feature` files and step through your Karate tests line by line. Inspect variables, view request/response data, and understand exactly what's happening at each step.
+### Breakpoint Debugging for Karate, Java and JavaScript
+Debug Karate, Java and JavaScript code in the same debugging session. Set breakpoints in your `.feature` files, Java files and JavaScript files. Step through your Karate tests line by line. Inspect variables, view request/response data, and understand exactly what's happening at each step.
 
 ### Hot Reload Variables
 Modify variable values on-the-fly while paused at a breakpoint. Right-click any variable in the Variables panel and set a new value to test different scenarios without restarting your test.
@@ -28,8 +27,18 @@ Quickly switch between environments (`dev`, `qa`, `stage`, or your custom enviro
 ### Syntax Highlighting
 Full syntax highlighting for the Karate DSL, including Gherkin keywords, JSON/XML payloads, JavaScript expressions, and embedded variables.
 
-### Java Debugging Support
-For advanced scenarios, attach a Java debugger simultaneously to debug both your Karate features and underlying Java code.
+### File Navigation
+Clickable file references throughout your feature files. File paths appear as underlined links - Cmd+Click (Mac) or Ctrl+Click (Windows/Linux) to navigate directly to the referenced file or tag:
+- `classpath:path/to/file.feature` - Opens the referenced file
+- `read('path/to/file.json')` - Works with or without classpath: prefix
+- `read('@tagName')` - Jumps to a tag in the current file
+- `file.feature@tagName` - Opens the file and jumps to the specified tag
+
+### Log Breakpoints
+Pause execution when specific strings appear in log output. Useful for catching exceptions or specific error messages without setting traditional breakpoints - just specify strings like "NullPointerException" or "ERROR" to break on. Configure via the `karateDebug.logBreakpoints` setting.
+
+### Log Filtering
+Hide noisy log output by configuring exclude patterns. Filter out verbose framework messages (like HikariPool, Thymeleaf) to focus on what matters during debugging. Configure via the `karateDebug.logFilter.exclude` setting.
 
 ## Requirements
 
@@ -59,57 +68,37 @@ Configure the extension via VS Code Settings (`Cmd+,` or `Ctrl+,`):
 | `karateDebug.matchDiagnostics.showFailing` | Show red underlines for failing match statements | `true` |
 | `karateDebug.matchDiagnostics.showActualValues` | Show actual values and Fix button next to failing match statements | `true` |
 | `karateDebug.logLevel` | Log level for Karate Debug output (`error`, `warn`, `info`, `debug`, `trace`) | `"info"` |
-| `karateDebug.logFilter.exclude` | Array of strings - log lines containing any of these strings will be hidden from output | `[]` |
-| `karateDebug.logBreakpoints` | Array of strings - pause execution when any of these strings appear in log output (e.g., 'NullPointerException', 'ERROR') | `[]` |
+| `karateDebug.logFilter.exclude` | Array of strings - log lines containing any of these strings will be hidden from output | `["THYMELEAF"]` |
+| `karateDebug.logBreakpoints` | Array of strings - pause execution when any of these strings appear in log output | `[]` |
 
 ### Example `settings.json`
 
 ```json
 {
   "karateDebug.environments": ["local", "dev", "qa", "stage", "prod"],
-  "karateDebug.defaultEnvironment": "dev"
+  "karateDebug.defaultEnvironment": "dev",
+  "karateDebug.logFilter.exclude": ["THYMELEAF", "HikariPool", "PoolBase"],
+  "karateDebug.logBreakpoints": ["NullPointerException", "ERROR", "FATAL"]
 }
 ```
 
 ## Launch Configuration
 
-For advanced scenarios, create a `.vscode/launch.json` configuration. When you create a new launch configuration and select "Karate Debug", the extension provides ready-to-use templates.
+The extension automatically creates a default launch configuration when you first debug a feature file. For advanced scenarios, you can customize the `.vscode/launch.json` configuration.
 
-### Simultaneous Karate and Java Debugging
-
-Debug both your `.feature` files AND underlying Java code in the same session. This is useful when your Karate tests call custom Java helpers or when you need to debug into Karate's internals.
-
-**How it works:**
-1. Start the "1. Karate: Start with Java Debug" configuration
-2. While it's waiting, start "2. Java: Attach to Karate"
-3. Both debuggers are now active - set breakpoints in `.feature` files AND `.java` files
+### Default Configuration
 
 ```json
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "type": "karate",
-      "request": "launch",
-      "name": "1. Karate: Start with Java Debug",
-      "feature": "${file}",
-      "javaDebugPort": 5006
-    },
-    {
-      "type": "java",
-      "request": "attach",
-      "name": "2. Java: Attach to Karate",
-      "hostName": "localhost",
-      "port": 5006,
-      "timeout": 30000
-    },
-    {
-      "type": "karate",
-      "request": "launch",
-      "name": "Karate: Debug Feature Only",
-      "feature": "${file}"
-    }
-  ]
+  "type": "karate",
+  "request": "launch",
+  "name": "Karate: Debug",
+  "feature": "${file}",
+  "enableJavaDebugging": true,
+  "enableJsDebugging": true,
+  "skipJdkClasses": false,
+  "skipKarateFramework": false,
+  "skipKarateDependencies": false
 }
 ```
 
@@ -117,21 +106,17 @@ Debug both your `.feature` files AND underlying Java code in the same session. T
 
 | Property | Description | Default |
 |----------|-------------|---------|
-| `feature` | Path to the feature file (use `${file}` for current file) | (required) |
+| `feature` | Path to the feature file to debug (use `${file}` for current file) | (required) |
 | `karateEnv` | Karate environment (`karate.env` system property) | `"dev"` |
-| `javaDebugPort` | Port for Java debugger attachment (enables simultaneous Java/Karate debugging) | - |
-
-### Polyglot Debugging Options (Experimental)
-
-| Property | Description | Default |
-|----------|-------------|---------|
-| `enablePolyglotDebugging` | Enable unified polyglot debugging across Karate, JavaScript, and Java | `false` |
-| `enableJavaDebugging` | Enable Java debugging in polyglot mode | `false` |
-| `enableJsDebugging` | Enable JavaScript debugging in polyglot mode | `false` |
+| `karateOptions` | Additional Karate CLI options | `""` |
+| `enableJavaDebugging` | Enable Java debugging - set breakpoints in Java code and step through Java methods | `true` |
+| `enableJsDebugging` | Enable JavaScript debugging - set breakpoints in .js files and step through JavaScript functions | `true` |
+| `javaDebugPort` | Port for Java debugger (JDWP). When set, enables attaching an external Java debugger | `0` (auto) |
+| `jsDebugPort` | Port for JavaScript debugger (Chrome DevTools Protocol) | `0` (auto) |
 
 ### Step Filtering Options
 
-These options control which code is automatically skipped when stepping through Java code in polyglot mode:
+Control which code is automatically skipped when stepping through Java code:
 
 | Property | Description | Default |
 |----------|-------------|---------|
@@ -142,44 +127,25 @@ These options control which code is automatically skipped when stepping through 
 When step filtering is enabled, stepping into framework code will automatically step out and return to user code.
 
 - Set `skipKarateFramework` to `false` to step into Karate source code
-- Set `skipKarateDependencies` to `false` to also step through Karate's internal libraries (jsonpath, netty, etc.)
+- Set `skipKarateDependencies` to `false` to also step through Karate's internal libraries
 
-## Building from Source
+### Java Source Options
 
-```bash
-# Clone the repository
-git clone https://github.com/j8d/karate-debug.git
-cd karate-debug
+| Property | Description | Default |
+|----------|-------------|---------|
+| `javaSourcePaths` | Additional directories containing Java source files for inline variable display | `[]` |
+| `autoDetectJdkSources` | Automatically detect and use JDK source files (src.zip) from the Java installation | `true` |
 
-# Build the Java debug server
-cd debug-server && mvn clean package -q && cd ..
-
-# Install dependencies and compile
-npm install
-npm run compile
-
-# Package the extension
-npm run package
-
-# Install locally
-code --install-extension karate-debug-*.vsix
-```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a [Pull Request](https://github.com/j8d/karate-debug/pulls) or open an [Issue](https://github.com/j8d/karate-debug/issues).
+Contributions are welcome! Feel free to [Contact Me](https://www.karatedebug.com/?contact=general&ide=vscode).
 
-## Support the Project
-
-If this extension helps you, consider supporting my work:
-
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/_j8d)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This extension is proprietary software. See the [full license terms](https://www.karatedebug.com/license).
 
 ## Acknowledgments
 
-- [Karate](https://github.com/karatelabs/karate) - The powerful API testing framework
-- [VS Code Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/) - Debug adapter implementation
+- [Karate](https://github.com/karatelabs/karate) - My favorite automation testing framework

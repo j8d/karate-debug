@@ -49,6 +49,13 @@ public class DapOutputAppender extends AppenderBase<ILoggingEvent> {
             return;
         }
 
+        // Filter out TRACE level logs - they create a feedback loop when sent to Debug Console
+        // because sendMessage() logs at trace level, which triggers another send, and so on.
+        // Debug Console is for user-visible output, not internal trace logs.
+        if (event.getLevel() == Level.TRACE) {
+            return;
+        }
+
         String message = formatMessage(event);
         String coloredMessage = applyColor(message, event);
         String category = event.getLevel().isGreaterOrEqual(Level.ERROR) ? "stderr" : "stdout";

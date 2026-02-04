@@ -19,16 +19,20 @@ public class DebugServer {
     private final String workspaceRoot;
     private final String karateEnv;
     private final String classpath;
+    private final String logLevel;
     private final boolean polyglotMode;
+    private final String sourcePaths;  // Semicolon-separated list of source directories/archives
     private ServerSocket serverSocket;
     private volatile boolean running = false;
 
-    public DebugServer(int port, String workspaceRoot, String karateEnv, String classpath, boolean polyglotMode) {
+    public DebugServer(int port, String workspaceRoot, String karateEnv, String classpath, String logLevel, boolean polyglotMode, String sourcePaths) {
         this.port = port;
         this.workspaceRoot = workspaceRoot;
         this.karateEnv = karateEnv;
         this.classpath = classpath;
+        this.logLevel = logLevel;
         this.polyglotMode = polyglotMode;
+        this.sourcePaths = sourcePaths;
     }
 
     public void start() throws IOException {
@@ -49,7 +53,7 @@ public class DebugServer {
                 // Handle the debug session
                 boolean hadValidSession;
                 if (polyglotMode) {
-                    PolyglotDapSession session = new PolyglotDapSession(clientSocket, workspaceRoot, karateEnv, classpath);
+                    PolyglotDapSession session = new PolyglotDapSession(clientSocket, workspaceRoot, karateEnv, classpath, logLevel, sourcePaths);
                     hadValidSession = session.run();
                 } else {
                     DapSession session = new DapSession(clientSocket, workspaceRoot, karateEnv);
@@ -88,6 +92,7 @@ public class DebugServer {
         String karateEnv = "dev";
         String logLevel = "info";
         String classpath = null;
+        String sourcePaths = null;
         boolean polyglotMode = false;
 
         // Parse command line arguments
@@ -118,6 +123,11 @@ public class DebugServer {
                         classpath = args[++i];
                     }
                 }
+                case "--source-paths" -> {
+                    if (i + 1 < args.length) {
+                        sourcePaths = args[++i];
+                    }
+                }
                 case "--polyglot" -> {
                     polyglotMode = true;
                 }
@@ -146,7 +156,7 @@ public class DebugServer {
         }
 
         try {
-            DebugServer server = new DebugServer(port, workspaceRoot, karateEnv, classpath, polyglotMode);
+            DebugServer server = new DebugServer(port, workspaceRoot, karateEnv, classpath, logLevel, polyglotMode, sourcePaths);
 
             // Handle shutdown gracefully
             Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
@@ -193,6 +203,7 @@ public class DebugServer {
         System.out.println("  -e, --env <env>         Karate environment (default: dev)");
         System.out.println("  -l, --log-level <level> Log level: error, warn, info, debug, trace (default: info)");
         System.out.println("  -cp, --classpath <cp>   Classpath for child process (polyglot mode only)");
+        System.out.println("  --source-paths <paths>  Semicolon-separated list of Java source directories/archives");
         System.out.println("  --polyglot              Enable polyglot debugging (Karate + JS + Java)");
         System.out.println("  -h, --help              Show this help");
     }

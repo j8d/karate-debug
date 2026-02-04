@@ -29,6 +29,9 @@ public class ChildProcessConfig {
     private boolean skipKarateFramework = true;      // Skip com.intuit.karate.*
     private boolean skipKarateDependencies = true;   // Skip com.jayway.jsonpath.*, io.netty.*, etc.
 
+    // Additional source paths for inline variable display (semicolon-separated)
+    private String sourcePaths;
+
     // ========== Builder-style setters ==========
     
     public ChildProcessConfig workingDirectory(File dir) {
@@ -106,6 +109,11 @@ public class ChildProcessConfig {
         return this;
     }
 
+    public ChildProcessConfig sourcePaths(String paths) {
+        this.sourcePaths = paths;
+        return this;
+    }
+
     // ========== Getters ==========
     
     public File getWorkingDirectory() {
@@ -162,6 +170,10 @@ public class ChildProcessConfig {
 
     public boolean isSkipKarateDependencies() {
         return skipKarateDependencies;
+    }
+
+    public String getSourcePaths() {
+        return sourcePaths;
     }
 }
 

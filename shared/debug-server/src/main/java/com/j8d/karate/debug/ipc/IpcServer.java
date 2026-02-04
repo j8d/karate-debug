@@ -64,7 +64,7 @@ public class IpcServer {
         actualPort = serverSocket.getLocalPort();
         running = true;
         
-        log.info("IPC server started on port {}", actualPort);
+        log.debug("IPC server started on port {}", actualPort);
         
         // Start accept thread
         acceptThread = new Thread(this::acceptLoop, "IPC-Accept");
@@ -87,7 +87,7 @@ public class IpcServer {
         
         running = false;
         clientConnected = false;
-        log.info("Stopping IPC server");
+        log.debug("Stopping IPC server");
         
         try {
             if (clientSocket != null) clientSocket.close();
@@ -136,7 +136,9 @@ public class IpcServer {
             return;
         }
         log.debug("IPC TX queued [thread={}]: {}", Thread.currentThread().getName(), gson.toJson(message));
-        sendQueue.offer(message);
+        if (!sendQueue.offer(message)) {
+            log.error("Failed to enqueue IPC message, queue full; dropping message");
+        }
     }
 
     /**
@@ -144,7 +146,7 @@ public class IpcServer {
      * This runs on a dedicated thread to avoid socket contention.
      */
     private void senderLoop() {
-        log.info("IPC sender thread started");
+        log.debug("IPC sender thread started");
         try {
             while (running && clientConnected) {
                 // Use poll with timeout so we can log heartbeats and check loop conditions
@@ -152,13 +154,8 @@ public class IpcServer {
 
                 if (message == null) {
                     // Timeout - no message available, continue loop
-                    // Use trace level to avoid log noise
-                    log.trace("IPC sender heartbeat: queue size={}, running={}, clientConnected={}",
-                              sendQueue.size(), running, clientConnected);
                     continue;
                 }
-
-                log.info("IPC sender took message: seq={}, event={}", message.getSeq(), message.getEvent());
 
                 // Double-check we should still send (connection might have closed while waiting)
                 if (!running || !clientConnected) {
@@ -168,23 +165,20 @@ public class IpcServer {
 
                 String json = gson.toJson(message);
                 byte[] bytes = (json + "\n").getBytes(StandardCharsets.UTF_8);
-                log.info("IPC sender BEFORE write() for seq={}", message.getSeq());
                 clientSocket.getOutputStream().write(bytes);
-                log.info("IPC sender BEFORE flush() for seq={}", message.getSeq());
                 clientSocket.getOutputStream().flush();
-                log.info("IPC sender AFTER flush() for seq={}", message.getSeq());
-                log.debug("IPC TX sent [thread={}]: {}", Thread.currentThread().getName(), json);
+                log.trace("IPC TX: {}", json);
             }
-            log.warn("IPC sender loop exited: running={}, clientConnected={}", running, clientConnected);
+            log.debug("IPC sender loop exited: running={}, clientConnected={}", running, clientConnected);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.info("IPC sender thread interrupted");
+            log.debug("IPC sender thread interrupted");
         } catch (IOException e) {
             log.error("IPC sender IO error: {}", e.getMessage(), e);
         } catch (Exception e) {
             log.error("IPC sender unexpected error: {}", e.getMessage(), e);
         }
-        log.info("IPC sender thread ending, queue size={}", sendQueue.size());
+        log.debug("IPC sender thread ending, queue size={}", sendQueue.size());
     }
     
     private void sendResponse(int requestSeq, boolean success, JsonObject body) {
@@ -204,13 +198,13 @@ public class IpcServer {
      */
     private void acceptLoop() {
         try {
-            log.info("Waiting for parent connection...");
+            log.debug("Waiting for parent connection...");
             clientSocket = serverSocket.accept();
 
             reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8));
             clientConnected = true;
 
-            log.info("Parent connected from {}", clientSocket.getRemoteSocketAddress());
+            log.debug("Parent connected from {}", clientSocket.getRemoteSocketAddress());
 
             // Start sender thread (dedicated thread for writing to socket)
             senderThread = new Thread(this::senderLoop, "IPC-Sender");
@@ -237,7 +231,6 @@ public class IpcServer {
         try {
             String line;
             while (running && clientConnected) {
-                log.trace("IPC reader waiting for message...");
                 line = reader.readLine();
                 if (line == null) {
                     log.info("IPC reader got null (EOF)");
@@ -290,9 +283,7 @@ public class IpcServer {
         }
 
         try {
-            log.trace("IPC handleRequest START: seq={}, command={}, thread={}", seq, command, Thread.currentThread().getName());
             JsonObject result = handler.handleCommand(command, request.getBody());
-            log.trace("IPC handleRequest END: seq={}, command={}, thread={}", seq, command, Thread.currentThread().getName());
             sendResponse(seq, true, result);
         } catch (Exception e) {
             log.error("Error handling command: {}", command, e);

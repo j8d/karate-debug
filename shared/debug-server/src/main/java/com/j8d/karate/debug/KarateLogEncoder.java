@@ -36,9 +36,14 @@ public class KarateLogEncoder extends PatternLayoutEncoder {
         if (KARATE_LOGGER.equals(loggerName) && message != null
                 && !message.startsWith(PRINT_PREFIX)
                 && !isHttpLogMessage(message)) {
-            // This is karate.log() output - add the prefix
-            String prefixedMessage = KARATE_LOG_PREFIX + message + "\n";
-            return prefixedMessage.getBytes(StandardCharsets.UTF_8);
+            // This is karate.log() output - add the prefix to the message
+            // We need to create a modified event with the prefixed message
+            // For simplicity, we'll just modify the output after encoding
+            byte[] encoded = super.encode(event);
+            String output = new String(encoded, StandardCharsets.UTF_8);
+            // Replace the original message with prefixed version
+            output = output.replace(" - " + message, " - " + KARATE_LOG_PREFIX + message);
+            return output.getBytes(StandardCharsets.UTF_8);
         }
 
         // For all other messages, use the standard encoding

@@ -35,9 +35,9 @@ suite('Karate Debugger Extension Test Suite', () => {
 
         const commands = await vscode.commands.getCommands(true);
 
-        assert.ok(commands.includes('karateRunner.debugFeature'));
-        assert.ok(commands.includes('karateRunner.selectEnvironment'));
-        assert.ok(commands.includes('karateRunner.refreshFeatures'));
+        assert.ok(commands.includes('karateDebug.debugFeature'));
+        assert.ok(commands.includes('karateDebug.selectEnvironment'));
+        assert.ok(commands.includes('karateDebug.refreshFeatures'));
     });
 
     test('Should provide CodeLens for feature files', async () => {
