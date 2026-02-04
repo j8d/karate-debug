@@ -226,10 +226,11 @@ public class RunnerDebugger implements RuntimeHook {
 
     @Override
     public boolean beforeFeature(FeatureRuntime fr) {
-        log.info("beforeFeature: {} (suite.dryRun={}, suite.hooks.size={})",
+        log.info("beforeFeature: {} (suite.dryRun={}, suite.hooks.size={}, suite.isAborted={})",
             fr.featureCall.feature.getResource().getRelativePath(),
             fr.suite.dryRun,
-            fr.suite.hooks.size());
+            fr.suite.hooks.size(),
+            fr.suite.isAborted());
         // Log hook instances to verify this hook is in the list
         int idx = 0;
         for (com.intuit.karate.RuntimeHook h : fr.suite.hooks) {
@@ -254,8 +255,16 @@ public class RunnerDebugger implements RuntimeHook {
 
     @Override
     public void afterScenario(ScenarioRuntime sr) {
-        log.info("afterScenario CALLED: {} (dryRun={})",
-            sr.scenario.getName(), sr.dryRun);
+        // Log diagnostic info to understand why beforeScenario might have been skipped
+        log.info("afterScenario CALLED: {} (dryRun={}, stopped={}, engineAborted={})",
+            sr.scenario.getName(), sr.dryRun, sr.isStopped(),
+            sr.engine != null ? sr.engine.isAborted() : "null-engine");
+        // Check if suite was aborted
+        try {
+            log.info("afterScenario: suite.isAborted={}", sr.featureRuntime.suite.isAborted());
+        } catch (Exception e) {
+            log.info("afterScenario: could not check suite.isAborted: {}", e.getMessage());
+        }
     }
 
     @Override
