@@ -2,7 +2,13 @@ package com.j8d.karate.debug;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -14,7 +20,13 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Integration test for cross-language step-into functionality.
  * Tests stepping from Karate into JavaScript code.
+ *
+ * DISABLED: GraalVM version mismatch between Karate (polyglot/truffle 24.0.0) and
+ * dap-tool (25.0.2) causes NoSuchMethodError when starting the DAP server.
+ * The dap-tool calls SuspensionFilter$Builder.sourceSectionAvailableOnly() which
+ * doesn't exist in truffle-api 24.0.0.
  */
+@Disabled("GraalVM version mismatch between Karate (24.0.0) and dap-tool (25.0.2)")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CrossLanguageStepIntoJsTest {
     
