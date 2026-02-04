@@ -96,7 +96,26 @@ public class RunnerCommandHandler implements IpcServerHandler {
             // Store for later when debugger is created
             log.debug("Debugger not ready, storing {} breakpoints for later", breakpointsArray.size());
             pendingBreakpoints.put(filePath, breakpointsArray);
-            return new JsonObject();
+
+            // Return unverified breakpoints so the caller knows they were received
+            // They will be verified when the debugger starts
+            JsonArray result = new JsonArray();
+            for (int i = 0; i < breakpointsArray.size(); i++) {
+                JsonObject bp = breakpointsArray.get(i).getAsJsonObject();
+                int line = bp.get("line").getAsInt();
+
+                JsonObject unverified = new JsonObject();
+                unverified.addProperty("id", i + 1);
+                unverified.addProperty("verified", false);
+                unverified.addProperty("line", line);
+                unverified.addProperty("source", filePath);
+                unverified.addProperty("message", "Pending - waiting for execution to start");
+                result.add(unverified);
+            }
+
+            JsonObject response = new JsonObject();
+            response.add("breakpoints", result);
+            return response;
         }
     }
     
