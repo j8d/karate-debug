@@ -101,6 +101,7 @@ public class RunnerDebugger implements RuntimeHook {
                     pathSpec = classpathPath + ":" + featureLine;
                 }
                 log.debug("Starting Karate execution: {}", pathSpec);
+                log.debug("Hook instance: {}, breakpoints: {}", System.identityHashCode(this), breakpoints.keySet());
 
                 Results results = Runner.path(pathSpec)
                     .hook(this)
@@ -143,6 +144,7 @@ public class RunnerDebugger implements RuntimeHook {
      * Sets breakpoints in a file.
      */
     public JsonObject setBreakpoints(String filePath, JsonArray breakpointsArray) {
+        log.debug("setBreakpoints called on instance: {}", System.identityHashCode(this));
         Map<Integer, BreakpointInfo> breakpointMap = new ConcurrentHashMap<>();
         JsonArray result = new JsonArray();
 
