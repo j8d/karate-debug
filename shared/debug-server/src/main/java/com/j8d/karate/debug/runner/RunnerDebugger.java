@@ -268,6 +268,21 @@ public class RunnerDebugger implements RuntimeHook {
         } catch (Exception e) {
             log.info("afterScenario: could not check suite.isAborted: {}", e.getMessage());
         }
+        // Check step results to understand execution
+        try {
+            log.info("afterScenario: stepResults.size={}, scenario.getSteps().size={}",
+                sr.result.getStepResults().size(),
+                sr.scenario.getSteps().size());
+            // Log first step result if any
+            if (!sr.result.getStepResults().isEmpty()) {
+                var firstStep = sr.result.getStepResults().get(0);
+                log.info("afterScenario: firstStepResult={}, isFailed={}",
+                    firstStep.getStep() != null ? firstStep.getStep().getText() : "null-step",
+                    firstStep.isFailed());
+            }
+        } catch (Exception e) {
+            log.info("afterScenario: could not check steps: {}", e.getMessage());
+        }
     }
 
     @Override
