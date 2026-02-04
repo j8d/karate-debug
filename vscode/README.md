@@ -1,9 +1,9 @@
 # Karate Debug
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/j8d.karate-debug?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
-[![GitHub Release](https://img.shields.io/github/v/release/j8d/karate-debug?logo=github)](https://github.com/j8d/karate-debug/releases/latest)
+[![GitHub Release](https://img.shields.io/github/v/release/j8d-org/karate-debug?logo=github)](https://github.com/j8d-org/karate-debug/releases/latest)
 
-A powerfull VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) tests. Set breakpoints directly in your `.feature` files, step through scenarios including Java and JavaScript code, inspect variables, and run tests with a single click.
+A powerful VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) tests. Set breakpoints directly in your `.feature` files, step through scenarios including Java and JavaScript code, inspect variables, and run tests with a single click.
 
 > **This is a new extension!** Feature requests, bug reports, and any other feedback or contributions are welcome! Feel free to [Contact Me](https://www.karatedebug.com/?contact=general&ide=vscode).
 
@@ -120,9 +120,9 @@ Control which code is automatically skipped when stepping through Java code:
 
 | Property | Description | Default |
 |----------|-------------|---------|
-| `skipJdkClasses` | Skip JDK core classes (java.*, javax.*, jdk.*, sun.*, com.sun.*) when stepping | `true` |
-| `skipKarateFramework` | Skip Karate framework classes (com.intuit.karate.*) when stepping | `true` |
-| `skipKarateDependencies` | Skip Karate's third-party dependencies (jsonpath, netty, slf4j, etc.) when stepping | `true` |
+| `skipJdkClasses` | Skip JDK core classes (java.*, javax.*, jdk.*, sun.*, com.sun.*) when stepping | `false` |
+| `skipKarateFramework` | Skip Karate framework classes (com.intuit.karate.*) when stepping | `false` |
+| `skipKarateDependencies` | Skip Karate's third-party dependencies (jsonpath, netty, slf4j, etc.) when stepping | `false` |
 
 When step filtering is enabled, stepping into framework code will automatically step out and return to user code.
 

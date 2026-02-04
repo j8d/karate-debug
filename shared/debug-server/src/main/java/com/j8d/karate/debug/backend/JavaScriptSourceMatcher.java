@@ -28,10 +28,7 @@ public class JavaScriptSourceMatcher {
     
     // Content hash -> file path (for matching "Unnamed" sources to files)
     private final Map<String, Path> contentToPath = new ConcurrentHashMap<>();
-    
-    // File path -> content (for reverse lookup and verification)
-    private final Map<Path, String> pathToContent = new ConcurrentHashMap<>();
-    
+
     // sourceReference -> file path (runtime mapping from DAP)
     private final Map<Integer, Path> sourceRefToPath = new ConcurrentHashMap<>();
     
@@ -102,11 +99,10 @@ public class JavaScriptSourceMatcher {
         try {
             String content = Files.readString(file);
             Path normalizedPath = file.toAbsolutePath().normalize();
-            
+
             // Use content as key (exact match)
             contentToPath.put(content, normalizedPath);
-            pathToContent.put(normalizedPath, content);
-            
+
             log.trace("Indexed JS file: {} ({} chars)", normalizedPath, content.length());
         } catch (IOException e) {
             log.trace("Failed to read JS file: {}", file);
