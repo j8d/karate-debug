@@ -173,9 +173,10 @@ public class ChildProcessManager {
         cmd.addAll(config.getJvmArgs());
         
         // Add JDWP agent if Java debugging enabled
+        // Security: Bind to localhost only to prevent remote access to the debug port
         if (config.isJavaDebuggingEnabled()) {
             int port = config.getJdwpPort();
-            String portSpec = port > 0 ? String.valueOf(port) : "*:0";
+            String portSpec = port > 0 ? "localhost:" + port : "localhost:0";
             cmd.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=" + portSpec);
         }
 
