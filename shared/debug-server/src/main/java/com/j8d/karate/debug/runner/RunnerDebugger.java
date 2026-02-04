@@ -259,6 +259,9 @@ public class RunnerDebugger implements RuntimeHook {
         log.info("afterScenario CALLED: {} (dryRun={}, stopped={}, engineAborted={})",
             sr.scenario.getName(), sr.dryRun, sr.isStopped(),
             sr.engine != null ? sr.engine.isAborted() : "null-engine");
+        // Check scenario properties that could cause beforeScenario to be skipped
+        log.info("afterScenario: scenario.isDynamic={}, scenario.isOutlineExample={}",
+            sr.scenario.isDynamic(), sr.scenario.isOutlineExample());
         // Check if suite was aborted
         try {
             log.info("afterScenario: suite.isAborted={}", sr.featureRuntime.suite.isAborted());
