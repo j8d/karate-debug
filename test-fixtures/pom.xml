@@ -13,18 +13,20 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <karate.version>1.5.2</karate.version>
+        <!-- Using instrumented Karate fork for CI debugging -->
+        <karate.version>97b2aeecf</karate.version>
     </properties>
 
     <dependencies>
+        <!-- Karate Core - using instrumented fork from j8d-org for CI debugging -->
         <dependency>
-            <groupId>io.karatelabs</groupId>
+            <groupId>com.github.j8d-org.karate</groupId>
             <artifactId>karate-core</artifactId>
             <version>${karate.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.karatelabs</groupId>
+            <groupId>com.github.j8d-org.karate</groupId>
             <artifactId>karate-junit5</artifactId>
             <version>${karate.version}</version>
             <scope>test</scope>
@@ -48,6 +50,14 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <!-- JitPack repository for instrumented Karate fork -->
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <build>
         <testResources>
