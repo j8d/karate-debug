@@ -54,6 +54,11 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
     private final Gson gson;
     private final AtomicInteger sequenceNumber = new AtomicInteger(1);
 
+    // Global breakpoint ID counter - ensures unique IDs across all files
+    private final AtomicInteger nextBreakpointId = new AtomicInteger(1);
+    // Maps "filePath:line" to global breakpoint ID for consistent ID tracking
+    private final Map<String, Integer> breakpointIdMap = new ConcurrentHashMap<>();
+
     // Dedicated lock for message sending to avoid deadlock with DapOutputAppender
     // The problem: log.trace() -> DapOutputAppender -> sendMessage (synchronized on this)
     // If main thread is processing messages and holds 'this' lock, other threads block on logging
@@ -390,6 +395,11 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
 
         List<Breakpoint> breakpoints;
 
+        // VS Code sends ALL breakpoints for a file each time, so clear old mappings for this file
+        // and assign fresh global IDs to ensure consistency
+        final String sourcePathFinal = sourcePath;
+        breakpointIdMap.entrySet().removeIf(e -> e.getKey().startsWith(sourcePathFinal + ":"));
+
         // VS Code sends setBreakpoints after initialized event but before launch.
         // If coordinator doesn't exist yet, queue the breakpoints for later.
         if (coordinator == null) {
@@ -399,17 +409,27 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
                 preLaunchBreakpoints.removeIf(bp -> bp.filePath().equals(sourcePath));
                 preLaunchBreakpoints.add(new PreLaunchBreakpoints(sourcePath, new ArrayList<>(requests)));
             }
-            // Return unverified breakpoints - they'll be verified when coordinator is ready
+            // Return unverified breakpoints with globally unique IDs
             breakpoints = new ArrayList<>();
-            int id = 1;
             for (BreakpointRequest req : requests) {
-                breakpoints.add(Breakpoint.unverified(id++, req.line(), sourcePath, "Pending - waiting for debug session"));
+                String key = sourcePath + ":" + req.line();
+                int globalId = nextBreakpointId.getAndIncrement();
+                breakpointIdMap.put(key, globalId);
+                breakpoints.add(Breakpoint.unverified(globalId, req.line(), sourcePath, "Pending - waiting for debug session"));
             }
         } else {
-            breakpoints = coordinator.setBreakpoints(sourcePath, requests);
+            // Coordinator returns breakpoints with backend-local IDs - we need to assign global IDs
+            List<Breakpoint> backendBreakpoints = coordinator.setBreakpoints(sourcePath, requests);
+            breakpoints = new ArrayList<>();
+            for (Breakpoint bp : backendBreakpoints) {
+                String key = bp.source() + ":" + bp.line();
+                int globalId = nextBreakpointId.getAndIncrement();
+                breakpointIdMap.put(key, globalId);
+                breakpoints.add(new Breakpoint(globalId, bp.verified(), bp.line(), bp.source(), bp.message()));
+            }
         }
 
-        // Convert to DAP format
+        // Convert to DAP format - breakpoints already have global IDs
         JsonArray bpArray = new JsonArray();
         for (Breakpoint bp : breakpoints) {
             JsonObject bpObj = new JsonObject();
@@ -1250,19 +1270,29 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
 
     @Override
     public void onBreakpointResolved(Breakpoint breakpoint) {
+        // Look up the global ID we assigned when VS Code sent setBreakpoints
+        String key = breakpoint.source() + ":" + breakpoint.line();
+        Integer globalId = breakpointIdMap.get(key);
+
+        if (globalId == null) {
+            log.warn("No global ID found for breakpoint at {}:{}, using backend ID {}",
+                    breakpoint.source(), breakpoint.line(), breakpoint.id());
+            globalId = breakpoint.id();
+        }
+
         JsonObject body = new JsonObject();
         // DAP spec requires a 'reason' field: 'changed', 'new', or 'removed'
         body.addProperty("reason", "changed");
         JsonObject bp = new JsonObject();
-        bp.addProperty("id", breakpoint.id());
+        bp.addProperty("id", globalId);
         bp.addProperty("verified", breakpoint.verified());
         bp.addProperty("line", breakpoint.line());
         if (breakpoint.message() != null) {
             bp.addProperty("message", breakpoint.message());
         }
         body.add("breakpoint", bp);
-        log.debug("Sending breakpoint event: id={}, verified={}, line={}",
-                breakpoint.id(), breakpoint.verified(), breakpoint.line());
+        log.debug("Sending breakpoint event: id={}, verified={}, line={}, source={}",
+                globalId, breakpoint.verified(), breakpoint.line(), breakpoint.source());
         sendEvent("breakpoint", body);
     }
 }
