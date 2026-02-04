@@ -18,7 +18,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Using instrumented Karate fork for CI debugging -->
         <!-- Use commit hash for JitPack to ensure we get our instrumented version -->
-        <karate.version>97b2aeecf</karate.version>
+        <karate.version>eb256a408</karate.version>
         <!--
              GraalVM version for dap-tool dependency.
              Note: Karate 1.5.2 bundles GraalJS/polyglot 24.0.0, but we use dap-tool 25.0.2
