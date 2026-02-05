@@ -312,6 +312,32 @@ notification.addAction(new AnAction("Button Text") {
 ```
 
 
+## Prepare Release Workflow
+
+When the user says "prepare release", "prepare to release", or similar phrases, follow this workflow:
+
+### VS Code Release
+1. Create release branch from main: `git checkout -b release/vscode-X.Y.Z`
+2. Update version in `vscode/package.json`
+3. Update `vscode/CHANGELOG.md` with new version entry (use today's date)
+4. Commit with message: `Prepare VS Code vX.Y.Z release`
+5. Push branch: `git push origin release/vscode-X.Y.Z`
+6. Create PR: `gh pr create --repo j8d-org/karate-debug --base main --head release/vscode-X.Y.Z --title "Release VS Code vX.Y.Z"`
+
+### IntelliJ Release
+1. Create release branch from main: `git checkout -b release/intellij-X.Y.Z`
+2. Update version in `intellij/gradle.properties`
+3. Update `intellij/CHANGELOG.md` with new version entry
+4. Commit with message: `Prepare IntelliJ vX.Y.Z release`
+5. Push and create PR as above
+
+### Finding Changes for Changelog
+Use git log to find changes since the last release tag:
+```bash
+git log --oneline vscode-vX.Y.Z..origin/main  # For VS Code
+git log --oneline intellij-vX.Y.Z..origin/main  # For IntelliJ
+```
+
 ## GitHub API Access
 
 ### Rules

@@ -5,6 +5,20 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-02-05
+
+### Changed
+- Updated README badges: added Installs, Rating, JetBrains Plugin cross-promotion, Java 17+ requirement, and License badges
+- CI optimization: Skip plugin verification on PR builds (only run on main)
+- CI optimization: Reduced verified IDE versions from 4 to 2 for faster builds
+
+### Fixed
+- Fixed JetBrains plugin ID in README badge (29773 to 26605)
+- Fixed license URL consistency in README (now uses www.karatedebug.com/license)
+
+### Updated
+- Dependency updates: @types/node v24.10.11, junit-jupiter v6
+
 ## [0.7.0] - 2026-02-04
 
 ### Added
