@@ -3,7 +3,7 @@
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/j8d.karate-debug?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/j8d.karate-debug)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/j8d.karate-debug)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
-[![JetBrains Plugin](https://img.shields.io/jetbrains/plugin/v/26605?label=IntelliJ%20Plugin&logo=intellij-idea)](https://plugins.jetbrains.com/plugin/26605-karate-debug)
+[![JetBrains Plugin](https://img.shields.io/jetbrains/plugin/v/29773?label=IntelliJ%20Plugin&logo=intellij-idea)](https://plugins.jetbrains.com/plugin/29773-karate-debug)
 [![Java](https://img.shields.io/badge/Java-17%2B-orange?logo=openjdk)](https://openjdk.org/)
 [![License](https://img.shields.io/badge/License-Commercial-blue)](https://www.karatedebug.com/license)
 
