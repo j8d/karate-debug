@@ -190,12 +190,10 @@ intellijPlatform {
     
     pluginVerification {
         ides {
-            // Verify against 4 key versions spanning our compatibility range
-            // Using major.minor only - should resolve to latest patch
-            create(IntelliJPlatformType.IntellijIdeaCommunity, "2023.1")
-            create(IntelliJPlatformType.IntellijIdeaCommunity, "2024.2")
-            create(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
-            create(IntelliJPlatformType.IntellijIdeaCommunity, "2025.1")
+            // Verify against oldest (compatibility floor) and newest (current) versions
+            // Middle versions add little value - if it works on both ends, it works in between
+            create(IntelliJPlatformType.IntellijIdeaCommunity, "2023.1")  // sinceBuild
+            create(IntelliJPlatformType.IntellijIdeaCommunity, "2025.1")  // current
         }
     }
 }

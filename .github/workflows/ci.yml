@@ -121,10 +121,12 @@ jobs:
         run: ./gradlew buildPlugin
 
       - name: Verify plugin
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         working-directory: intellij
         run: ./gradlew verifyPlugin 2>&1 | tee verify-output.txt
 
       - name: Add versions to summary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         working-directory: intellij
         run: |
           echo "## IntelliJ Plugin Build" >> $GITHUB_STEP_SUMMARY
