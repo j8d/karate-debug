@@ -2,7 +2,7 @@
   "name": "karate-debug",
   "displayName": "Karate Debug",
   "description": "Debug Karate API tests with breakpoints, step-through debugging, and an integrated test explorer. Features CodeLens buttons, environment switching, and full Karate DSL syntax highlighting.",
-  "version": "0.6.12",
+  "version": "0.7.0",
   "publisher": "j8d",
   "author": {
     "name": "j8d"
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/j8d/karate-debug"
+    "url": "https://github.com/j8d-org/karate-debug"
   },
   "bugs": {
     "email": "ryan@karatedebug.com"
@@ -115,20 +115,47 @@
                 "description": "[Experimental] Port for JavaScript debugger (Chrome DevTools Protocol). When set, enables debugging of embedded JavaScript in Karate tests. Connect Chrome DevTools or VS Code JS debugger to this port.",
                 "default": 0
               },
-              "enablePolyglotDebugging": {
-                "type": "boolean",
-                "description": "[Experimental] Enable unified polyglot debugging across Karate, JavaScript, and Java in a single debug session.",
-                "default": false
-              },
               "enableJavaDebugging": {
                 "type": "boolean",
-                "description": "Enable Java debugging in polyglot mode. Only applies when enablePolyglotDebugging is true.",
+                "description": "[Experimental] Enable Java debugging. When enabled, you can set breakpoints in Java code and step through Java methods called from Karate tests.",
                 "default": false
               },
               "enableJsDebugging": {
                 "type": "boolean",
-                "description": "Enable JavaScript debugging in polyglot mode. Only applies when enablePolyglotDebugging is true.",
+                "description": "[Experimental] Enable JavaScript debugging. When enabled, you can set breakpoints in .js files and step through JavaScript functions called from Karate tests.",
                 "default": false
+              },
+              "skipJdkClasses": {
+                "type": "boolean",
+                "description": "Skip JDK core classes (java.*, javax.*, jdk.*, sun.*, com.sun.*) when stepping in Java code. When enabled, stepping will automatically exit framework code and return to user code.",
+                "default": true
+              },
+              "skipKarateFramework": {
+                "type": "boolean",
+                "description": "Skip Karate framework classes (com.intuit.karate.*) when stepping in Java code. Set to false to step into Karate source code for debugging.",
+                "default": true
+              },
+              "skipKarateDependencies": {
+                "type": "boolean",
+                "description": "Skip Karate's third-party dependencies (com.jayway.jsonpath.*, io.netty.*, org.slf4j.*, etc.) when stepping in Java code. Set to false to step through all library code that Karate uses internally.",
+                "default": true
+              },
+              "internalConsoleOptions": {
+                "type": "string",
+                "enum": ["neverOpen", "openOnFirstSessionStart", "openOnSessionStart"],
+                "description": "Controls when the Debug Console should open. Use 'neverOpen' to keep focus on the Output tab.",
+                "default": "neverOpen"
+              },
+              "javaSourcePaths": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Additional directories containing Java source files. Use this to enable inline variable display for JDK, Karate, or other library sources. Paths can be directories or .zip/.jar files containing sources.",
+                "default": []
+              },
+              "autoDetectJdkSources": {
+                "type": "boolean",
+                "description": "Automatically detect and use JDK source files (src.zip) from the Java installation. Enables inline variable display when stepping into JDK classes.",
+                "default": true
               }
             }
           }
@@ -160,7 +187,6 @@
             "request": "launch",
             "name": "Karate: Polyglot Debug (Karate + JS + Java)",
             "feature": "${file}",
-            "enablePolyglotDebugging": true,
             "enableJavaDebugging": true,
             "enableJsDebugging": true
           }
@@ -259,7 +285,7 @@
           "items": {
             "type": "string"
           },
-          "default": [],
+          "default": ["THYMELEAF"],
           "description": "Log lines containing any of these strings will be hidden from output."
         },
         "karateDebug.logBreakpoints": {

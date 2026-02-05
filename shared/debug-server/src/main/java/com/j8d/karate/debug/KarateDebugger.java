@@ -298,7 +298,7 @@ public class KarateDebugger implements RuntimeHook {
                     .backupReportDir(false)
                     .parallel(1);
 
-                logger.debug("Karate execution completed. Passed: {}, Failed: {}",
+                logger.info("Karate execution completed. Passed: {}, Failed: {}",
                     results.getScenariosPassed(), results.getScenariosFailed());
 
             } catch (Exception e) {

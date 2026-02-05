@@ -3,6 +3,7 @@ package com.j8d.karate.debug.runner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.j8d.karate.debug.ipc.IpcCommands;
 import com.j8d.karate.debug.ipc.IpcServerHandler;
@@ -26,7 +27,7 @@ public class RunnerCommandHandler implements IpcServerHandler {
     
     @Override
     public JsonObject handleCommand(String command, JsonObject body) throws Exception {
-        log.debug("Handling command: {} with body: {}", command, body);
+        log.trace("Handling command: {} with body: {}", command, body);
         
         return switch (command) {
             case IpcCommands.START -> handleStart(body);
@@ -49,37 +50,98 @@ public class RunnerCommandHandler implements IpcServerHandler {
         };
     }
     
+    // Store breakpoints that arrive before debugger is created
+    private final java.util.Map<String, JsonArray> pendingBreakpoints = new java.util.concurrent.ConcurrentHashMap<>();
+
     private JsonObject handleStart(JsonObject body) {
-        log.info("Starting Karate execution");
-        
+        log.debug("Starting Karate execution");
+
         // Create debugger and start execution
-        // This will be implemented when we refactor KarateDebugger
         debugger = new RunnerDebugger(runner);
+
+        // Apply any breakpoints that were set before debugger was created
+        if (!pendingBreakpoints.isEmpty()) {
+            log.debug("Applying {} pending breakpoint files", pendingBreakpoints.size());
+            for (java.util.Map.Entry<String, JsonArray> entry : pendingBreakpoints.entrySet()) {
+                String filePath = entry.getKey();
+                JsonArray breakpointsArray = entry.getValue();
+                log.debug("Applying pending breakpoints for: {}", filePath);
+                JsonObject result = debugger.setBreakpoints(filePath, breakpointsArray);
+
+                // Send breakpoint resolved events for each verified breakpoint
+                if (result != null && result.has("breakpoints")) {
+                    JsonArray verifiedBps = result.getAsJsonArray("breakpoints");
+                    for (int i = 0; i < verifiedBps.size(); i++) {
+                        JsonObject bp = verifiedBps.get(i).getAsJsonObject();
+                        if (bp.has("verified") && bp.get("verified").getAsBoolean()) {
+                            sendBreakpointResolvedEvent(bp);
+                        }
+                    }
+                }
+            }
+            pendingBreakpoints.clear();
+        }
+
         debugger.start();
-        
+
         return null; // Simple acknowledgment
     }
-    
+
+    private void sendBreakpointResolvedEvent(JsonObject bp) {
+        JsonObject eventBody = new JsonObject();
+        eventBody.addProperty("id", bp.get("id").getAsInt());
+        eventBody.addProperty("verified", true);
+        eventBody.addProperty("line", bp.get("line").getAsInt());
+        if (bp.has("source")) {
+            eventBody.addProperty("source", bp.get("source").getAsString());
+        }
+        runner.getIpcServer().sendEvent(com.j8d.karate.debug.ipc.IpcEvents.BREAKPOINT_RESOLVED, eventBody);
+        log.debug("Sent breakpoint resolved event for line {}", bp.get("line").getAsInt());
+    }
+
     private JsonObject handleStop(JsonObject body) {
         log.info("Stopping Karate execution");
-        
+
         if (debugger != null) {
             debugger.stop();
         }
         runner.shutdown();
-        
+
         return null;
     }
-    
+
     private JsonObject handleSetBreakpoints(JsonObject body) {
         String filePath = body.get("filePath").getAsString();
-        // breakpoints array will be parsed and set
-        log.debug("Setting breakpoints in: {}", filePath);
-        
+        JsonArray breakpointsArray = body.getAsJsonArray("breakpoints");
+        log.debug("Setting breakpoints in: {} (count: {})", filePath, breakpointsArray.size());
+
         if (debugger != null) {
-            return debugger.setBreakpoints(filePath, body.getAsJsonArray("breakpoints"));
+            return debugger.setBreakpoints(filePath, breakpointsArray);
+        } else {
+            // Store for later when debugger is created
+            log.debug("Debugger not ready, storing {} breakpoints for later", breakpointsArray.size());
+            pendingBreakpoints.put(filePath, breakpointsArray);
+
+            // Return unverified breakpoints so the caller knows they were received
+            // They will be verified when the debugger starts
+            JsonArray result = new JsonArray();
+            for (int i = 0; i < breakpointsArray.size(); i++) {
+                JsonObject bp = breakpointsArray.get(i).getAsJsonObject();
+                int line = bp.get("line").getAsInt();
+
+                JsonObject unverified = new JsonObject();
+                unverified.addProperty("id", i + 1);
+                unverified.addProperty("verified", false);
+                unverified.addProperty("line", line);
+                unverified.addProperty("source", filePath);
+                unverified.addProperty("message", "Pending - waiting for execution to start");
+                result.add(unverified);
+            }
+
+            JsonObject response = new JsonObject();
+            response.add("breakpoints", result);
+            return response;
         }
-        return new JsonObject();
     }
     
     private JsonObject handleResume(JsonObject body) {
@@ -94,8 +156,6 @@ public class RunnerCommandHandler implements IpcServerHandler {
     
     private JsonObject handleStepOver(JsonObject body) {
         int threadId = body.get("threadId").getAsInt();
-        log.debug("Step over on thread: {}", threadId);
-        
         if (debugger != null) {
             debugger.stepOver(threadId);
         }
@@ -104,18 +164,14 @@ public class RunnerCommandHandler implements IpcServerHandler {
     
     private JsonObject handleStepInto(JsonObject body) {
         int threadId = body.get("threadId").getAsInt();
-        log.debug("Step into on thread: {}", threadId);
-        
         if (debugger != null) {
             debugger.stepInto(threadId);
         }
         return null;
     }
-    
+
     private JsonObject handleStepOut(JsonObject body) {
         int threadId = body.get("threadId").getAsInt();
-        log.debug("Step out on thread: {}", threadId);
-        
         if (debugger != null) {
             debugger.stepOut(threadId);
         }

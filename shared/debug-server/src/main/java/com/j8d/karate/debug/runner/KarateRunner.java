@@ -8,6 +8,8 @@ import java.util.Scanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ch.qos.logback.classic.Level;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -46,13 +48,42 @@ public class KarateRunner {
     public static void main(String[] args) {
         KarateRunner runner = new KarateRunner();
         runner.parseArgs(args);
-        
+
+        // Apply log level before starting (must be done after parsing args)
+        setLogLevel(runner.logLevel);
+
         try {
             runner.start();
         } catch (Exception e) {
             log.error("Failed to start KarateRunner", e);
             System.exit(1);
         }
+    }
+
+    private static void setLogLevel(String levelName) {
+        Level level = switch (levelName.toLowerCase()) {
+            case "error" -> Level.ERROR;
+            case "warn" -> Level.WARN;
+            case "info" -> Level.INFO;
+            case "debug" -> Level.DEBUG;
+            case "trace" -> Level.TRACE;
+            default -> Level.INFO;
+        };
+
+        // Set ROOT logger level - this affects all loggers
+        ch.qos.logback.classic.Logger rootLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        rootLogger.setLevel(level);
+
+        // Set log level for our debug server classes
+        ch.qos.logback.classic.Logger debugLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.j8d.karate.debug");
+        debugLogger.setLevel(level);
+
+        // Set log level for Karate framework
+        ch.qos.logback.classic.Logger karateLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.intuit.karate");
+        karateLogger.setLevel(level);
     }
     
     private void parseArgs(String[] args) {
@@ -94,14 +125,14 @@ public class KarateRunner {
         System.out.println("IPC_PORT=" + ipcPort);
         System.out.flush();
         
-        log.info("IPC server started on port {}", ipcPort);
-        
+        log.debug("IPC server started on port {}", ipcPort);
+
         // Wait for parent to connect, then send ready event
         waitForConnectionAndSendReady();
-        
+
         // Keep running until stopped
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            log.info("Shutdown hook triggered");
+            log.debug("Shutdown hook triggered");
             ipcServer.stop();
         }));
         
@@ -151,7 +182,7 @@ public class KarateRunner {
             }
         }
         
-        log.info("Sending ready event: {}", body);
+        log.debug("Sending ready event: {}", body);
         ipcServer.sendEvent(IpcEvents.READY, body);
     }
     
@@ -177,14 +208,23 @@ public class KarateRunner {
     private int discoverJdwpPort() {
         // Check if JDWP agent is loaded by looking for the debug agent property
         String jdwpAddress = System.getProperty("sun.jdwp.listenerAddress");
+        log.debug("sun.jdwp.listenerAddress = {}", jdwpAddress);
+
         if (jdwpAddress != null && jdwpAddress.contains(":")) {
             try {
                 String portStr = jdwpAddress.substring(jdwpAddress.lastIndexOf(':') + 1);
-                return Integer.parseInt(portStr);
+                int port = Integer.parseInt(portStr);
+                log.debug("Discovered JDWP port: {}", port);
+                return port;
             } catch (NumberFormatException e) {
                 log.warn("Could not parse JDWP port from: {}", jdwpAddress);
             }
         }
+
+        // Fallback: check for JDWP in command line args
+        String javaCmd = System.getProperty("sun.java.command");
+        log.debug("sun.java.command = {}", javaCmd);
+
         return 0;
     }
 
@@ -193,7 +233,10 @@ public class KarateRunner {
      */
     private CdpInfo discoverCdpInfo() {
         String inspectProp = System.getProperty("polyglot.inspect");
+        log.debug("polyglot.inspect = {}", inspectProp);
+
         if (inspectProp == null) {
+            log.debug("Chrome Inspector not enabled (polyglot.inspect not set)");
             return null;
         }
 
@@ -205,6 +248,18 @@ public class KarateRunner {
             port = 9229;
         }
 
+        // Port 0 means dynamic port - we need to discover it
+        if (port == 0) {
+            log.debug("Chrome Inspector using dynamic port, attempting discovery...");
+            // Try common ports or wait for inspector to start
+            // For now, we can't easily discover the dynamic port
+            // The inspector binds to a random port but doesn't expose it via system property
+            log.warn("Dynamic Chrome Inspector port (0) not yet supported for discovery");
+            return null;
+        }
+
+        log.debug("Querying Chrome Inspector at port {}", port);
+
         // Query the inspector's /json endpoint
         try {
             URL url = new URL("http://127.0.0.1:" + port + "/json");
@@ -212,9 +267,13 @@ public class KarateRunner {
             conn.setConnectTimeout(1000);
             conn.setReadTimeout(1000);
 
-            if (conn.getResponseCode() == 200) {
+            int responseCode = conn.getResponseCode();
+            log.debug("Chrome Inspector /json response code: {}", responseCode);
+
+            if (responseCode == 200) {
                 try (Scanner scanner = new Scanner(conn.getInputStream())) {
                     String json = scanner.useDelimiter("\\A").next();
+                    log.debug("Chrome Inspector /json response: {}", json);
                     JsonArray targets = gson.fromJson(json, JsonArray.class);
 
                     if (targets.size() > 0) {
@@ -228,12 +287,13 @@ public class KarateRunner {
                             ? target.get("description").getAsString()
                             : null;
 
+                        log.debug("Discovered CDP: port={}, wsUrl={}", port, wsUrl);
                         return new CdpInfo(port, wsUrl, description);
                     }
                 }
             }
         } catch (Exception e) {
-            log.debug("Could not discover CDP info: {}", e.getMessage());
+            log.warn("Could not discover CDP info: {}", e.getMessage());
         }
 
         return null;

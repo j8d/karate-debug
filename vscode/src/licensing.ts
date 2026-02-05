@@ -353,11 +353,13 @@ export class LicenseManager {
 
         await this.context.globalState.update('userId', undefined);
         await this.context.globalState.update('githubUsername', undefined);
-        await this.context.globalState.update('trialStartTimestamp', undefined);
+        // Note: Don't clear trialStartTimestamp - we want to preserve local trial tracking
 
-        this.currentStatus = { isValid: false, status: 'none' };
-        this.updateStatusBar(this.currentStatus);
         vscode.window.showInformationMessage('Logged out of Karate Debug');
+
+        // Re-check anonymous trial status after logout
+        // This ensures the status bar shows correct trial/expired state instead of 'none'
+        await this.startOrCheckAnonymousTrial();
     }
 
     async validateLicense(): Promise<LicenseStatus> {
@@ -601,15 +603,18 @@ export class LicenseManager {
 
     async showTrialExpiredMessage(): Promise<void> {
         const action = await vscode.window.showErrorMessage(
-            'Your Karate Debug trial has expired. Please purchase a license to continue.',
+            'Your Karate Debug trial has expired. Please purchase a license or sign in if you already have one.',
             'Purchase License',
-            'Learn More'
+            'Sign In',
+            'Contact Developer'
         );
 
         if (action === 'Purchase License') {
             await this.startCheckout();
-        } else if (action === 'Learn More') {
-            vscode.env.openExternal(vscode.Uri.parse('https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug'));
+        } else if (action === 'Sign In') {
+            await this.login();
+        } else if (action === 'Contact Developer') {
+            vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?contact=general&ide=vscode'));
         }
     }
 

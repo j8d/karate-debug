@@ -16,17 +16,28 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <karate.version>1.5.2</karate.version>
+        <!-- Using Karate fork with GraalVM 25.0.2 for compatibility with chromeinspector/dap-tool -->
+        <!-- See docs/KARATE-FORK-STRATEGY.md for details -->
+        <karate.version>v1.5.2-j8d.1</karate.version>
+        <!--
+             GraalVM version for dap-tool dependency.
+             Note: Karate 1.5.2 bundles GraalJS/polyglot 24.0.0, but we use dap-tool 25.0.2
+             because it's the latest available version with the DAP server implementation.
+             This version mismatch means we cannot use dap-tool's DAP server directly with
+             Karate's polyglot engine (causes NoSuchMethodError). Instead, we use dap-tool
+             only for bundling/availability purposes, while actual JS debugging is done via
+             Chrome DevTools Protocol (CDP) with Karate's built-in GraalJS engine.
+             See CrossLanguageStepIntoJsTest.java and GraalDapSourceTest.java for details.
+        -->
         <graalvm.version>25.0.2</graalvm.version>
     </properties>
 
     <dependencies>
-        <!-- Karate Core - provided scope since project will supply it -->
+        <!-- Karate Core - using instrumented fork from j8d-org for CI debugging -->
         <dependency>
-            <groupId>io.karatelabs</groupId>
+            <groupId>com.github.j8d-org.karate</groupId>
             <artifactId>karate-core</artifactId>
             <version>${karate.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- JSON processing for DAP messages - included in JAR -->
@@ -36,12 +47,11 @@
             <version>2.13.2</version>
         </dependency>
 
-        <!-- Logging - provided scope since project will supply it -->
+        <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>2.0.17</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- Logback - needed for DapOutputAppender which extends AppenderBase -->
@@ -61,13 +71,44 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- GraalVM DAP Tool - enables JavaScript debugging via Debug Adapter Protocol -->
+        <!-- Bundled in the debug server JAR so it's available when spawning child processes -->
+        <dependency>
+            <groupId>org.graalvm.tools</groupId>
+            <artifactId>dap-tool</artifactId>
+            <version>${graalvm.version}</version>
+        </dependency>
+
         <!-- WebSocket client for Chrome DevTools Protocol (CDP) communication -->
         <dependency>
             <groupId>org.java-websocket</groupId>
             <artifactId>Java-WebSocket</artifactId>
             <version>1.6.0</version>
         </dependency>
+
+        <!-- CFR Decompiler - for decompiling Java bytecode on-the-fly -->
+        <dependency>
+            <groupId>org.benf</groupId>
+            <artifactId>cfr</artifactId>
+            <version>0.152</version>
+        </dependency>
+
+        <!-- JUnit 5 for testing -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <!-- JitPack repository for instrumented Karate fork -->
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>
@@ -97,6 +138,11 @@
                                 <includes>
                                     <include>com.google.code.gson:gson</include>
                                     <include>org.java-websocket:Java-WebSocket</include>
+                                    <include>org.benf:cfr</include>
+                                    <!-- GraalVM DAP tool and its dependencies for JS debugging -->
+                                    <include>org.graalvm.tools:dap-tool</include>
+                                    <include>org.graalvm.truffle:truffle-dsl-processor</include>
+                                    <include>org.graalvm.shadowed:json</include>
                                 </includes>
                             </artifactSet>
                             <transformers>
@@ -108,6 +154,13 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- Surefire for JUnit 5 tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
             </plugin>
         </plugins>
     </build>

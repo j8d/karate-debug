@@ -14,6 +14,8 @@ import com.j8d.karate.debug.backend.Breakpoint;
 import com.j8d.karate.debug.backend.BreakpointRequest;
 import com.j8d.karate.debug.backend.DebugBackend;
 import com.j8d.karate.debug.backend.DebugBackend.BackendType;
+import com.j8d.karate.debug.backend.JavaBackend;
+import com.j8d.karate.debug.backend.JavaScriptBackend;
 import com.j8d.karate.debug.backend.EvaluateResult;
 import com.j8d.karate.debug.backend.Scope;
 import com.j8d.karate.debug.backend.SetVariableResult;
@@ -51,6 +53,16 @@ public class DapMultiplexer implements BackendEventListener {
     private volatile boolean started = false;
     private volatile BackendType stoppedBackend = null;
     private volatile int stoppedThreadId = -1;
+
+    // Track when we're stepping in a non-Karate backend
+    // Used to suppress Karate's stopped event when Java/JS step completes
+    private volatile BackendType steppingInBackend = null;
+
+    // Track when we're in cross-language step mode (step from Karate into Java/JS)
+    // This is different from just stepping within Java - in cross-language mode,
+    // we want to suppress Karate's stopped event. When stepping within Java and
+    // the step exits to framework code, we should NOT suppress Karate's event.
+    private volatile boolean crossLanguageStepMode = false;
     
     /**
      * Creates a new DapMultiplexer.
@@ -70,7 +82,7 @@ public class DapMultiplexer implements BackendEventListener {
             throw new IllegalStateException("Backend already registered for type: " + type);
         }
         
-        log.info("Registering backend: {}", type);
+        log.trace("Registering backend: {}", type);
         backends.put(type, backend);
         backend.initialize(this);
     }
@@ -108,13 +120,13 @@ public class DapMultiplexer implements BackendEventListener {
             return;
         }
         
-        log.info("Starting DapMultiplexer with {} backends", backends.size());
-        
+        log.trace("Starting DapMultiplexer with {} backends", backends.size());
+
         // Start backends in order for proper coordination
         for (BackendType type : BackendType.values()) {
             DebugBackend backend = backends.get(type);
             if (backend != null) {
-                log.info("Starting backend: {}", type);
+                log.trace("Starting backend: {}", type);
                 backend.start();
             }
         }
@@ -130,14 +142,14 @@ public class DapMultiplexer implements BackendEventListener {
             return;
         }
         
-        log.info("Stopping DapMultiplexer");
-        
+        log.trace("Stopping DapMultiplexer");
+
         // Stop backends in reverse order
         BackendType[] types = BackendType.values();
         for (int i = types.length - 1; i >= 0; i--) {
             DebugBackend backend = backends.get(types[i]);
             if (backend != null) {
-                log.info("Stopping backend: {}", types[i]);
+                log.trace("Stopping backend: {}", types[i]);
                 backend.stop();
             }
         }
@@ -214,7 +226,7 @@ public class DapMultiplexer implements BackendEventListener {
             return result;
         }
 
-        log.debug("Routing setBreakpoints to {}: {} breakpoints in {}",
+        log.trace("Routing setBreakpoints to {}: {} breakpoints in {}",
             type, breakpoints.size(), filePath);
 
         List<Breakpoint> result = backend.setBreakpoints(filePath, breakpoints);
@@ -295,43 +307,134 @@ public class DapMultiplexer implements BackendEventListener {
         ThreadRef ref = toLocalThreadId(globalThreadId);
         DebugBackend backend = backends.get(ref.type());
         if (backend != null) {
-            log.debug("Resume on {} thread {}", ref.type(), ref.localId());
+            log.trace("Resume on {} thread {}", ref.type(), ref.localId());
             backend.resume(ref.localId());
         }
     }
 
     /**
      * Steps over on the specified global thread.
+     * If Karate is blocked (stopped in Java/JS), redirects to the stopped backend.
      */
     public void stepOver(int globalThreadId) {
         ThreadRef ref = toLocalThreadId(globalThreadId);
+
+        // If requesting step on Karate but we're stopped in Java/JS, redirect to stopped backend
+        if (ref.type() == BackendType.KARATE && stoppedBackend != null && stoppedBackend != BackendType.KARATE) {
+            log.trace("Redirecting step over from Karate to stopped backend {}", stoppedBackend);
+            DebugBackend stoppedBackendInstance = backends.get(stoppedBackend);
+            if (stoppedBackendInstance != null) {
+                int localThreadId = IdRange.threadsFor(stoppedBackend).toLocal(stoppedThreadId);
+                steppingInBackend = stoppedBackend; // Track that we're stepping in this backend
+                stoppedBackend = null; // Clear so next stopped event is not suppressed as duplicate
+                stoppedBackendInstance.stepOver(localThreadId);
+                return;
+            }
+        }
+
         DebugBackend backend = backends.get(ref.type());
         if (backend != null) {
-            log.debug("Step over on {} thread {}", ref.type(), ref.localId());
+            log.trace("Step over on {} thread {}", ref.type(), ref.localId());
+            if (ref.type() != BackendType.KARATE) {
+                steppingInBackend = ref.type(); // Track that we're stepping in this backend
+            }
+            stoppedBackend = null; // Clear so next stopped event is not suppressed as duplicate
             backend.stepOver(ref.localId());
         }
     }
 
     /**
      * Steps into on the specified global thread.
+     * For cross-language step-into from Karate, enables Java method entry and JS script entry catching.
      */
     public void stepInto(int globalThreadId) {
         ThreadRef ref = toLocalThreadId(globalThreadId);
-        DebugBackend backend = backends.get(ref.type());
-        if (backend != null) {
-            log.debug("Step into on {} thread {}", ref.type(), ref.localId());
-            backend.stepInto(ref.localId());
+
+        // If requesting step on Karate but we're stopped in Java/JS, redirect to stopped backend
+        // Karate is blocked waiting for the Java/JS call to complete
+        if (ref.type() == BackendType.KARATE && stoppedBackend != null && stoppedBackend != BackendType.KARATE) {
+            log.trace("Redirecting step from Karate to stopped backend {}", stoppedBackend);
+            DebugBackend stoppedBackendInstance = backends.get(stoppedBackend);
+            if (stoppedBackendInstance != null) {
+                int localThreadId = IdRange.threadsFor(stoppedBackend).toLocal(stoppedThreadId);
+                steppingInBackend = stoppedBackend; // Track that we're stepping in this backend
+                stoppedBackend = null; // Clear so next stopped event is not suppressed as duplicate
+                stoppedBackendInstance.stepInto(localThreadId);
+                return;
+            }
         }
+
+        DebugBackend backend = backends.get(ref.type());
+
+        if (backend == null) {
+            log.warn("No backend for thread {}", globalThreadId);
+            return;
+        }
+
+        // If stepping from Karate, enable entry catching for both Java and JavaScript
+        // This allows us to catch when Karate calls into user code in either language
+        if (ref.type() == BackendType.KARATE) {
+            boolean enabledAnyCatching = false;
+
+            // Enable Java method entry catching if Java backend exists
+            if (backends.containsKey(BackendType.JAVA)) {
+                JavaBackend javaBackend = (JavaBackend) backends.get(BackendType.JAVA);
+                javaBackend.enableMethodEntry();
+                log.trace("Enabled Java method entry for cross-language step-into");
+                enabledAnyCatching = true;
+            }
+
+            // Enable JavaScript script entry catching if JS backend exists
+            if (backends.containsKey(BackendType.JAVASCRIPT)) {
+                JavaScriptBackend jsBackend = (JavaScriptBackend) backends.get(BackendType.JAVASCRIPT);
+                jsBackend.enableScriptEntry();
+                log.trace("Enabled JavaScript script entry for cross-language step-into");
+                enabledAnyCatching = true;
+            }
+
+            if (enabledAnyCatching) {
+                // We'll catch whichever language gets entered first
+                // steppingInBackend will be set when onStopped is called
+                crossLanguageStepMode = true;
+            }
+        } else {
+            steppingInBackend = ref.type(); // Track that we're stepping in this backend
+            // NOT cross-language mode - this is stepping within Java/JS
+            crossLanguageStepMode = false;
+        }
+
+        stoppedBackend = null; // Clear so next stopped event is not suppressed as duplicate
+        log.trace("Step into on {} thread {}", ref.type(), ref.localId());
+        backend.stepInto(ref.localId());
     }
 
     /**
      * Steps out on the specified global thread.
+     * If Karate is blocked (stopped in Java/JS), redirects to the stopped backend.
      */
     public void stepOut(int globalThreadId) {
         ThreadRef ref = toLocalThreadId(globalThreadId);
+
+        // If requesting step on Karate but we're stopped in Java/JS, redirect to stopped backend
+        if (ref.type() == BackendType.KARATE && stoppedBackend != null && stoppedBackend != BackendType.KARATE) {
+            log.trace("Redirecting step out from Karate to stopped backend {}", stoppedBackend);
+            DebugBackend stoppedBackendInstance = backends.get(stoppedBackend);
+            if (stoppedBackendInstance != null) {
+                int localThreadId = IdRange.threadsFor(stoppedBackend).toLocal(stoppedThreadId);
+                steppingInBackend = stoppedBackend; // Track that we're stepping in this backend
+                stoppedBackend = null; // Clear so next stopped event is not suppressed as duplicate
+                stoppedBackendInstance.stepOut(localThreadId);
+                return;
+            }
+        }
+
         DebugBackend backend = backends.get(ref.type());
         if (backend != null) {
-            log.debug("Step out on {} thread {}", ref.type(), ref.localId());
+            log.trace("Step out on {} thread {}", ref.type(), ref.localId());
+            if (ref.type() != BackendType.KARATE) {
+                steppingInBackend = ref.type(); // Track that we're stepping in this backend
+            }
+            stoppedBackend = null; // Clear so next stopped event is not suppressed as duplicate
             backend.stepOut(ref.localId());
         }
     }
@@ -343,7 +446,7 @@ public class DapMultiplexer implements BackendEventListener {
         ThreadRef ref = toLocalThreadId(globalThreadId);
         DebugBackend backend = backends.get(ref.type());
         if (backend != null) {
-            log.debug("Pause on {} thread {}", ref.type(), ref.localId());
+            log.trace("Pause on {} thread {}", ref.type(), ref.localId());
             backend.pause(ref.localId());
         }
     }
@@ -353,15 +456,32 @@ public class DapMultiplexer implements BackendEventListener {
     /**
      * Gets stack frames for a global thread ID.
      * Maps local frame IDs to global IDs in the returned frames.
+     *
+     * When stopped in a non-Karate backend (Java/JS), Karate is blocked waiting
+     * for the call to complete. In this case, we return empty frames for Karate
+     * to avoid timeout errors.
      */
     public List<StackFrame> getStackFrames(int globalThreadId) {
         ThreadRef ref = toLocalThreadId(globalThreadId);
+        log.trace("getStackFrames: globalThreadId={}, backend={}, localId={}", globalThreadId, ref.type(), ref.localId());
         DebugBackend backend = backends.get(ref.type());
         if (backend == null) {
+            log.trace("getStackFrames: no backend for type {}", ref.type());
+            return List.of();
+        }
+
+        // If requesting Karate frames but we're stopped in Java/JS, Karate is blocked
+        // and can't respond to IPC. Return empty frames to avoid timeout.
+        if (ref.type() == BackendType.KARATE && stoppedBackend != null && stoppedBackend != BackendType.KARATE) {
+            log.trace("Karate is blocked (stopped in {}), returning empty frames for thread {}", stoppedBackend, globalThreadId);
             return List.of();
         }
 
         List<StackFrame> localFrames = backend.getStackFrames(ref.localId());
+        log.trace("getStackFrames: got {} frames from backend {}", localFrames.size(), ref.type());
+        for (StackFrame frame : localFrames) {
+            log.trace("  Frame: id={}, name={}, source={}, line={}", frame.id(), frame.name(), frame.sourcePath(), frame.line());
+        }
         return mapFramesToGlobal(ref.type(), localFrames);
     }
 
@@ -389,7 +509,7 @@ public class DapMultiplexer implements BackendEventListener {
                         allFrames.addAll(mapFramesToGlobal(type, frames));
                     }
                 } catch (Exception e) {
-                    log.debug("Could not get frames from {}: {}", type, e.getMessage());
+                    log.trace("Could not get frames from {}: {}", type, e.getMessage());
                 }
             }
         }
@@ -475,7 +595,17 @@ public class DapMultiplexer implements BackendEventListener {
      * Evaluates an expression in the context of a global frame ID.
      */
     public EvaluateResult evaluate(int globalFrameId, String expression, String context) {
-        FrameRef ref = toLocalFrameId(globalFrameId);
+        // Handle frame ID 0 (used by VS Code for watch expressions without specific frame context)
+        // Default to the currently stopped backend, or Karate if none stopped
+        FrameRef ref;
+        if (globalFrameId == 0) {
+            BackendType type = stoppedBackend != null ? stoppedBackend : BackendType.KARATE;
+            ref = new FrameRef(type, 0);
+            log.trace("Evaluate with frameId=0, stoppedBackend={}, using backend {}", stoppedBackend, type);
+        } else {
+            ref = toLocalFrameId(globalFrameId);
+        }
+
         DebugBackend backend = backends.get(ref.type());
         if (backend == null) {
             return EvaluateResult.error("No backend for frame");
@@ -524,12 +654,83 @@ public class DapMultiplexer implements BackendEventListener {
         BackendType type = backend.getType();
         int globalThreadId = toGlobalThreadId(type, localThreadId);
 
-        log.debug("Backend {} stopped: thread={}, reason={}", type, globalThreadId, reason);
+        log.trace("Backend {} stopped: thread={}, reason={}, steppingInBackend={}, stoppedBackend={}",
+                  type, globalThreadId, reason, steppingInBackend, stoppedBackend);
+
+        // If Karate reports stopped while we're waiting for Java (cross-language step mode),
+        // it means the call completed WITHOUT entering user Java code. This happens when:
+        // 1. The call was to JavaScript (GraalJS doesn't trigger Java method entry)
+        // 2. The call was to framework-only Java code (filtered out by method entry filter)
+        // In either case, forward the Karate stopped event and clean up.
+        if (type == BackendType.KARATE && steppingInBackend != null && steppingInBackend != BackendType.KARATE) {
+            log.trace("Karate stopped while waiting for {} - call did not enter user {} code, forwarding Karate event",
+                      steppingInBackend, steppingInBackend);
+            steppingInBackend = null;
+            crossLanguageStepMode = false;
+
+            // Disable entry catching and cancel any pending steps
+            if (backends.containsKey(BackendType.JAVA)) {
+                JavaBackend javaBackend = (JavaBackend) backends.get(BackendType.JAVA);
+                javaBackend.disableMethodEntry();
+                javaBackend.cancelAllSteps();
+            }
+            if (backends.containsKey(BackendType.JAVASCRIPT)) {
+                JavaScriptBackend jsBackend = (JavaScriptBackend) backends.get(BackendType.JAVASCRIPT);
+                jsBackend.disableScriptEntry();
+            }
+            // Fall through to forward the Karate stopped event
+        }
+
+        // If we're already stopped in this backend, suppress duplicate stopped events
+        // This can happen when both method entry and breakpoint fire at the same location
+        if (stoppedBackend == type) {
+            log.trace("Suppressing duplicate stopped event for backend {}", type);
+            return;
+        }
+
+        // Clear the stepping flag when the target backend stops
+        if (type == steppingInBackend) {
+            steppingInBackend = null;
+            crossLanguageStepMode = false; // Cross-language step completed
+        }
+
+        // Disable entry catching if it was enabled (cross-language step cleanup)
+        if (backends.containsKey(BackendType.JAVA)) {
+            JavaBackend javaBackend = (JavaBackend) backends.get(BackendType.JAVA);
+            javaBackend.disableMethodEntry();
+        }
+        if (backends.containsKey(BackendType.JAVASCRIPT)) {
+            JavaScriptBackend jsBackend = (JavaScriptBackend) backends.get(BackendType.JAVASCRIPT);
+            jsBackend.disableScriptEntry();
+        }
 
         stoppedBackend = type;
         stoppedThreadId = globalThreadId;
 
         if (eventListener != null) {
+            log.trace("Forwarding stopped event to VS Code: thread={}, reason={}, backend={}",
+                     globalThreadId, reason, type);
+
+            // Log user-friendly stopped message
+            if (description != null && !description.isEmpty()) {
+                if ("breakpoint".equals(reason)) {
+                    log.info("Stopped at breakpoint in {}", description);
+                } else if ("step".equals(reason)) {
+                    log.info("Paused at {}", description);
+                } else {
+                    log.info("Stopped at {}", description);
+                }
+            } else {
+                // Fallback when description is not available
+                if ("breakpoint".equals(reason)) {
+                    log.info("Stopped at breakpoint ({})", type);
+                } else if ("step".equals(reason)) {
+                    log.info("Paused ({})", type);
+                } else {
+                    log.info("Stopped: {} ({})", reason, type);
+                }
+            }
+
             eventListener.onStopped(globalThreadId, reason, description);
         }
     }
@@ -539,7 +740,7 @@ public class DapMultiplexer implements BackendEventListener {
         BackendType type = backend.getType();
         int globalThreadId = toGlobalThreadId(type, localThreadId);
 
-        log.debug("Backend {} continued: thread={}", type, globalThreadId);
+        log.trace("Backend {} continued: thread={}", type, globalThreadId);
 
         if (stoppedBackend == type) {
             stoppedBackend = null;
@@ -554,9 +755,19 @@ public class DapMultiplexer implements BackendEventListener {
     @Override
     public void onTerminated(DebugBackend backend) {
         BackendType type = backend.getType();
-        log.info("Backend {} terminated", type);
+        log.trace("Backend {} terminated", type);
 
-        // Check if all backends have terminated
+        // Karate is the main execution driver - when it terminates, end the session.
+        // Java and JS backends are only active while Karate is running.
+        if (type == BackendType.KARATE) {
+            log.info("Karate backend terminated - ending debug session");
+            if (eventListener != null) {
+                eventListener.onTerminated();
+            }
+            return;
+        }
+
+        // For non-Karate backends, check if all backends have terminated
         boolean allTerminated = true;
         for (DebugBackend b : backends.values()) {
             if (b.isReady()) {

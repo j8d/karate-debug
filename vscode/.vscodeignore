@@ -28,6 +28,7 @@ node_modules/**
 !node_modules/@vscode/debugadapter/**
 !node_modules/@vscode/debugprotocol/**
 !node_modules/vscode-languageclient/**
+!node_modules/ws/**
 
 # Package files
 *.vsix

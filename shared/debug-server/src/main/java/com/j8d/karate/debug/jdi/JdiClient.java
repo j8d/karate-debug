@@ -24,6 +24,7 @@ import com.sun.jdi.event.Event;
 import com.sun.jdi.event.EventQueue;
 import com.sun.jdi.event.EventSet;
 import com.sun.jdi.event.ExceptionEvent;
+import com.sun.jdi.event.MethodEntryEvent;
 import com.sun.jdi.event.StepEvent;
 import com.sun.jdi.event.ThreadDeathEvent;
 import com.sun.jdi.event.ThreadStartEvent;
@@ -32,6 +33,7 @@ import com.sun.jdi.event.VMDisconnectEvent;
 import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.EventRequestManager;
+import com.sun.jdi.request.MethodEntryRequest;
 import com.sun.jdi.request.StepRequest;
 
 /**
@@ -59,7 +61,37 @@ public class JdiClient {
     
     // Step request tracking: threadId -> active StepRequest
     private final Map<Long, StepRequest> activeStepRequests = new ConcurrentHashMap<>();
-    
+
+    // Method entry request for cross-language step-into
+    private MethodEntryRequest methodEntryRequest;
+
+    // Step filtering configuration
+    private final boolean skipJdkClasses;
+    private final boolean skipKarateFramework;
+    private final boolean skipKarateDependencies;
+
+    /**
+     * Creates a JdiClient with default settings (skip all framework classes).
+     */
+    public JdiClient() {
+        this(true, true, true);
+    }
+
+    /**
+     * Creates a JdiClient with configurable step filtering.
+     *
+     * @param skipJdkClasses Whether to auto-skip JDK core classes when stepping
+     * @param skipKarateFramework Whether to auto-skip Karate framework classes when stepping
+     * @param skipKarateDependencies Whether to auto-skip Karate's dependencies (jsonpath, netty, etc.)
+     */
+    public JdiClient(boolean skipJdkClasses, boolean skipKarateFramework, boolean skipKarateDependencies) {
+        this.skipJdkClasses = skipJdkClasses;
+        this.skipKarateFramework = skipKarateFramework;
+        this.skipKarateDependencies = skipKarateDependencies;
+        log.trace("JdiClient created with skipJdkClasses={}, skipKarateFramework={}, skipKarateDependencies={}",
+                skipJdkClasses, skipKarateFramework, skipKarateDependencies);
+    }
+
     /**
      * Sets the event listener for JDI events.
      */
@@ -75,26 +107,26 @@ public class JdiClient {
      * @throws IOException If connection fails
      */
     public void connect(String host, int port) throws IOException {
-        log.info("Connecting to JVM at {}:{}", host, port);
-        
+        log.debug("Connecting to JVM at {}:{}", host, port);
+
         try {
             AttachingConnector connector = findSocketAttachConnector();
             if (connector == null) {
                 throw new IOException("Socket attaching connector not found");
             }
-            
+
             Map<String, Connector.Argument> args = connector.defaultArguments();
             args.get("hostname").setValue(host);
             args.get("port").setValue(String.valueOf(port));
-            
+
             vm = connector.attach(args);
             erm = vm.eventRequestManager();
-            
+
             // Enable class prepare events for deferred breakpoints
             ClassPrepareRequest cpr = erm.createClassPrepareRequest();
             cpr.enable();
-            
-            log.info("Connected to JVM: {}", vm.name());
+
+            log.debug("Connected to JVM: {}", vm.name());
             
             // Start event loop
             startEventLoop();
@@ -108,7 +140,7 @@ public class JdiClient {
      * Disconnects from the JVM.
      */
     public void disconnect() {
-        log.info("Disconnecting from JVM");
+        log.trace("Disconnecting from JVM");
         running.set(false);
         
         if (vm != null) {
@@ -182,6 +214,11 @@ public class JdiClient {
 
             Location location = locations.get(0);
             BreakpointRequest bpReq = erm.createBreakpointRequest(location);
+
+            // IMPORTANT: Only suspend the event thread, not all threads.
+            // This allows the IPC-Sender thread to continue running during debugging.
+            bpReq.setSuspendPolicy(BreakpointRequest.SUSPEND_EVENT_THREAD);
+
             bpReq.enable();
 
             breakpointRequests.put(breakpointId, bpReq);
@@ -236,19 +273,35 @@ public class JdiClient {
 
     /**
      * Creates a step request for the given thread.
+     * Adds class exclusion filters to skip JDK and framework classes.
      */
     public void step(ThreadReference thread, int depth) {
+        String depthName = depth == StepRequest.STEP_INTO ? "INTO" :
+                          depth == StepRequest.STEP_OVER ? "OVER" : "OUT";
+        log.debug("Creating step request: thread={}, depth={}, suspended={}",
+                 thread.name(), depthName, thread.isSuspended());
+
         // Remove any existing step request for this thread
         cancelStep(thread);
 
         StepRequest stepReq = erm.createStepRequest(thread, StepRequest.STEP_LINE, depth);
         stepReq.addCountFilter(1); // Only one step
+
+        // IMPORTANT: Only suspend the event thread, not all threads.
+        // This allows the IPC-Sender thread to continue running during debugging.
+        stepReq.setSuspendPolicy(StepRequest.SUSPEND_EVENT_THREAD);
+
+        // No step filters - let users step into any code they want.
+        // If they don't want to step into JDK/framework code, they can use Step Over.
+
         stepReq.enable();
 
         activeStepRequests.put(thread.uniqueID(), stepReq);
 
+        log.debug("Step request enabled, resuming thread {}", thread.name());
         // Resume to execute the step
         thread.resume();
+        log.debug("Thread {} resumed", thread.name());
     }
 
     /**
@@ -279,6 +332,85 @@ public class JdiClient {
         StepRequest stepReq = activeStepRequests.remove(thread.uniqueID());
         if (stepReq != null) {
             erm.deleteEventRequest(stepReq);
+        }
+    }
+
+    /**
+     * Cancels all active step requests.
+     * Called when a Java step exits to framework code and we need to clean up.
+     */
+    public void cancelAllSteps() {
+        if (erm == null) return;
+        for (StepRequest stepReq : activeStepRequests.values()) {
+            try {
+                erm.deleteEventRequest(stepReq);
+            } catch (Exception e) {
+                log.debug("Error canceling step request: {}", e.getMessage());
+            }
+        }
+        activeStepRequests.clear();
+        log.debug("Cancelled all active step requests");
+    }
+
+    /**
+     * Enables method entry events for cross-language step-into.
+     * Filters to only user code (excludes JDK, Karate, GraalVM internals).
+     */
+    public void enableMethodEntry() {
+        if (methodEntryRequest != null) {
+            log.debug("Method entry already enabled");
+            return;
+        }
+        if (erm == null) {
+            log.warn("Cannot enable method entry: not connected");
+            return;
+        }
+
+        methodEntryRequest = erm.createMethodEntryRequest();
+
+        // IMPORTANT: Only suspend the event thread, not all threads.
+        // This allows the IPC-Sender thread to continue running during debugging.
+        methodEntryRequest.setSuspendPolicy(MethodEntryRequest.SUSPEND_EVENT_THREAD);
+
+        // Filter out JDK and framework classes - only catch user code
+        methodEntryRequest.addClassExclusionFilter("java.*");
+        methodEntryRequest.addClassExclusionFilter("javax.*");
+        methodEntryRequest.addClassExclusionFilter("sun.*");
+        methodEntryRequest.addClassExclusionFilter("com.sun.*");
+        methodEntryRequest.addClassExclusionFilter("jdk.*");
+        methodEntryRequest.addClassExclusionFilter("com.intuit.karate.*");
+        methodEntryRequest.addClassExclusionFilter("org.graalvm.*");
+        methodEntryRequest.addClassExclusionFilter("com.oracle.truffle.*");
+        methodEntryRequest.addClassExclusionFilter("com.oracle.js.*");
+        methodEntryRequest.addClassExclusionFilter("org.graaljs.*");
+        // Our own debug infrastructure
+        methodEntryRequest.addClassExclusionFilter("com.j8d.karate.debug.*");
+        // Logging frameworks
+        methodEntryRequest.addClassExclusionFilter("ch.qos.logback.*");
+        methodEntryRequest.addClassExclusionFilter("org.slf4j.*");
+        methodEntryRequest.addClassExclusionFilter("org.apache.logging.*");
+        methodEntryRequest.addClassExclusionFilter("org.apache.log4j.*");
+        // Common frameworks
+        methodEntryRequest.addClassExclusionFilter("org.apache.commons.*");
+        methodEntryRequest.addClassExclusionFilter("com.google.*");
+        methodEntryRequest.addClassExclusionFilter("org.json.*");
+        methodEntryRequest.addClassExclusionFilter("com.fasterxml.*");
+        methodEntryRequest.addClassExclusionFilter("io.netty.*");
+        methodEntryRequest.addClassExclusionFilter("org.yaml.*");
+
+        methodEntryRequest.enable();
+        log.trace("Method entry events enabled for cross-language step-into");
+    }
+
+    /**
+     * Disables method entry events.
+     */
+    public void disableMethodEntry() {
+        if (methodEntryRequest != null) {
+            methodEntryRequest.disable();
+            erm.deleteEventRequest(methodEntryRequest);
+            methodEntryRequest = null;
+            log.trace("Method entry events disabled");
         }
     }
 
@@ -346,7 +478,25 @@ public class JdiClient {
             return false; // Stay suspended at breakpoint
 
         } else if (event instanceof StepEvent stepEvent) {
-            // Clean up the step request
+            Location loc = stepEvent.location();
+            String className = loc.declaringType().name();
+            log.debug("StepEvent received: thread={}, class={}, method={}, line={}",
+                     stepEvent.thread().name(),
+                     className,
+                     loc.method().name(),
+                     loc.lineNumber());
+
+            // Check if we're in framework code - if so, auto-continue stepping
+            if (isFrameworkClass(className)) {
+                log.debug("StepEvent in framework code, auto-continuing step");
+                // Issue another step to skip framework code
+                // Use STEP_OUT to quickly exit framework code back to user code
+                cancelStep(stepEvent.thread());
+                step(stepEvent.thread(), StepRequest.STEP_OUT);
+                return false; // Stay suspended, the new step request will resume
+            }
+
+            // User code - clean up and report
             cancelStep(stepEvent.thread());
             listener.onStepComplete(stepEvent.thread(), stepEvent.location());
             return false; // Stay suspended after step
@@ -356,6 +506,11 @@ public class JdiClient {
             boolean isCaught = exEvent.catchLocation() != null;
             listener.onException(exEvent.thread(), exEvent.location(), exceptionType, isCaught);
             return false; // Stay suspended on exception
+
+        } else if (event instanceof MethodEntryEvent meEvent) {
+            // Method entry for cross-language step-into
+            listener.onMethodEntry(meEvent.thread(), meEvent.location());
+            return false; // Stay suspended at method entry
 
         } else if (event instanceof ClassPrepareEvent cpEvent) {
             String className = cpEvent.referenceType().name();
@@ -421,6 +576,136 @@ public class JdiClient {
             }
         }
         return null;
+    }
+
+    // ========== Framework Code Detection ==========
+
+    /**
+     * JDK core class prefixes to optionally skip when stepping.
+     */
+    private static final String[] JDK_PREFIXES = {
+        "java.",
+        "javax.",
+        "jdk.",
+        "sun.",
+        "com.sun.",
+    };
+
+    /**
+     * GraalVM/Truffle runtime prefixes - always skipped.
+     */
+    private static final String[] GRAALVM_PREFIXES = {
+        "com.oracle.truffle.",
+        "org.graalvm.",
+    };
+
+    /**
+     * Karate framework prefix - optionally skipped.
+     */
+    private static final String KARATE_PREFIX = "com.intuit.karate.";
+
+    /**
+     * Karate's internal dependencies - skipped when skipKarateFramework=true.
+     * When skipKarateFramework=false, user can step through all of these.
+     */
+    private static final String[] KARATE_DEPENDENCY_PREFIXES = {
+        "com.jayway.jsonpath.",    // JSON path parsing
+        "net.minidev.",            // JSON Smart (used by jsonpath)
+        "org.slf4j.",              // Logging
+        "ch.qos.logback.",         // Logging implementation
+        "io.netty.",               // HTTP client
+        "org.apache.http.",        // HTTP client (Apache)
+        "org.thymeleaf.",          // Template engine
+        "com.linecorp.armeria.",   // HTTP framework
+        "de.siegmar.fastcsv.",     // CSV parsing
+        "org.antlr.",              // Parser generator
+        "org.yaml.snakeyaml.",     // YAML parsing
+        "com.github.javaparser.",  // Java parsing
+    };
+
+    /**
+     * Checks if a class is a JVM-generated class that has no source code.
+     * These are dynamically generated by the JVM at runtime and should always be skipped.
+     *
+     * Examples:
+     * - java.lang.invoke.LambdaForm$MH/0x0000007001434800
+     * - java.lang.invoke.LambdaForm$DMH/0x0000007001425400
+     * - java.lang.invoke.Invokers$Holder
+     * - java.lang.invoke.DirectMethodHandle$Holder
+     * - java.lang.invoke.DelegatingMethodHandle$Holder
+     * - java.lang.invoke.LambdaForm$Holder
+     */
+    private boolean isJvmGeneratedClass(String className) {
+        // LambdaForm generated classes have patterns like:
+        // java.lang.invoke.LambdaForm$MH/0x... (method handle)
+        // java.lang.invoke.LambdaForm$DMH/0x... (direct method handle)
+        // java.lang.invoke.LambdaForm$BMH/0x... (bound method handle)
+        if (className.startsWith("java.lang.invoke.LambdaForm$") && className.contains("/")) {
+            return true;
+        }
+
+        // Holder classes are generated at runtime to hold method handles
+        // java.lang.invoke.Invokers$Holder
+        // java.lang.invoke.DirectMethodHandle$Holder
+        // java.lang.invoke.DelegatingMethodHandle$Holder
+        // java.lang.invoke.LambdaForm$Holder
+        if (className.startsWith("java.lang.invoke.") && className.endsWith("$Holder")) {
+            return true;
+        }
+
+        // Lambda proxy classes generated by LambdaMetafactory
+        // e.g., com.example.MyClass$$Lambda$123/0x0000007001234567
+        if (className.contains("$$Lambda$") && className.contains("/")) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks if a class is framework code that should be auto-skipped when stepping.
+     * The behavior is controlled by the skipJdkClasses, skipKarateFramework, and
+     * skipKarateDependencies settings.
+     */
+    private boolean isFrameworkClass(String className) {
+        // Always skip JVM-generated classes - they have no source code
+        if (isJvmGeneratedClass(className)) {
+            return true;
+        }
+
+        // Always skip GraalVM/Truffle runtime - these are internal execution classes
+        for (String prefix : GRAALVM_PREFIXES) {
+            if (className.startsWith(prefix)) {
+                return true;
+            }
+        }
+
+        // Optionally skip JDK classes
+        if (skipJdkClasses) {
+            for (String prefix : JDK_PREFIXES) {
+                if (className.startsWith(prefix)) {
+                    return true;
+                }
+            }
+        }
+
+        // Optionally skip Karate framework classes
+        if (skipKarateFramework) {
+            if (className.startsWith(KARATE_PREFIX)) {
+                return true;
+            }
+        }
+
+        // Optionally skip Karate's dependencies (jsonpath, netty, etc.)
+        if (skipKarateDependencies) {
+            for (String prefix : KARATE_DEPENDENCY_PREFIXES) {
+                if (className.startsWith(prefix)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     // ========== Inner Classes ==========

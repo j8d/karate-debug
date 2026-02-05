@@ -13,18 +13,20 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <karate.version>1.5.2</karate.version>
+        <!-- Using Karate fork with GraalVM 25.0.2 for compatibility with chromeinspector/dap-tool -->
+        <karate.version>v1.5.2-j8d.1</karate.version>
     </properties>
 
     <dependencies>
+        <!-- Karate Core - using instrumented fork from j8d-org for CI debugging -->
         <dependency>
-            <groupId>io.karatelabs</groupId>
+            <groupId>com.github.j8d-org.karate</groupId>
             <artifactId>karate-core</artifactId>
             <version>${karate.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.karatelabs</groupId>
+            <groupId>com.github.j8d-org.karate</groupId>
             <artifactId>karate-junit5</artifactId>
             <version>${karate.version}</version>
             <scope>test</scope>
@@ -38,7 +40,24 @@
             <version>25.0.2</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- GraalVM DAP Tool - enables JavaScript debugging via Debug Adapter Protocol -->
+        <!-- Alternative to Chrome Inspector, uses native DAP instead of CDP -->
+        <dependency>
+            <groupId>org.graalvm.tools</groupId>
+            <artifactId>dap-tool</artifactId>
+            <version>25.0.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <!-- JitPack repository for instrumented Karate fork -->
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <build>
         <testResources>

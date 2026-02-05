@@ -72,7 +72,7 @@ public class KarateBackend implements DebugBackend {
     
     @Override
     public void start() {
-        log.info("Starting KarateBackend");
+        log.trace("Starting KarateBackend");
         
         // Send start command to child
         JsonObject body = new JsonObject();
@@ -82,7 +82,7 @@ public class KarateBackend implements DebugBackend {
     
     @Override
     public void stop() {
-        log.info("Stopping KarateBackend");
+        log.trace("Stopping KarateBackend");
         ready = false;
         
         try {
@@ -176,7 +176,9 @@ public class KarateBackend implements DebugBackend {
         body.addProperty("threadId", threadId);
 
         try {
+            log.trace("Sending getStackFrames IPC request for threadId={}", threadId);
             IpcMessage response = sendCommandSync(IpcCommands.GET_STACK_FRAMES, body);
+            log.trace("Received getStackFrames IPC response");
             return parseStackFrames(response.getBody());
         } catch (Exception e) {
             log.error("Failed to get stack frames", e);
@@ -297,7 +299,14 @@ public class KarateBackend implements DebugBackend {
                 }
             }
             case IpcEvents.BREAKPOINT_RESOLVED -> {
-                // TODO: Handle breakpoint resolution
+                int bpId = body.get("id").getAsInt();
+                int line = body.get("line").getAsInt();
+                String source = body.has("source") ? body.get("source").getAsString() : null;
+                Breakpoint bp = new Breakpoint(bpId, true, line, source, null);
+                log.debug("Received breakpoint resolved event: id={}, line={}", bpId, line);
+                if (listener != null) {
+                    listener.onBreakpointResolved(this, bp);
+                }
             }
             default -> log.warn("Unknown IPC event: {}", eventName);
         }
