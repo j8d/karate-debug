@@ -148,7 +148,7 @@ Contributions are welcome! Feel free to [Contact Me](https://www.karatedebug.com
 
 ## License
 
-This extension is proprietary software. See the [full license terms](https://www.www.karatedebug.com/license).
+This extension is proprietary software. See the [full license terms](https://www.karatedebug.com/license).
 
 ## Acknowledgments
 
