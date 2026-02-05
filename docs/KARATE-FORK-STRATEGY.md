@@ -27,11 +27,12 @@ This document outlines the strategy for maintaining a custom fork of Karate (`j8
 
 ## Switching Between Official and Fork
 
-### For Development/Debugging (use fork)
+### Using the Fork (current setup)
 
 ```xml
 <properties>
-    <karate.version>debug-main-SNAPSHOT</karate.version>
+    <!-- Use tag for stable releases, commit hash for specific versions -->
+    <karate.version>v1.5.2-j8d.1</karate.version>
 </properties>
 
 <dependencies>
@@ -88,18 +89,25 @@ git rebase master
 git push origin debug-main --force-with-lease
 ```
 
+## Current Version
+
+**Tag**: `v1.5.2-j8d.1`
+**Base**: Karate 1.5.2
+**Key Change**: GraalVM upgraded from 24.0.0 to 25.0.2
+
 ## Tasks
 
-### Phase 1: Initial Setup (Current)
+### Phase 1: Initial Setup
 - [x] Fork `karatelabs/karate` to `j8d-org`
 - [x] Create `debug-scenario-runtime` branch with diagnostic logging
 - [x] Configure JitPack in debug-server pom.xml
-- [ ] Verify instrumented fork works in CI
+- [x] Verify instrumented fork works in CI
+- [x] Create release tag `v1.5.2-j8d.1`
 
 ### Phase 2: Permanent Structure
-- [ ] Create `debug-main` branch as stable instrumented version
-- [ ] Add Maven profile to toggle between official/fork
-- [ ] Document all modifications made to Karate source
+- [x] Document all modifications made to Karate source
+- [ ] Create `debug-main` branch as stable instrumented version (optional)
+- [ ] Add Maven profile to toggle between official/fork (optional)
 - [ ] Set up upstream sync workflow (manual or automated)
 
 ### Phase 3: Production Release Process
@@ -113,7 +121,7 @@ Track all changes made to the fork here:
 
 | File | Change | Purpose | Date |
 |------|--------|---------|------|
-| `ScenarioRuntime.java` | Added `[KARATE-DEBUG]` logging | Diagnose beforeScenario not being called | 2026-02-04 |
+| `karate-core/pom.xml` | Upgraded `graal.version` from 24.0.0 to 25.0.2 | Fix GraalVM/Truffle version mismatch with chromeinspector-tool/dap-tool 25.x | 2026-02-05 |
 
 ## Contributing Upstream
 
