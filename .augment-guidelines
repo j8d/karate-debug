@@ -319,10 +319,11 @@ When the user says "prepare release", "prepare to release", or similar phrases, 
 ### VS Code Release
 1. Create release branch from main: `git checkout -b release/vscode-X.Y.Z`
 2. Update version in `vscode/package.json`
-3. Update `vscode/CHANGELOG.md` with new version entry (use today's date)
-4. Commit with message: `Prepare VS Code vX.Y.Z release`
-5. Push branch: `git push origin release/vscode-X.Y.Z`
-6. Create PR: `gh pr create --repo j8d-org/karate-debug --base main --head release/vscode-X.Y.Z --title "Release VS Code vX.Y.Z"`
+3. Run `npm install` in `vscode/` to update `package-lock.json` with the new version
+4. Update `vscode/CHANGELOG.md` with new version entry (use today's date)
+5. Commit with message: `Prepare VS Code vX.Y.Z release`
+6. Push branch: `git push origin release/vscode-X.Y.Z`
+7. Create PR: `gh pr create --repo j8d-org/karate-debug --base main --head release/vscode-X.Y.Z --title "Release VS Code vX.Y.Z"`
 
 ### IntelliJ Release
 1. Create release branch from main: `git checkout -b release/intellij-X.Y.Z`
