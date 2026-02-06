@@ -13,8 +13,8 @@ No complex setup. No configuration files. No sign-up required. Just install and 
 
 ## Features
 
-### Breakpoint Debugging
-Set breakpoints in your `.feature` files and step through your Karate tests line by line. Inspect variables, view request/response data, and understand exactly what's happening at each step.
+### Breakpoint Debugging for Karate, Java and JavaScript
+Debug Karate, Java and JavaScript code in the same debugging session. Set breakpoints in your `.feature` files, Java files and JavaScript files. Step through your Karate tests line by line. Inspect variables, view request/response data, and understand exactly what's happening at each step.
 
 ### Conditional Breakpoints
 Right-click on any breakpoint to add a condition. The debugger will only pause when the condition evaluates to true - perfect for debugging specific iterations in loops or catching edge cases.
@@ -48,7 +48,11 @@ Hide noisy log output by configuring exclude patterns. Filter out verbose framew
 Pause execution when specific strings appear in log output. Useful for catching exceptions or specific error messages without setting traditional breakpoints - just specify strings like "NullPointerException" or "ERROR" to break on.
 
 ### Step Filtering
-Control which code is skipped when stepping through Java code during debugging. By default, the debugger skips Karate framework classes and third-party dependencies so you can focus on your own code. Disable these filters in Settings > Tools > Karate Debug when you need to step into framework internals.
+Control which code is automatically skipped when stepping through Java code. By default, the debugger skips Karate framework classes and third-party dependencies so you can focus on your own code. When step filtering is enabled, stepping into framework code will automatically step out and return to user code.
+
+Configure these options in Settings > Tools > Karate Debug:
+- **Skip Karate Framework** - Set to `false` to step into Karate source code
+- **Skip Karate Dependencies** - Set to `false` to also step through Karate's internal libraries (jsonpath, netty, slf4j, etc.)
 
 ### Missing Sources Notification
 When stepping into library code that lacks source files, the debugger shows a notification with a "Download Sources" button. For Maven projects, this runs `mvn dependency:sources` to fetch the missing sources automatically.
