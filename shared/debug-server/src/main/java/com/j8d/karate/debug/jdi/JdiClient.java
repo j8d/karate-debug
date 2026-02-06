@@ -288,9 +288,9 @@ public class JdiClient {
         // Remove any existing step request for this thread
         cancelStep(thread);
 
-        // Track original step type - only set if not already tracking (for auto-continue chains)
-        // This ensures we remember the user's original intent (INTO vs OVER/OUT)
-        originalStepDepth.putIfAbsent(thread.uniqueID(), depth);
+        // Track original step type for this thread.
+        // Overwrite any previous value to avoid preserving stale intent across interrupted steps.
+        originalStepDepth.put(thread.uniqueID(), depth);
 
         StepRequest stepReq = erm.createStepRequest(thread, StepRequest.STEP_LINE, depth);
         stepReq.addCountFilter(1); // Only one step
@@ -380,12 +380,14 @@ public class JdiClient {
         // This allows the IPC-Sender thread to continue running during debugging.
         methodEntryRequest.setSuspendPolicy(MethodEntryRequest.SUSPEND_EVENT_THREAD);
 
-        // Filter out JDK classes - always excluded (no source code)
-        methodEntryRequest.addClassExclusionFilter("java.*");
-        methodEntryRequest.addClassExclusionFilter("javax.*");
-        methodEntryRequest.addClassExclusionFilter("sun.*");
-        methodEntryRequest.addClassExclusionFilter("com.sun.*");
-        methodEntryRequest.addClassExclusionFilter("jdk.*");
+        // Conditionally filter out JDK classes based on step-filtering setting
+        if (skipJdkClasses) {
+            methodEntryRequest.addClassExclusionFilter("java.*");
+            methodEntryRequest.addClassExclusionFilter("javax.*");
+            methodEntryRequest.addClassExclusionFilter("sun.*");
+            methodEntryRequest.addClassExclusionFilter("com.sun.*");
+            methodEntryRequest.addClassExclusionFilter("jdk.*");
+        }
 
         // Conditionally exclude Karate framework classes based on skip setting
         // When skipKarateFramework is false, users can step into Karate source code

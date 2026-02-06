@@ -276,10 +276,11 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
 
     /**
      * Check if polyglot debugging is enabled.
-     * Polyglot mode is automatically enabled when either Java or JavaScript debugging is enabled.
+     * Polyglot mode is automatically enabled when either Java or JavaScript debugging is enabled,
+     * or when the legacy enablePolyglotDebugging flag is set (for backward compatibility).
      */
     public boolean isPolyglotDebuggingEnabled() {
-        return enableJavaDebugging || enableJsDebugging;
+        return enablePolyglotDebugging || enableJavaDebugging || enableJsDebugging;
     }
 
     /**
