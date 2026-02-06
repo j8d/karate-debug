@@ -2,6 +2,24 @@
 
 All notable changes to the Karate Debug IntelliJ plugin will be documented in this file.
 
+## [0.2.0] - 2026-02-06
+
+### Added
+- Step filtering settings - control which code is skipped when stepping through Java code:
+  - Skip Karate Framework Classes (com.intuit.karate.*) - enabled by default
+  - Skip Karate Dependencies (jsonpath, netty, slf4j, etc.) - enabled by default
+  - Settings available in Preferences > Tools > Karate Debug
+- Missing sources notification - when stepping into library code without sources:
+  - Shows notification with "Download Sources" button
+  - Runs `mvn dependency:sources` for Maven projects
+  - Shows instructions for Gradle projects
+  - "Don't Show Again" option to dismiss for the session
+
+### Fixed
+- Step-into from Karate feature lines now correctly opens framework code when skip settings are disabled
+- Match expression evaluation now works correctly when stopped in JavaScript code
+- Reduced log verbosity by moving debug output to TRACE level
+
 ## [0.1.5] - 2026-01-22
 
 ### Added
