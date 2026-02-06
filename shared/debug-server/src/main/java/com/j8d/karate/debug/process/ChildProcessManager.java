@@ -195,7 +195,7 @@ public class ChildProcessManager {
                 // Prepend debug server JAR to ensure our bundled GraalVM tools take precedence
                 String pathSeparator = System.getProperty("path.separator");
                 classpath = debugServerJar + pathSeparator + classpath;
-                log.debug("Added debug server JAR to classpath for GraalVM tools: {}", debugServerJar);
+                log.trace("Added debug server JAR to classpath for GraalVM tools: {}", debugServerJar);
             }
         }
 
@@ -461,7 +461,7 @@ public class ChildProcessManager {
 
         ChildProcessInfo info = new ChildProcessInfo(ipcPort, jdwpPort, jsDapPort, graalVmVersion);
 
-        log.info("Child process ready: IPC={}, JDWP={}, JS-DAP={}", ipcPort, jdwpPort, jsDapPort);
+        log.trace("Child process ready: IPC={}, JDWP={}, JS-DAP={}", ipcPort, jdwpPort, jsDapPort);
 
         readyFuture.complete(info);
     }

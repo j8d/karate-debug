@@ -54,6 +54,10 @@
         <projectService
             serviceImplementation="com.j8d.karate.intellij.debug.MatchDiagnosticsRegistry"/>
 
+        <!-- Source download service for detecting and downloading library sources -->
+        <projectService
+            serviceImplementation="com.j8d.karate.intellij.debug.SourceDownloadService"/>
+
         <!-- Startup activity to detect Karate projects -->
         <postStartupActivity
             implementation="com.j8d.karate.intellij.project.KarateProjectStartupActivity"/>

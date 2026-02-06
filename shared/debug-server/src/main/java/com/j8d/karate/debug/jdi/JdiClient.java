@@ -62,6 +62,10 @@ public class JdiClient {
     // Step request tracking: threadId -> active StepRequest
     private final Map<Long, StepRequest> activeStepRequests = new ConcurrentHashMap<>();
 
+    // Track original step type per thread (INTO vs OVER/OUT) for framework filtering
+    // Step-over/out should ALWAYS skip framework code; step-into uses the skip settings
+    private final Map<Long, Integer> originalStepDepth = new ConcurrentHashMap<>();
+
     // Method entry request for cross-language step-into
     private MethodEntryRequest methodEntryRequest;
 
@@ -278,11 +282,15 @@ public class JdiClient {
     public void step(ThreadReference thread, int depth) {
         String depthName = depth == StepRequest.STEP_INTO ? "INTO" :
                           depth == StepRequest.STEP_OVER ? "OVER" : "OUT";
-        log.debug("Creating step request: thread={}, depth={}, suspended={}",
+        log.trace("Creating step request: thread={}, depth={}, suspended={}",
                  thread.name(), depthName, thread.isSuspended());
 
         // Remove any existing step request for this thread
         cancelStep(thread);
+
+        // Track original step type - only set if not already tracking (for auto-continue chains)
+        // This ensures we remember the user's original intent (INTO vs OVER/OUT)
+        originalStepDepth.putIfAbsent(thread.uniqueID(), depth);
 
         StepRequest stepReq = erm.createStepRequest(thread, StepRequest.STEP_LINE, depth);
         stepReq.addCountFilter(1); // Only one step
@@ -298,10 +306,10 @@ public class JdiClient {
 
         activeStepRequests.put(thread.uniqueID(), stepReq);
 
-        log.debug("Step request enabled, resuming thread {}", thread.name());
+        log.trace("Step request enabled, resuming thread {}", thread.name());
         // Resume to execute the step
         thread.resume();
-        log.debug("Thread {} resumed", thread.name());
+        log.trace("Thread {} resumed", thread.name());
     }
 
     /**
@@ -372,13 +380,20 @@ public class JdiClient {
         // This allows the IPC-Sender thread to continue running during debugging.
         methodEntryRequest.setSuspendPolicy(MethodEntryRequest.SUSPEND_EVENT_THREAD);
 
-        // Filter out JDK and framework classes - only catch user code
+        // Filter out JDK classes - always excluded (no source code)
         methodEntryRequest.addClassExclusionFilter("java.*");
         methodEntryRequest.addClassExclusionFilter("javax.*");
         methodEntryRequest.addClassExclusionFilter("sun.*");
         methodEntryRequest.addClassExclusionFilter("com.sun.*");
         methodEntryRequest.addClassExclusionFilter("jdk.*");
-        methodEntryRequest.addClassExclusionFilter("com.intuit.karate.*");
+
+        // Conditionally exclude Karate framework classes based on skip setting
+        // When skipKarateFramework is false, users can step into Karate source code
+        if (skipKarateFramework) {
+            methodEntryRequest.addClassExclusionFilter("com.intuit.karate.*");
+        }
+
+        // Always exclude GraalVM/Truffle runtime - internal execution classes
         methodEntryRequest.addClassExclusionFilter("org.graalvm.*");
         methodEntryRequest.addClassExclusionFilter("com.oracle.truffle.*");
         methodEntryRequest.addClassExclusionFilter("com.oracle.js.*");
@@ -397,6 +412,18 @@ public class JdiClient {
         methodEntryRequest.addClassExclusionFilter("com.fasterxml.*");
         methodEntryRequest.addClassExclusionFilter("io.netty.*");
         methodEntryRequest.addClassExclusionFilter("org.yaml.*");
+
+        // Conditionally exclude Karate dependencies based on skip setting
+        if (skipKarateDependencies) {
+            methodEntryRequest.addClassExclusionFilter("com.jayway.jsonpath.*");
+            methodEntryRequest.addClassExclusionFilter("net.minidev.*");
+            methodEntryRequest.addClassExclusionFilter("org.apache.http.*");
+            methodEntryRequest.addClassExclusionFilter("org.thymeleaf.*");
+            methodEntryRequest.addClassExclusionFilter("com.linecorp.armeria.*");
+            methodEntryRequest.addClassExclusionFilter("de.siegmar.fastcsv.*");
+            methodEntryRequest.addClassExclusionFilter("org.antlr.*");
+            methodEntryRequest.addClassExclusionFilter("com.github.javaparser.*");
+        }
 
         methodEntryRequest.enable();
         log.trace("Method entry events enabled for cross-language step-into");
@@ -480,14 +507,24 @@ public class JdiClient {
         } else if (event instanceof StepEvent stepEvent) {
             Location loc = stepEvent.location();
             String className = loc.declaringType().name();
-            log.debug("StepEvent received: thread={}, class={}, method={}, line={}",
+            long threadId = stepEvent.thread().uniqueID();
+
+            // Get the original step type (what the user requested: INTO vs OVER/OUT)
+            Integer origDepth = originalStepDepth.get(threadId);
+
+            log.trace("StepEvent received: thread={}, class={}, method={}, line={}, origStepType={}",
                      stepEvent.thread().name(),
                      className,
                      loc.method().name(),
-                     loc.lineNumber());
+                     loc.lineNumber(),
+                     origDepth == null ? "unknown" :
+                         (origDepth == StepRequest.STEP_INTO ? "INTO" :
+                          origDepth == StepRequest.STEP_OVER ? "OVER" : "OUT"));
 
-            // Check if we're in framework code - if so, auto-continue stepping
-            if (isFrameworkClass(className)) {
+            // Check if we should skip this framework code
+            // - Step Over/Out: ALWAYS skip framework code (user wants to stay at their level)
+            // - Step Into: Use the skip settings (user may want to descend into framework)
+            if (shouldSkipFrameworkClass(className, origDepth)) {
                 log.debug("StepEvent in framework code, auto-continuing step");
                 // Issue another step to skip framework code
                 // Use STEP_OUT to quickly exit framework code back to user code
@@ -498,6 +535,8 @@ public class JdiClient {
 
             // User code - clean up and report
             cancelStep(stepEvent.thread());
+            // Clear the original step tracking since we're done with this step sequence
+            originalStepDepth.remove(threadId);
             listener.onStepComplete(stepEvent.thread(), stepEvent.location());
             return false; // Stay suspended after step
 
@@ -663,11 +702,17 @@ public class JdiClient {
     }
 
     /**
-     * Checks if a class is framework code that should be auto-skipped when stepping.
-     * The behavior is controlled by the skipJdkClasses, skipKarateFramework, and
-     * skipKarateDependencies settings.
+     * Checks if a class should be skipped when stepping, based on the original step type.
+     *
+     * Step semantics:
+     * - Step Over/Out: ALWAYS skip all framework code (user wants to stay at their abstraction level)
+     * - Step Into: Use the skip settings (user may intentionally want to descend into framework code)
+     *
+     * @param className The fully qualified class name
+     * @param originalStepType The original step type (STEP_INTO, STEP_OVER, or STEP_OUT), or null if unknown
+     * @return true if this class should be skipped during stepping
      */
-    private boolean isFrameworkClass(String className) {
+    private boolean shouldSkipFrameworkClass(String className, Integer originalStepType) {
         // Always skip JVM-generated classes - they have no source code
         if (isJvmGeneratedClass(className)) {
             return true;
@@ -680,27 +725,44 @@ public class JdiClient {
             }
         }
 
-        // Optionally skip JDK classes
-        if (skipJdkClasses) {
+        // For Step Over/Out (or unknown), ALWAYS skip all framework code
+        // The user didn't ask to descend - they want to stay at their level
+        boolean isStepInto = (originalStepType != null && originalStepType == StepRequest.STEP_INTO);
+
+        if (!isStepInto) {
+            // Step Over/Out: skip ALL framework code unconditionally
             for (String prefix : JDK_PREFIXES) {
                 if (className.startsWith(prefix)) {
                     return true;
                 }
             }
-        }
-
-        // Optionally skip Karate framework classes
-        if (skipKarateFramework) {
             if (className.startsWith(KARATE_PREFIX)) {
                 return true;
             }
-        }
-
-        // Optionally skip Karate's dependencies (jsonpath, netty, etc.)
-        if (skipKarateDependencies) {
             for (String prefix : KARATE_DEPENDENCY_PREFIXES) {
                 if (className.startsWith(prefix)) {
                     return true;
+                }
+            }
+        } else {
+            // Step Into: use the skip settings (user may want to explore framework code)
+            if (skipJdkClasses) {
+                for (String prefix : JDK_PREFIXES) {
+                    if (className.startsWith(prefix)) {
+                        return true;
+                    }
+                }
+            }
+            if (skipKarateFramework) {
+                if (className.startsWith(KARATE_PREFIX)) {
+                    return true;
+                }
+            }
+            if (skipKarateDependencies) {
+                for (String prefix : KARATE_DEPENDENCY_PREFIXES) {
+                    if (className.startsWith(prefix)) {
+                        return true;
+                    }
                 }
             }
         }

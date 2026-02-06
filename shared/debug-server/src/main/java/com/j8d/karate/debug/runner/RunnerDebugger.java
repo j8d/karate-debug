@@ -95,14 +95,14 @@ public class RunnerDebugger implements RuntimeHook {
         executionThread = new Thread(() -> {
             try {
                 String classpathPath = toClasspathPath(featurePath);
-                log.debug("Classpath path: {}", classpathPath);
+                log.trace("Classpath path: {}", classpathPath);
 
                 String pathSpec = classpathPath;
                 if (featureLine > 0) {
                     pathSpec = classpathPath + ":" + featureLine;
                 }
                 log.debug("Starting Karate execution: {}", pathSpec);
-                log.debug("Hook instance: {}, breakpoints: {}", System.identityHashCode(this), breakpoints.keySet());
+                log.trace("Hook instance: {}, breakpoints: {}", System.identityHashCode(this), breakpoints.keySet());
 
                 Results results = Runner.path(pathSpec)
                     .hook(this)
@@ -145,7 +145,7 @@ public class RunnerDebugger implements RuntimeHook {
      * Sets breakpoints in a file.
      */
     public JsonObject setBreakpoints(String filePath, JsonArray breakpointsArray) {
-        log.debug("setBreakpoints called on instance: {}", System.identityHashCode(this));
+        log.trace("setBreakpoints called on instance: {}", System.identityHashCode(this));
         Map<Integer, BreakpointInfo> breakpointMap = new ConcurrentHashMap<>();
         JsonArray result = new JsonArray();
 
@@ -171,9 +171,9 @@ public class RunnerDebugger implements RuntimeHook {
         }
 
         String normalizedPath = normalizeSourcePath(filePath);
-        log.debug("Storing breakpoint with key: {} (original: {})", normalizedPath, filePath);
+        log.trace("Storing breakpoint with key: {} (original: {})", normalizedPath, filePath);
         breakpoints.put(normalizedPath, breakpointMap);
-        log.debug("Breakpoints map now has keys: {}", breakpoints.keySet());
+        log.trace("Breakpoints map now has keys: {}", breakpoints.keySet());
 
         JsonObject response = new JsonObject();
         response.add("breakpoints", result);
@@ -226,7 +226,7 @@ public class RunnerDebugger implements RuntimeHook {
 
     @Override
     public boolean beforeFeature(FeatureRuntime fr) {
-        log.info("beforeFeature: {} (suite.dryRun={}, suite.hooks.size={}, suite.isAborted={})",
+        log.trace("beforeFeature: {} (suite.dryRun={}, suite.hooks.size={}, suite.isAborted={})",
             fr.featureCall.feature.getResource().getRelativePath(),
             fr.suite.dryRun,
             fr.suite.hooks.size(),
@@ -234,7 +234,7 @@ public class RunnerDebugger implements RuntimeHook {
         // Log hook instances to verify this hook is in the list
         int idx = 0;
         for (com.intuit.karate.RuntimeHook h : fr.suite.hooks) {
-            log.info("beforeFeature: suite.hooks[{}] = {} (isThis={})",
+            log.trace("beforeFeature: suite.hooks[{}] = {} (isThis={})",
                 idx++, System.identityHashCode(h), h == this);
         }
         return true;
@@ -242,16 +242,13 @@ public class RunnerDebugger implements RuntimeHook {
 
     @Override
     public void afterFeature(FeatureRuntime fr) {
-        log.info("afterFeature: {}", fr.featureCall.feature.getResource().getRelativePath());
+        log.debug("afterFeature: {}", fr.featureCall.feature.getResource().getRelativePath());
     }
 
     @Override
     public boolean beforeScenario(ScenarioRuntime sr) {
         currentRuntime = sr;
-        // Use System.out to bypass any logging configuration issues
-        System.out.println("[HOOK] beforeScenario CALLED: " + sr.scenario.getName() +
-            " (dryRun=" + sr.dryRun + ", hookInstance=" + System.identityHashCode(this) + ")");
-        log.info("beforeScenario CALLED: {} (dryRun={}) - returning true",
+        log.debug("beforeScenario CALLED: {} (dryRun={}) - returning true",
             sr.scenario.getName(), sr.dryRun);
         return true;
     }
@@ -259,32 +256,32 @@ public class RunnerDebugger implements RuntimeHook {
     @Override
     public void afterScenario(ScenarioRuntime sr) {
         // Log diagnostic info to understand why beforeScenario might have been skipped
-        log.info("afterScenario CALLED: {} (dryRun={}, stopped={}, engineAborted={})",
+        log.debug("afterScenario CALLED: {} (dryRun={}, stopped={}, engineAborted={})",
             sr.scenario.getName(), sr.dryRun, sr.isStopped(),
             sr.engine != null ? sr.engine.isAborted() : "null-engine");
         // Check scenario properties that could cause beforeScenario to be skipped
-        log.info("afterScenario: scenario.isDynamic={}, scenario.isOutlineExample={}",
+        log.debug("afterScenario: scenario.isDynamic={}, scenario.isOutlineExample={}",
             sr.scenario.isDynamic(), sr.scenario.isOutlineExample());
         // Check if suite was aborted
         try {
-            log.info("afterScenario: suite.isAborted={}", sr.featureRuntime.suite.isAborted());
+            log.debug("afterScenario: suite.isAborted={}", sr.featureRuntime.suite.isAborted());
         } catch (Exception e) {
-            log.info("afterScenario: could not check suite.isAborted: {}", e.getMessage());
+            log.debug("afterScenario: could not check suite.isAborted: {}", e.getMessage());
         }
         // Check step results to understand execution
         try {
-            log.info("afterScenario: stepResults.size={}, scenario.getSteps().size={}",
+            log.debug("afterScenario: stepResults.size={}, scenario.getSteps().size={}",
                 sr.result.getStepResults().size(),
                 sr.scenario.getSteps().size());
             // Log first step result if any
             if (!sr.result.getStepResults().isEmpty()) {
                 var firstStep = sr.result.getStepResults().get(0);
-                log.info("afterScenario: firstStepResult={}, isFailed={}",
+                log.debug("afterScenario: firstStepResult={}, isFailed={}",
                     firstStep.getStep() != null ? firstStep.getStep().getText() : "null-step",
                     firstStep.isFailed());
             }
         } catch (Exception e) {
-            log.info("afterScenario: could not check steps: {}", e.getMessage());
+            log.debug("afterScenario: could not check steps: {}", e.getMessage());
         }
     }
 
@@ -297,9 +294,8 @@ public class RunnerDebugger implements RuntimeHook {
         String sourcePath = normalizeSourcePath(relativePath);
         int line = step.getLine();
 
-        // Debug logging at DEBUG level (not TRACE) to see what's happening
-        log.debug("beforeStep: line={}, relativePath={}, normalizedPath={}", line, relativePath, sourcePath);
-        log.debug("beforeStep: breakpoints keys={}", breakpoints.keySet());
+        log.trace("beforeStep: line={}, relativePath={}, normalizedPath={}", line, relativePath, sourcePath);
+        log.trace("beforeStep: breakpoints keys={}", breakpoints.keySet());
 
         boolean shouldPause = false;
         String pauseReason = "breakpoint";
@@ -647,7 +643,7 @@ public class RunnerDebugger implements RuntimeHook {
     private String normalizeSourcePath(String path) {
         File file = new File(path);
         if (file.isAbsolute()) {
-            log.debug("normalizeSourcePath: {} is absolute, returning as-is", path);
+            log.trace("normalizeSourcePath: {} is absolute, returning as-is", path);
             return file.getAbsolutePath();
         }
         String[] sourceRoots = {
@@ -658,13 +654,13 @@ public class RunnerDebugger implements RuntimeHook {
         };
         for (String root : sourceRoots) {
             File resolved = new File(workspaceRoot, root + path);
-            log.debug("normalizeSourcePath: trying {} -> exists={}", resolved.getAbsolutePath(), resolved.exists());
+            log.trace("normalizeSourcePath: trying {} -> exists={}", resolved.getAbsolutePath(), resolved.exists());
             if (resolved.exists()) {
                 return resolved.getAbsolutePath();
             }
         }
         String fallback = new File(workspaceRoot, path).getAbsolutePath();
-        log.debug("normalizeSourcePath: no source root matched for {}, using fallback: {}", path, fallback);
+        log.trace("normalizeSourcePath: no source root matched for {}, using fallback: {}", path, fallback);
         return fallback;
     }
 

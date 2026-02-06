@@ -303,7 +303,7 @@ public class KarateBackend implements DebugBackend {
                 int line = body.get("line").getAsInt();
                 String source = body.has("source") ? body.get("source").getAsString() : null;
                 Breakpoint bp = new Breakpoint(bpId, true, line, source, null);
-                log.debug("Received breakpoint resolved event: id={}, line={}", bpId, line);
+                log.trace("Received breakpoint resolved event: id={}, line={}", bpId, line);
                 if (listener != null) {
                     listener.onBreakpointResolved(this, bp);
                 }

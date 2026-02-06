@@ -331,7 +331,21 @@ public class KarateDapClient {
             debugProcess.log("Log breakpoints configured: " + logBreakpointPatterns);
         }
 
+        // Add polyglot debugging settings
+        args.addProperty("enableJavaDebugging", settings.isPolyglotJavaDebuggingEnabled());
+        args.addProperty("enableJsDebugging", settings.isPolyglotJsDebuggingEnabled());
+
+        // Add step filtering settings (invert: show=true means skip=false)
+        args.addProperty("skipJdkClasses", !settings.showJdkClasses);
+        args.addProperty("skipKarateFramework", !settings.showKarateFramework);
+        args.addProperty("skipKarateDependencies", !settings.showKarateDependencies);
+
         debugProcess.log("Launching with feature: " + featurePath);
+        debugProcess.log("Polyglot debugging: Java=" + (settings.isPolyglotJavaDebuggingEnabled() ? "enabled" : "disabled") +
+                        ", JS=" + (settings.isPolyglotJsDebuggingEnabled() ? "enabled" : "disabled"));
+        debugProcess.log("Step filtering: JDK=" + (settings.showJdkClasses ? "show" : "skip") +
+                        ", Karate=" + (settings.showKarateFramework ? "show" : "skip") +
+                        ", Dependencies=" + (settings.showKarateDependencies ? "show" : "skip"));
 
         sendRequest("launch", args).thenAccept(response -> {
             debugProcess.log("Launch response received - debug session started");

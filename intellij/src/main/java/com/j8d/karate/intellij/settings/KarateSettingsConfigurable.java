@@ -39,9 +39,11 @@ public class KarateSettingsConfigurable implements Configurable {
     private JBCheckBox autoDiscoverEnvironmentsCheckbox;
     private JBTextField logFilterExcludeField;
     private JBTextField logBreakpointsField;
-    private JBCheckBox enablePolyglotDebuggingCheckbox;
-    private JBCheckBox polyglotJavaDebuggingCheckbox;
-    private JBCheckBox polyglotJsDebuggingCheckbox;
+    private JBCheckBox enableJavaDebuggingCheckbox;
+    private JBCheckBox enableJsDebuggingCheckbox;
+    private JBCheckBox showJdkClassesCheckbox;
+    private JBCheckBox showKarateFrameworkCheckbox;
+    private JBCheckBox showKarateDependenciesCheckbox;
 
     public KarateSettingsConfigurable(Project project) {
         this.project = project;
@@ -89,13 +91,19 @@ public class KarateSettingsConfigurable implements Configurable {
         logFilterExcludeField = new JBTextField(settings.logFilterExclude);
         logBreakpointsField = new JBTextField(settings.logBreakpoints);
 
-        // Polyglot debugging settings
-        enablePolyglotDebuggingCheckbox = new JBCheckBox("[Experimental] Enable unified polyglot debugging",
-            settings.enablePolyglotDebugging);
-        polyglotJavaDebuggingCheckbox = new JBCheckBox("Enable Java debugging in polyglot mode",
+        // Polyglot debugging settings (enabling either Java or JS automatically enables polyglot mode)
+        enableJavaDebuggingCheckbox = new JBCheckBox("[Experimental] Enable Java debugging",
             settings.enableJavaDebugging);
-        polyglotJsDebuggingCheckbox = new JBCheckBox("Enable JavaScript debugging in polyglot mode",
+        enableJsDebuggingCheckbox = new JBCheckBox("[Experimental] Enable JavaScript debugging",
             settings.enableJsDebugging);
+
+        // Step filtering settings (show = step into these classes, unchecked = skip them)
+        showJdkClassesCheckbox = new JBCheckBox("Show JDK classes (java.*, javax.*, jdk.*, sun.*)",
+            settings.showJdkClasses);
+        showKarateFrameworkCheckbox = new JBCheckBox("Show Karate framework classes (com.intuit.karate.*)",
+            settings.showKarateFramework);
+        showKarateDependenciesCheckbox = new JBCheckBox("Show Karate dependencies (jsonpath, netty, slf4j, etc.)",
+            settings.showKarateDependencies);
 
         // Update environment combo when environments field changes
         environmentsField.addActionListener(e -> updateEnvironmentCombo());
@@ -121,9 +129,13 @@ public class KarateSettingsConfigurable implements Configurable {
             .addLabeledComponent(new JBLabel("Log filter (comma-separated strings to hide):"), logFilterExcludeField)
             .addLabeledComponent(new JBLabel("Log breakpoints (comma-separated, pause when found in logs):"), logBreakpointsField)
             .addSeparator()
-            .addComponent(enablePolyglotDebuggingCheckbox)
-            .addComponent(polyglotJavaDebuggingCheckbox)
-            .addComponent(polyglotJsDebuggingCheckbox)
+            .addComponent(enableJavaDebuggingCheckbox)
+            .addComponent(enableJsDebuggingCheckbox)
+            .addSeparator()
+            .addComponent(new JBLabel("Step Filtering (show these classes when stepping through Java code):"))
+            .addComponent(showJdkClassesCheckbox)
+            .addComponent(showKarateFrameworkCheckbox)
+            .addComponent(showKarateDependenciesCheckbox)
             .addComponentFillVertically(new JPanel(), 0)
             .getPanel();
         
@@ -160,9 +172,11 @@ public class KarateSettingsConfigurable implements Configurable {
             autoDiscoverEnvironmentsCheckbox.isSelected() != settings.autoDiscoverEnvironments ||
             !logFilterExcludeField.getText().equals(settings.logFilterExclude) ||
             !logBreakpointsField.getText().equals(settings.logBreakpoints) ||
-            enablePolyglotDebuggingCheckbox.isSelected() != settings.enablePolyglotDebugging ||
-            polyglotJavaDebuggingCheckbox.isSelected() != settings.enableJavaDebugging ||
-            polyglotJsDebuggingCheckbox.isSelected() != settings.enableJsDebugging;
+            enableJavaDebuggingCheckbox.isSelected() != settings.enableJavaDebugging ||
+            enableJsDebuggingCheckbox.isSelected() != settings.enableJsDebugging ||
+            showJdkClassesCheckbox.isSelected() != settings.showJdkClasses ||
+            showKarateFrameworkCheckbox.isSelected() != settings.showKarateFramework ||
+            showKarateDependenciesCheckbox.isSelected() != settings.showKarateDependencies;
     }
 
     @Override
@@ -184,9 +198,11 @@ public class KarateSettingsConfigurable implements Configurable {
         settings.autoDiscoverEnvironments = autoDiscoverEnvironmentsCheckbox.isSelected();
         settings.logFilterExclude = logFilterExcludeField.getText();
         settings.logBreakpoints = logBreakpointsField.getText();
-        settings.enablePolyglotDebugging = enablePolyglotDebuggingCheckbox.isSelected();
-        settings.enableJavaDebugging = polyglotJavaDebuggingCheckbox.isSelected();
-        settings.enableJsDebugging = polyglotJsDebuggingCheckbox.isSelected();
+        settings.enableJavaDebugging = enableJavaDebuggingCheckbox.isSelected();
+        settings.enableJsDebugging = enableJsDebuggingCheckbox.isSelected();
+        settings.showJdkClasses = showJdkClassesCheckbox.isSelected();
+        settings.showKarateFramework = showKarateFrameworkCheckbox.isSelected();
+        settings.showKarateDependencies = showKarateDependenciesCheckbox.isSelected();
 
         // Notify listeners (e.g., status bar widgets) that settings have changed
         settings.fireSettingsChanged();
@@ -212,9 +228,11 @@ public class KarateSettingsConfigurable implements Configurable {
         autoDiscoverEnvironmentsCheckbox.setSelected(settings.autoDiscoverEnvironments);
         logFilterExcludeField.setText(settings.logFilterExclude);
         logBreakpointsField.setText(settings.logBreakpoints);
-        enablePolyglotDebuggingCheckbox.setSelected(settings.enablePolyglotDebugging);
-        polyglotJavaDebuggingCheckbox.setSelected(settings.enableJavaDebugging);
-        polyglotJsDebuggingCheckbox.setSelected(settings.enableJsDebugging);
+        enableJavaDebuggingCheckbox.setSelected(settings.enableJavaDebugging);
+        enableJsDebuggingCheckbox.setSelected(settings.enableJsDebugging);
+        showJdkClassesCheckbox.setSelected(settings.showJdkClasses);
+        showKarateFrameworkCheckbox.setSelected(settings.showKarateFramework);
+        showKarateDependenciesCheckbox.setSelected(settings.showKarateDependencies);
     }
 }
 

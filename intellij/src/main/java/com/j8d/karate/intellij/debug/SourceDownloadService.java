@@ -1,0 +1,247 @@
+package com.j8d.karate.intellij.debug;
+
+import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.execution.process.OSProcessHandler;
+import com.intellij.execution.process.ProcessAdapter;
+import com.intellij.execution.process.ProcessEvent;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.components.Service;
+import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.ProgressManager;
+import com.intellij.openapi.progress.Task;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.j8d.karate.intellij.project.KarateProjectService;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.io.File;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Service for detecting missing library sources and downloading them.
+ * Shows a notification to the user when sources are missing during debugging.
+ */
+@Service(Service.Level.PROJECT)
+public final class SourceDownloadService {
+
+    private static final Logger LOG = Logger.getInstance(SourceDownloadService.class);
+
+    private final Project project;
+    
+    // Track which classes we've already shown notifications for (to avoid spam)
+    private final Set<String> notifiedClasses = ConcurrentHashMap.newKeySet();
+    
+    // Track if we've shown the general "sources missing" notification this session
+    private volatile boolean hasShownSessionNotification = false;
+
+    public SourceDownloadService(Project project) {
+        this.project = project;
+    }
+
+    public static SourceDownloadService getInstance(@NotNull Project project) {
+        return project.getService(SourceDownloadService.class);
+    }
+
+    /**
+     * Check if a resolved file is a decompiled class file (sources missing).
+     * @param resolvedFile The file resolved from JavaPsiFacade
+     * @return true if this is a decompiled class file, false if it's a source file
+     */
+    public boolean isMissingSources(@Nullable VirtualFile resolvedFile) {
+        if (resolvedFile == null) {
+            return false;
+        }
+        
+        String path = resolvedFile.getPath();
+        // Decompiled class files have paths ending in .class
+        // Source files end in .java
+        // Also check if it's inside a regular JAR (not a sources JAR)
+        return path.endsWith(".class") || 
+               (path.contains(".jar!/") && !path.contains("-sources.jar!/") && path.endsWith(".java"));
+    }
+
+    /**
+     * Called when we detect a class with missing sources.
+     * Shows a notification to the user with an option to download sources.
+     */
+    public void notifyMissingSources(String className) {
+        // Avoid spamming notifications
+        if (hasShownSessionNotification || notifiedClasses.contains(className)) {
+            return;
+        }
+        
+        notifiedClasses.add(className);
+        hasShownSessionNotification = true;
+        
+        ApplicationManager.getApplication().invokeLater(() -> {
+            var notification = NotificationGroupManager.getInstance()
+                .getNotificationGroup("Karate Debug")
+                .createNotification(
+                    "Library Sources Missing",
+                    "Source code for library classes is not available. " +
+                    "You're viewing decompiled code. Click 'Download Sources' to fetch them.",
+                    NotificationType.INFORMATION
+                );
+
+            notification.addAction(new AnAction("Download Sources") {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent e) {
+                    notification.expire();
+                    downloadSources();
+                }
+            });
+
+            notification.addAction(new AnAction("Don't Show Again") {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent e) {
+                    notification.expire();
+                    // Keep hasShownSessionNotification = true to prevent future notifications
+                }
+            });
+
+            notification.notify(project);
+        });
+    }
+
+    /**
+     * Downloads library sources using Maven or Gradle.
+     */
+    public void downloadSources() {
+        KarateProjectService projectService = KarateProjectService.getInstance(project);
+        String projectType = projectService.getProjectType();
+        
+        if ("maven".equals(projectType)) {
+            downloadMavenSources();
+        } else if ("gradle".equals(projectType)) {
+            downloadGradleSources();
+        } else {
+            showError("Unknown project type. Please run 'mvn dependency:sources' or equivalent manually.");
+        }
+    }
+
+    private void downloadMavenSources() {
+        ProgressManager.getInstance().run(new Task.Backgroundable(project, "Downloading Library Sources", true) {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                indicator.setIndeterminate(true);
+                indicator.setText("Running mvn dependency:sources...");
+                
+                try {
+                    String basePath = project.getBasePath();
+                    if (basePath == null) {
+                        showError("Cannot determine project base path");
+                        return;
+                    }
+                    
+                    GeneralCommandLine commandLine = new GeneralCommandLine("mvn", "dependency:sources")
+                        .withWorkDirectory(new File(basePath));
+                    
+                    OSProcessHandler handler = new OSProcessHandler(commandLine);
+                    StringBuilder output = new StringBuilder();
+                    
+                    handler.addProcessListener(new ProcessAdapter() {
+                        @Override
+                        public void onTextAvailable(@NotNull ProcessEvent event, @NotNull com.intellij.openapi.util.Key outputType) {
+                            output.append(event.getText());
+                        }
+                        
+                        @Override
+                        public void processTerminated(@NotNull ProcessEvent event) {
+                            if (event.getExitCode() == 0) {
+                                showSuccess();
+                            } else {
+                                showError("Maven command failed. Check the Maven tool window for details.");
+                            }
+                        }
+                    });
+                    
+                    handler.startNotify();
+                    handler.waitFor();
+
+                } catch (Exception e) {
+                    LOG.error("Failed to download sources", e);
+                    showError("Failed to run Maven: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void downloadGradleSources() {
+        ProgressManager.getInstance().run(new Task.Backgroundable(project, "Downloading Library Sources", true) {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                indicator.setIndeterminate(true);
+                indicator.setText("Refreshing Gradle dependencies with sources...");
+
+                try {
+                    String basePath = project.getBasePath();
+                    if (basePath == null) {
+                        showError("Cannot determine project base path");
+                        return;
+                    }
+
+                    // For Gradle, we need to use the IDEA sync which downloads sources
+                    // The simplest approach is to tell the user to use the IDE's built-in refresh
+                    ApplicationManager.getApplication().invokeLater(() -> {
+                        var notification = NotificationGroupManager.getInstance()
+                            .getNotificationGroup("Karate Debug")
+                            .createNotification(
+                                "Gradle Sources",
+                                "For Gradle projects, please use View > Tool Windows > Gradle, " +
+                                "then click the Refresh button. IntelliJ will download sources automatically " +
+                                "if 'Download sources' is enabled in Gradle settings.",
+                                NotificationType.INFORMATION
+                            );
+                        notification.notify(project);
+                    });
+
+                } catch (Exception e) {
+                    LOG.error("Failed to handle Gradle sources", e);
+                    showError("Failed: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void showSuccess() {
+        ApplicationManager.getApplication().invokeLater(() -> {
+            var notification = NotificationGroupManager.getInstance()
+                .getNotificationGroup("Karate Debug")
+                .createNotification(
+                    "Sources Downloaded",
+                    "Library sources have been downloaded. Please reload your Maven/Gradle project " +
+                    "(Maven tool window > Reload All Projects) for IntelliJ to recognize them.",
+                    NotificationType.INFORMATION
+                );
+            notification.notify(project);
+        });
+    }
+
+    private void showError(String message) {
+        ApplicationManager.getApplication().invokeLater(() -> {
+            var notification = NotificationGroupManager.getInstance()
+                .getNotificationGroup("Karate Debug")
+                .createNotification(
+                    "Download Failed",
+                    message,
+                    NotificationType.ERROR
+                );
+            notification.notify(project);
+        });
+    }
+
+    /**
+     * Reset the notification state. Called when a new debug session starts.
+     */
+    public void resetNotificationState() {
+        hasShownSessionNotification = false;
+        // Keep notifiedClasses to avoid repeating notifications for the same classes
+    }
+}
