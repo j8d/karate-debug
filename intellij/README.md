@@ -47,6 +47,12 @@ Hide noisy log output by configuring exclude patterns. Filter out verbose framew
 ### Log Breakpoints
 Pause execution when specific strings appear in log output. Useful for catching exceptions or specific error messages without setting traditional breakpoints - just specify strings like "NullPointerException" or "ERROR" to break on.
 
+### Step Filtering
+Control which code is skipped when stepping through Java code during debugging. By default, the debugger skips Karate framework classes and third-party dependencies so you can focus on your own code. Disable these filters in Settings > Tools > Karate Debug when you need to step into framework internals.
+
+### Missing Sources Notification
+When stepping into library code that lacks source files, the debugger shows a notification with a "Download Sources" button. For Maven projects, this runs `mvn dependency:sources` to fetch the missing sources automatically.
+
 ### Syntax Highlighting
 Full syntax highlighting for the Karate DSL, including Gherkin keywords, JSON/XML payloads, JavaScript expressions, Java class references, and embedded variables.
 
@@ -68,6 +74,8 @@ Configure the plugin via Settings > Tools > Karate Debug:
 | Show Passing Matches | Highlight passing match statements during debug | `true` |
 | Show Failing Matches | Highlight failing match statements during debug | `true` |
 | Show Actual Values | Display actual values next to failing matches with a [Fix] button to replace the expected value | `true` |
+| Skip Karate Framework | Skip Karate framework classes (com.intuit.karate.*) when stepping | `true` |
+| Skip Karate Dependencies | Skip Karate's third-party dependencies (jsonpath, netty, slf4j, etc.) when stepping | `true` |
 
 ## Run Configuration
 
