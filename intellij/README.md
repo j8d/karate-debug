@@ -78,8 +78,9 @@ Configure the plugin via Settings > Tools > Karate Debug:
 | Show Passing Matches | Highlight passing match statements during debug | `true` |
 | Show Failing Matches | Highlight failing match statements during debug | `true` |
 | Show Actual Values | Display actual values next to failing matches with a [Fix] button to replace the expected value | `true` |
-| Skip Karate Framework | Skip Karate framework classes (com.intuit.karate.*) when stepping | `true` |
-| Skip Karate Dependencies | Skip Karate's third-party dependencies (jsonpath, netty, slf4j, etc.) when stepping | `true` |
+| Show JDK Classes | Step into JDK classes (java.*, javax.*, jdk.*, sun.*, com.sun.*) | `false` |
+| Show Karate Framework | Step into Karate framework classes (com.intuit.karate.*) | `false` |
+| Show Karate Dependencies | Step into Karate's third-party dependencies (jsonpath, netty, slf4j, etc.) | `false` |
 
 ## Run Configuration
 

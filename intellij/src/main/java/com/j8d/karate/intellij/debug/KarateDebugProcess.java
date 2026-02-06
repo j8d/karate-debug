@@ -64,6 +64,9 @@ public class KarateDebugProcess extends XDebugProcess {
     public void sessionInitialized() {
         super.sessionInitialized();
 
+        // Reset missing sources notification state for new session
+        SourceDownloadService.getInstance(getSession().getProject()).resetNotificationState();
+
         // Start the DAP server and connect
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
             try {

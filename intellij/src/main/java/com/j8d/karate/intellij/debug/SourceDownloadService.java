@@ -58,13 +58,21 @@ public final class SourceDownloadService {
         if (resolvedFile == null) {
             return false;
         }
-        
+
         String path = resolvedFile.getPath();
-        // Decompiled class files have paths ending in .class
-        // Source files end in .java
-        // Also check if it's inside a regular JAR (not a sources JAR)
-        return path.endsWith(".class") || 
-               (path.contains(".jar!/") && !path.contains("-sources.jar!/") && path.endsWith(".java"));
+
+        // Compiled class files are decompiled views - sources are missing
+        if (path.endsWith(".class")) {
+            return true;
+        }
+
+        // Files from the decompiler virtual file system are missing sources
+        String protocol = resolvedFile.getFileSystem().getProtocol();
+        if ("decompiler".equals(protocol)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -144,14 +152,8 @@ public final class SourceDownloadService {
                         .withWorkDirectory(new File(basePath));
                     
                     OSProcessHandler handler = new OSProcessHandler(commandLine);
-                    StringBuilder output = new StringBuilder();
-                    
+
                     handler.addProcessListener(new ProcessAdapter() {
-                        @Override
-                        public void onTextAvailable(@NotNull ProcessEvent event, @NotNull com.intellij.openapi.util.Key outputType) {
-                            output.append(event.getText());
-                        }
-                        
                         @Override
                         public void processTerminated(@NotNull ProcessEvent event) {
                             if (event.getExitCode() == 0) {

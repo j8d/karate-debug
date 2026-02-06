@@ -75,8 +75,11 @@ public class KarateStackFrame extends XStackFrame {
         }
 
         // If path looks like a Java class path (e.g., com/intuit/karate/core/ScenarioEngine.java),
-        // try to resolve it using IntelliJ's Java PSI
-        if (path.endsWith(".java") && !path.startsWith("/")) {
+        // try to resolve it using IntelliJ's Java PSI.
+        // Check for absolute paths on both Unix (starts with /) and Windows (e.g., C:\ or C:/)
+        boolean isAbsolutePath = path.startsWith("/") ||
+                                 (path.length() > 2 && path.charAt(1) == ':');
+        if (path.endsWith(".java") && !isAbsolutePath) {
             String className = pathToClassName(path);
             if (className != null) {
                 file = findClassSourceFile(className);

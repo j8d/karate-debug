@@ -98,7 +98,7 @@ public class KarateSettingsConfigurable implements Configurable {
             settings.enableJsDebugging);
 
         // Step filtering settings (show = step into these classes, unchecked = skip them)
-        showJdkClassesCheckbox = new JBCheckBox("Show JDK classes (java.*, javax.*, jdk.*, sun.*)",
+        showJdkClassesCheckbox = new JBCheckBox("Show JDK classes (java.*, javax.*, jdk.*, sun.*, com.sun.*)",
             settings.showJdkClasses);
         showKarateFrameworkCheckbox = new JBCheckBox("Show Karate framework classes (com.intuit.karate.*)",
             settings.showKarateFramework);
