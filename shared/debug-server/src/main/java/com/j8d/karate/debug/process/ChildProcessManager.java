@@ -113,7 +113,7 @@ public class ChildProcessManager {
         // Wait for ready event
         try {
             processInfo = readyFuture.get(STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            log.debug("Child process ready: {}", processInfo);
+            log.trace("Child process ready: {}", processInfo);
             return processInfo;
         } catch (java.util.concurrent.ExecutionException e) {
             throw new IOException("Child process failed to start: " + e.getCause().getMessage(), e.getCause());
@@ -238,7 +238,7 @@ public class ChildProcessManager {
                     if (jdwpMatcher.find()) {
                         try {
                             discoveredJdwpPort = Integer.parseInt(jdwpMatcher.group(1));
-                            log.debug("Discovered JDWP port: {}", discoveredJdwpPort);
+                            log.trace("Discovered JDWP port: {}", discoveredJdwpPort);
                         } catch (NumberFormatException e) {
                             log.warn("Failed to parse JDWP port from stdout: {}", line);
                         }
@@ -250,12 +250,12 @@ public class ChildProcessManager {
                     if (dapMatcher.find()) {
                         try {
                             discoveredDapPort = Integer.parseInt(dapMatcher.group(1));
-                            log.debug("Discovered GraalVM DAP server from stdout: port={}", discoveredDapPort);
+                            log.trace("Discovered GraalVM DAP server from stdout: port={}", discoveredDapPort);
 
                             // Notify listener for late JavaScript backend creation
                             DapDiscoveryListener listener = dapDiscoveryListener;
                             if (listener != null) {
-                                log.debug("Notifying DAP discovery listener");
+                                log.trace("Notifying DAP discovery listener");
                                 listener.onDapPortDiscovered(discoveredDapPort);
                             } else {
                                 log.trace("No DAP discovery listener registered");
@@ -302,7 +302,7 @@ public class ChildProcessManager {
                     if (jdwpMatcher.find()) {
                         try {
                             discoveredJdwpPort = Integer.parseInt(jdwpMatcher.group(1));
-                            log.debug("Discovered JDWP port from stderr: {}", discoveredJdwpPort);
+                            log.trace("Discovered JDWP port from stderr: {}", discoveredJdwpPort);
                         } catch (NumberFormatException e) {
                             log.warn("Failed to parse JDWP port from stderr: {}", line);
                         }
@@ -314,7 +314,7 @@ public class ChildProcessManager {
                     if (dapMatcher.find()) {
                         try {
                             discoveredDapPort = Integer.parseInt(dapMatcher.group(1));
-                            log.debug("Discovered GraalVM DAP server from stderr: port={}", discoveredDapPort);
+                            log.trace("Discovered GraalVM DAP server from stderr: port={}", discoveredDapPort);
 
                             // Notify listener for late JavaScript backend creation
                             DapDiscoveryListener listener = dapDiscoveryListener;

@@ -385,14 +385,14 @@ public class DebugCoordinator {
         multiplexer.start();
 
         state = CoordinatorState.RUNNING;
-        log.debug("Execution started");
+        log.trace("Execution started");
     }
 
     /**
      * Stops the debug session and cleans up all resources.
      */
     public void stop() {
-        log.debug("Stopping DebugCoordinator");
+        log.trace("Stopping DebugCoordinator");
         state = CoordinatorState.TERMINATED;
 
         // Stop multiplexer (which stops all backends)

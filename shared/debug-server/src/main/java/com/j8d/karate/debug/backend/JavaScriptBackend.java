@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -58,9 +59,17 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
     private volatile boolean pendingStepIn = false;
     // Track when we're actively stepping within JavaScript (step into/over/out was initiated)
     private volatile boolean isSteppingInJs = false;
+    // Counter for inline snippet step-ins to prevent infinite loops
+    private volatile int inlineSnippetStepCount = 0;
+    // Maximum number of consecutive inline snippet step-ins before giving up
+    private static final int MAX_INLINE_SNIPPET_STEPS = 50;
 
     // Source content matcher for mapping "Unnamed" sources to .js files
     private final JavaScriptSourceMatcher sourceMatcher;
+
+    // Track sourceReferences that are Karate internal JavaScript (report generation, etc.)
+    // These should be auto-continued without counting as step attempts
+    private final Set<Integer> karateInternalSources = ConcurrentHashMap.newKeySet();
 
     // Pending breakpoints: file path -> breakpoint requests (for re-applying after source match)
     private final Map<String, List<BreakpointRequest>> pendingBreakpoints = new ConcurrentHashMap<>();
@@ -322,6 +331,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
         scriptEntryCatchingEnabled = true;
         pendingStepIn = true;
+        inlineSnippetStepCount = 0; // Reset counter for new cross-language step
 
         log.trace("Enabled script entry catching for cross-language step-into");
 
@@ -345,7 +355,52 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
         pendingStepIn = false;
         scriptEntryCatchingEnabled = false;
+        inlineSnippetStepCount = 0;
         log.trace("Disabled script entry catching");
+    }
+
+    /**
+     * Disables all event processing and tells GraalVM to stop debugging.
+     * This is used when feature execution is complete to avoid overhead during
+     * report generation, while keeping the Polyglot context usable.
+     *
+     * We send a "disconnect" command to GraalVM's DAP server to tell it to stop
+     * debugging (which eliminates the debugging overhead), but we do NOT close
+     * the socket because that would break the Polyglot context.
+     */
+    public void disableEventProcessing() {
+        log.trace("Disabling JavaScript event processing and sending disconnect to GraalVM DAP");
+        ready = false;
+        scriptEntryCatchingEnabled = false;
+        pendingStepIn = false;
+        isSteppingInJs = false;
+        inlineSnippetStepCount = 0;
+
+        // Clear all JavaScript breakpoints first to reduce overhead
+        try {
+            JsonObject setBreakpointsArgs = new JsonObject();
+            JsonObject source = new JsonObject();
+            source.addProperty("path", ""); // Empty path clears all
+            setBreakpointsArgs.add("source", source);
+            setBreakpointsArgs.add("breakpoints", new JsonArray());
+            // Don't wait - just fire and forget
+            dapClient.send("setBreakpoints", setBreakpointsArgs);
+            log.trace("Sent clear breakpoints command to GraalVM DAP");
+        } catch (Exception e) {
+            log.trace("Error clearing breakpoints: {}", e.getMessage());
+        }
+
+        // Send disconnect command with suspendDebuggee=false to ensure JS resumes
+        // This tells GraalVM to stop debugging and let the debuggee continue freely
+        try {
+            JsonObject disconnectArgs = new JsonObject();
+            disconnectArgs.addProperty("terminateDebuggee", false);
+            disconnectArgs.addProperty("suspendDebuggee", false);
+            dapClient.send("disconnect", disconnectArgs);
+            log.trace("Sent disconnect command to GraalVM DAP server");
+        } catch (Exception e) {
+            log.trace("Error sending disconnect to GraalVM DAP", e);
+        }
     }
 
     // ========== Inspection ==========
@@ -527,6 +582,17 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
     @Override
     public void onStopped(JsonObject body) {
+        // Skip processing if event processing is disabled (e.g., during report generation)
+        if (!ready) {
+            // Still need to auto-continue to not block the JS execution
+            int threadId = body.has("threadId") ? body.get("threadId").getAsInt() : 1;
+            log.trace("Auto-continuing (event processing disabled) for threadId={}", threadId);
+            JsonObject continueArgs = new JsonObject();
+            continueArgs.addProperty("threadId", threadId);
+            dapClient.send("continue", continueArgs);
+            return;
+        }
+
         String reason = body.has("reason") ? body.get("reason").getAsString() : "unknown";
         int threadId = body.has("threadId") ? body.get("threadId").getAsInt() : 1;
 
@@ -555,10 +621,29 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                         JsonObject topFrame = currentStackFrames.get(0).getAsJsonObject();
                         JsonObject source = topFrame.has("source") ? topFrame.getAsJsonObject("source") : null;
 
+                        // Get sourceRef for checking
+                        int sourceRef = 0;
+                        if (source != null && source.has("sourceReference")) {
+                            sourceRef = source.get("sourceReference").getAsInt();
+                        }
+
+                        // Check if this is Karate internal JavaScript (report generation, etc.)
+                        // These should be auto-continued immediately without counting as step attempts
+                        if (sourceRef > 0 && karateInternalSources.contains(sourceRef)) {
+                            log.trace("Auto-continuing past Karate internal JavaScript (sourceRef={})", sourceRef);
+                            try {
+                                JsonObject continueArgs = new JsonObject();
+                                continueArgs.addProperty("threadId", threadId);
+                                dapClient.send("continue", continueArgs);
+                            } catch (Exception e) {
+                                log.error("Failed to auto-continue past Karate internal JS", e);
+                            }
+                            return;
+                        }
+
                         // Check if source is mapped to a user file
                         boolean isMappedToFile = false;
                         if (source != null && source.has("name") && "Unnamed".equals(source.get("name").getAsString())) {
-                            int sourceRef = source.has("sourceReference") ? source.get("sourceReference").getAsInt() : 0;
                             if (sourceMatcher != null && sourceRef > 0) {
                                 Optional<Path> mappedPath = sourceMatcher.getPathForSourceRef(sourceRef);
                                 isMappedToFile = mappedPath.isPresent();
@@ -573,22 +658,39 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                         if (!isMappedToFile) {
                             // Not a user file (inline snippet like karate.log() or jsHelper.processOrder())
                             if (scriptEntryCatchingEnabled) {
-                                // Cross-language step-into: step INTO the inline snippet to reach the function body
-                                // This is needed because GraalVM DAP only stops on script entry, not function entry
-                                log.trace("Stepping into inline snippet to reach function body");
-                                shouldStepInto = true;
-                            } else {
-                                // Not in step mode - just skip
+                                // Check if we've exceeded the max inline snippet steps
+                                if (inlineSnippetStepCount >= MAX_INLINE_SNIPPET_STEPS) {
+                                    // We've stepped too many times without finding user code
+                                    // This likely means we're in Karate's internal JavaScript (report generation, etc.)
+                                    log.debug("Exceeded max inline snippet steps ({}), giving up on cross-language step-into",
+                                            MAX_INLINE_SNIPPET_STEPS);
+                                    scriptEntryCatchingEnabled = false;
+                                    pendingStepIn = false;
+                                    inlineSnippetStepCount = 0;
+                                    // Fall through to auto-continue
+                                } else {
+                                    // Cross-language step-into: step INTO the inline snippet to reach the function body
+                                    // This is needed because GraalVM DAP only stops on script entry, not function entry
+                                    log.trace("Stepping into inline snippet to reach function body (attempt {})",
+                                            inlineSnippetStepCount + 1);
+                                    shouldStepInto = true;
+                                    inlineSnippetStepCount++;
+                                }
+                            }
+                            if (!shouldStepInto) {
+                                // Not in step mode or gave up - just skip
                                 log.trace("Auto-continuing past inline snippet (not mapped to file)");
                             }
                         } else if (isSteppingInJs) {
                             // We're stepping within JS - pause
                             log.trace("Pausing: stepping in JS");
                             shouldPause = true;
+                            inlineSnippetStepCount = 0; // Reset counter on pause
                         } else if (scriptEntryCatchingEnabled) {
                             // Cross-language step-into - pause on user files only
                             log.trace("Pausing: cross-language step-into on mapped file");
                             shouldPause = true;
+                            inlineSnippetStepCount = 0; // Reset counter on pause
                         } else {
                             // Not stepping, not cross-language - this is just script initialization
                             // TODO: Check for breakpoints at this line
@@ -709,6 +811,12 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
     @Override
     public void onLoadedSource(JsonObject body) {
+        // Skip processing if event processing is disabled (e.g., during report generation)
+        if (!ready) {
+            log.trace("Ignoring loadedSource event - event processing disabled");
+            return;
+        }
+
         if (!body.has("source")) return;
 
         JsonObject source = body.getAsJsonObject("source");
@@ -756,6 +864,14 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
             // Note: DapClient.handleResponse() extracts the body, so 'body' IS the response body
             if (body != null && body.has("content")) {
                 String content = body.get("content").getAsString();
+
+                // Check if this is Karate internal JavaScript (report generation, etc.)
+                // These contain patterns like: karateEvent: 'report_feature'
+                if (content.contains("karateEvent:") || content.contains("karateEvent :")) {
+                    log.trace("Detected Karate internal JavaScript (report generation) for sourceRef={}", sourceRef);
+                    karateInternalSources.add(sourceRef);
+                    return; // Don't try to match to user files
+                }
 
                 // Try to match content to a known .js file
                 Optional<Path> matchedFile = sourceMatcher.matchContent(content);

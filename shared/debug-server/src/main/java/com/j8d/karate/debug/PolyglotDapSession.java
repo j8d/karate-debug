@@ -331,7 +331,7 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
         boolean skipKarateFramework = !args.has("skipKarateFramework") || args.get("skipKarateFramework").getAsBoolean();
         boolean skipKarateDependencies = !args.has("skipKarateDependencies") || args.get("skipKarateDependencies").getAsBoolean();
 
-        log.debug("Polyglot launch: feature={}, java={}, js={}, skipJdk={}, skipKarate={}, skipKarateDeps={}",
+        log.trace("Polyglot launch: feature={}, java={}, js={}, skipJdk={}, skipKarate={}, skipKarateDeps={}",
                 featurePath, enableJavaDebugging, enableJsDebugging, skipJdkClasses, skipKarateFramework, skipKarateDependencies);
 
         // Create child process config
@@ -356,7 +356,7 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
         // (VS Code sends setBreakpoints before launch, so we queue them)
         synchronized (preLaunchBreakpoints) {
             if (!preLaunchBreakpoints.isEmpty()) {
-                log.debug("Transferring {} pre-launch breakpoint requests to coordinator", preLaunchBreakpoints.size());
+                log.trace("Transferring {} pre-launch breakpoint requests to coordinator", preLaunchBreakpoints.size());
                 for (PreLaunchBreakpoints bp : preLaunchBreakpoints) {
                     coordinator.setBreakpoints(bp.filePath(), bp.requests());
                 }
@@ -367,7 +367,7 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
         // Initialize asynchronously - store future so configurationDone can wait for it
         initializationFuture = coordinator.initialize()
             .thenRun(() -> {
-                log.debug("Coordinator initialized successfully");
+                log.trace("Coordinator initialized successfully");
                 sendResponse(request, true, null);
             })
             .exceptionally(e -> {
@@ -495,7 +495,15 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
     private void handleStackTrace(JsonObject request, JsonObject args) {
         int threadId = args.get("threadId").getAsInt();
         log.trace("handleStackTrace: threadId={}", threadId);
-        List<StackFrame> frames = coordinator.getStackFrames(threadId);
+
+        List<StackFrame> frames;
+        try {
+            frames = coordinator.getStackFrames(threadId);
+        } catch (Exception e) {
+            log.error("Error getting stack frames for thread {}: {}", threadId, e.getMessage());
+            log.trace("Stack trace:", e);
+            frames = List.of();
+        }
 
         JsonArray framesArray = new JsonArray();
         for (StackFrame frame : frames) {

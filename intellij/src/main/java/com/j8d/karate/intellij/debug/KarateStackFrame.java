@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.application.ReadAction;
+import com.intellij.util.SlowOperations;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
@@ -119,32 +120,36 @@ public class KarateStackFrame extends XStackFrame {
     private VirtualFile findClassSourceFile(String className) {
         Project project = debugProcess.getSession().getProject();
 
-        // Do the PSI lookup in a ReadAction
-        VirtualFile result = ReadAction.compute(() -> {
-            try {
-                // Search in all scopes including libraries
-                GlobalSearchScope scope = GlobalSearchScope.allScope(project);
-                PsiClass psiClass = JavaPsiFacade.getInstance(project).findClass(className, scope);
+        // Do the PSI lookup in a ReadAction. We use SlowOperations.allowSlowOperations() to suppress
+        // the EDT warning because this is called during stack frame construction which happens
+        // on the EDT during debug events. The PSI lookup is generally fast for cached data.
+        // TODO: Consider refactoring to compute source positions asynchronously in the future.
+        VirtualFile result = SlowOperations.allowSlowOperations(
+            () -> ReadAction.compute(() -> {
+                try {
+                    // Search in all scopes including libraries
+                    GlobalSearchScope scope = GlobalSearchScope.allScope(project);
+                    PsiClass psiClass = JavaPsiFacade.getInstance(project).findClass(className, scope);
 
-                if (psiClass != null) {
-                    // Use getNavigationElement() to get the source file instead of the class file.
-                    // This is what IntelliJ uses for "Go to Declaration" and properly resolves
-                    // to source files in src.zip or attached sources.
-                    PsiElement navigationElement = psiClass.getNavigationElement();
-                    if (navigationElement != null) {
-                        PsiFile containingFile = navigationElement.getContainingFile();
-                        if (containingFile != null) {
-                            VirtualFile vf = containingFile.getVirtualFile();
-                            LOG.debug("Resolved " + className + " -> " + (vf != null ? vf.getPath() : "null"));
-                            return vf;
+                    if (psiClass != null) {
+                        // Use getNavigationElement() to get the source file instead of the class file.
+                        // This is what IntelliJ uses for "Go to Declaration" and properly resolves
+                        // to source files in src.zip or attached sources.
+                        PsiElement navigationElement = psiClass.getNavigationElement();
+                        if (navigationElement != null) {
+                            PsiFile containingFile = navigationElement.getContainingFile();
+                            if (containingFile != null) {
+                                VirtualFile vf = containingFile.getVirtualFile();
+                                LOG.debug("Resolved " + className + " -> " + (vf != null ? vf.getPath() : "null"));
+                                return vf;
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    LOG.debug("Failed to resolve class " + className + ": " + e.getMessage());
                 }
-            } catch (Exception e) {
-                LOG.debug("Failed to resolve class " + className + ": " + e.getMessage());
-            }
-            return null;
-        });
+                return null;
+            }));
 
         // Check for missing sources OUTSIDE the ReadAction to avoid threading issues
         if (result != null) {

@@ -83,7 +83,7 @@ public class RunnerDebugger implements RuntimeHook {
         int featureLine = runner.getFeatureLine();
         String karateEnv = runner.getKarateEnv();
 
-        log.debug("Starting execution, featurePath={}, featureLine={}", featurePath, featureLine);
+        log.trace("Starting execution, featurePath={}, featureLine={}", featurePath, featureLine);
 
         if (featurePath == null) {
             log.error("No feature path set");
@@ -101,14 +101,16 @@ public class RunnerDebugger implements RuntimeHook {
                 if (featureLine > 0) {
                     pathSpec = classpathPath + ":" + featureLine;
                 }
-                log.debug("Starting Karate execution: {}", pathSpec);
+                log.trace("Starting Karate execution: {}", pathSpec);
                 log.trace("Hook instance: {}, breakpoints: {}", System.identityHashCode(this), breakpoints.keySet());
 
+                log.trace("Calling Runner.path()...");
                 Results results = Runner.path(pathSpec)
                     .hook(this)
                     .karateEnv(karateEnv)
                     .backupReportDir(false)
                     .parallel(1);
+                log.trace("Runner.path() returned");
 
                 log.info("Karate execution completed. Passed: {}, Failed: {}",
                     results.getScenariosPassed(), results.getScenariosFailed());
@@ -183,7 +185,7 @@ public class RunnerDebugger implements RuntimeHook {
     // ========== Execution Control ==========
 
     public void resume(int threadId) {
-        log.debug("Resume thread {}", threadId);
+        log.trace("Resume thread {}", threadId);
         stepMode = StepMode.RUN;
         resumeExecution();
     }
@@ -206,7 +208,7 @@ public class RunnerDebugger implements RuntimeHook {
     }
 
     public void pause(int threadId) {
-        log.debug("Pause thread {}", threadId);
+        log.trace("Pause thread {}", threadId);
         // Set step mode to step-in so we pause at the next step
         stepMode = StepMode.STEP_IN;
     }
@@ -242,13 +244,19 @@ public class RunnerDebugger implements RuntimeHook {
 
     @Override
     public void afterFeature(FeatureRuntime fr) {
-        log.debug("afterFeature: {}", fr.featureCall.feature.getResource().getRelativePath());
+        log.trace("afterFeature: {}", fr.featureCall.feature.getResource().getRelativePath());
+
+        // Notify parent that feature is complete - report generation will follow.
+        // This allows the parent to stop JavaScript debugging to avoid slowing down report generation.
+        ipcServer.sendEvent(IpcEvents.FEATURE_COMPLETE, new JsonObject());
+
+        log.trace("afterFeature: returning from hook");
     }
 
     @Override
     public boolean beforeScenario(ScenarioRuntime sr) {
         currentRuntime = sr;
-        log.debug("beforeScenario CALLED: {} (dryRun={}) - returning true",
+        log.trace("beforeScenario CALLED: {} (dryRun={}) - returning true",
             sr.scenario.getName(), sr.dryRun);
         return true;
     }
@@ -256,32 +264,32 @@ public class RunnerDebugger implements RuntimeHook {
     @Override
     public void afterScenario(ScenarioRuntime sr) {
         // Log diagnostic info to understand why beforeScenario might have been skipped
-        log.debug("afterScenario CALLED: {} (dryRun={}, stopped={}, engineAborted={})",
+        log.trace("afterScenario CALLED: {} (dryRun={}, stopped={}, engineAborted={})",
             sr.scenario.getName(), sr.dryRun, sr.isStopped(),
             sr.engine != null ? sr.engine.isAborted() : "null-engine");
         // Check scenario properties that could cause beforeScenario to be skipped
-        log.debug("afterScenario: scenario.isDynamic={}, scenario.isOutlineExample={}",
+        log.trace("afterScenario: scenario.isDynamic={}, scenario.isOutlineExample={}",
             sr.scenario.isDynamic(), sr.scenario.isOutlineExample());
         // Check if suite was aborted
         try {
-            log.debug("afterScenario: suite.isAborted={}", sr.featureRuntime.suite.isAborted());
+            log.trace("afterScenario: suite.isAborted={}", sr.featureRuntime.suite.isAborted());
         } catch (Exception e) {
-            log.debug("afterScenario: could not check suite.isAborted: {}", e.getMessage());
+            log.trace("afterScenario: could not check suite.isAborted: {}", e.getMessage());
         }
         // Check step results to understand execution
         try {
-            log.debug("afterScenario: stepResults.size={}, scenario.getSteps().size={}",
+            log.trace("afterScenario: stepResults.size={}, scenario.getSteps().size={}",
                 sr.result.getStepResults().size(),
                 sr.scenario.getSteps().size());
             // Log first step result if any
             if (!sr.result.getStepResults().isEmpty()) {
                 var firstStep = sr.result.getStepResults().get(0);
-                log.debug("afterScenario: firstStepResult={}, isFailed={}",
+                log.trace("afterScenario: firstStepResult={}, isFailed={}",
                     firstStep.getStep() != null ? firstStep.getStep().getText() : "null-step",
                     firstStep.isFailed());
             }
         } catch (Exception e) {
-            log.debug("afterScenario: could not check steps: {}", e.getMessage());
+            log.trace("afterScenario: could not check steps: {}", e.getMessage());
         }
     }
 
@@ -616,7 +624,7 @@ public class RunnerDebugger implements RuntimeHook {
         String displayValue = formatValue(parsedValue);
         String type = parsedValue != null ? parsedValue.getClass().getSimpleName() : "null";
 
-        log.debug("Queued variable change: {} = {}", name, displayValue);
+        log.trace("Queued variable change: {} = {}", name, displayValue);
 
         result.addProperty("value", displayValue);
         result.addProperty("type", type);
@@ -631,7 +639,7 @@ public class RunnerDebugger implements RuntimeHook {
         for (Map.Entry<String, Object> entry : pendingVariableChanges.entrySet()) {
             String name = entry.getKey();
             Object value = entry.getValue();
-            log.debug("Applying variable change: {} = {}", name, formatValue(value));
+            log.trace("Applying variable change: {} = {}", name, formatValue(value));
             currentRuntime.engine.setVariable(name, value);
         }
 

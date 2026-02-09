@@ -295,11 +295,29 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
     }
 
     /**
+     * Disables class prepare events.
+     * Called when feature execution is complete to avoid overhead during report generation.
+     */
+    public void disableClassPrepareEvents() {
+        jdiClient.disableClassPrepareEvents();
+    }
+
+    /**
      * Cancels all active step requests.
      * Called when a Java step exits to framework code and we need to clean up.
      */
     public void cancelAllSteps() {
         jdiClient.cancelAllSteps();
+    }
+
+    /**
+     * Cancels all active step requests and resumes the VM.
+     * Used when cross-language stepping needs to be aborted and the JVM
+     * should continue running (e.g., when Karate stops while Java was stepping).
+     */
+    public void cancelAllStepsAndResume() {
+        jdiClient.cancelAllSteps();
+        jdiClient.resume();
     }
 
     // ========== Stack Frame Inspection ==========
@@ -338,7 +356,16 @@ public class JavaBackend implements DebugBackend, JdiEventListener {
                 ));
             }
         } catch (IncompatibleThreadStateException e) {
-            log.warn("Thread not suspended: {}", threadId);
+            // Expected during rapid stepping - thread may be resumed before we can get frames
+            log.debug("Thread not suspended (likely resumed during stepping): {}", threadId);
+        } catch (com.sun.jdi.VMDisconnectedException e) {
+            log.debug("VM disconnected while getting stack frames for thread {}", threadId);
+        } catch (com.sun.jdi.ObjectCollectedException e) {
+            log.debug("Thread reference was garbage collected: {}", threadId);
+        } catch (Exception e) {
+            // Log at debug level - these race conditions are expected during async debugging
+            log.debug("Could not get stack frames for thread {}: {}", threadId, e.getMessage());
+            log.trace("Stack trace:", e);
         }
 
         return frames;

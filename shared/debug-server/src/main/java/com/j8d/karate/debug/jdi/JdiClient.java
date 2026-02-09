@@ -66,8 +66,14 @@ public class JdiClient {
     // Step-over/out should ALWAYS skip framework code; step-into uses the skip settings
     private final Map<Long, Integer> originalStepDepth = new ConcurrentHashMap<>();
 
+    // Track count of framework steps skipped per thread (for aggregated logging)
+    private final Map<Long, Integer> frameworkStepCount = new ConcurrentHashMap<>();
+
     // Method entry request for cross-language step-into
     private MethodEntryRequest methodEntryRequest;
+
+    // Class prepare request for deferred breakpoints
+    private ClassPrepareRequest classPrepareRequest;
 
     // Step filtering configuration
     private final boolean skipJdkClasses;
@@ -111,7 +117,7 @@ public class JdiClient {
      * @throws IOException If connection fails
      */
     public void connect(String host, int port) throws IOException {
-        log.debug("Connecting to JVM at {}:{}", host, port);
+        log.trace("Connecting to JVM at {}:{}", host, port);
 
         try {
             AttachingConnector connector = findSocketAttachConnector();
@@ -127,10 +133,10 @@ public class JdiClient {
             erm = vm.eventRequestManager();
 
             // Enable class prepare events for deferred breakpoints
-            ClassPrepareRequest cpr = erm.createClassPrepareRequest();
-            cpr.enable();
+            classPrepareRequest = erm.createClassPrepareRequest();
+            classPrepareRequest.enable();
 
-            log.debug("Connected to JVM: {}", vm.name());
+            log.trace("Connected to JVM: {}", vm.name());
             
             // Start event loop
             startEventLoop();
@@ -167,6 +173,18 @@ public class JdiClient {
      */
     public boolean isConnected() {
         return vm != null && running.get();
+    }
+
+    /**
+     * Disables class prepare events.
+     * Called when feature execution is complete to avoid overhead during report generation.
+     * Deferred breakpoints will no longer be resolved after this call.
+     */
+    public void disableClassPrepareEvents() {
+        if (classPrepareRequest != null && classPrepareRequest.isEnabled()) {
+            log.trace("Disabling class prepare events");
+            classPrepareRequest.disable();
+        }
     }
     
     /**
@@ -264,6 +282,7 @@ public class JdiClient {
      */
     public void resume() {
         if (vm != null) {
+            log.trace("Resuming all threads in VM");
             vm.resume();
         }
     }
@@ -288,9 +307,10 @@ public class JdiClient {
         // Remove any existing step request for this thread
         cancelStep(thread);
 
-        // Track original step type for this thread.
-        // Overwrite any previous value to avoid preserving stale intent across interrupted steps.
-        originalStepDepth.put(thread.uniqueID(), depth);
+        // Track original step type - only set if not already tracking (for auto-continue chains).
+        // This ensures we remember the user's original intent (INTO vs OVER/OUT) when we
+        // auto-continue through framework code via STEP_OUT.
+        originalStepDepth.putIfAbsent(thread.uniqueID(), depth);
 
         StepRequest stepReq = erm.createStepRequest(thread, StepRequest.STEP_LINE, depth);
         stepReq.addCountFilter(1); // Only one step
@@ -353,11 +373,11 @@ public class JdiClient {
             try {
                 erm.deleteEventRequest(stepReq);
             } catch (Exception e) {
-                log.debug("Error canceling step request: {}", e.getMessage());
+                log.trace("Error canceling step request: {}", e.getMessage());
             }
         }
         activeStepRequests.clear();
-        log.debug("Cancelled all active step requests");
+        log.trace("Cancelled all active step requests");
     }
 
     /**
@@ -366,7 +386,7 @@ public class JdiClient {
      */
     public void enableMethodEntry() {
         if (methodEntryRequest != null) {
-            log.debug("Method entry already enabled");
+            log.trace("Method entry already enabled");
             return;
         }
         if (erm == null) {
@@ -380,11 +400,7 @@ public class JdiClient {
         // This allows the IPC-Sender thread to continue running during debugging.
         methodEntryRequest.setSuspendPolicy(MethodEntryRequest.SUSPEND_EVENT_THREAD);
 
-        // ALWAYS exclude JDK classes from method entry catching.
-        // Method entry is used for cross-language step-into from Karate to Java.
-        // We want to catch the first USER method, not JDK internals.
-        // The skipJdkClasses setting is respected in step filtering (shouldSkipFrameworkClass()),
-        // not in method entry catching.
+        // Filter out JDK classes - always excluded (no source code)
         methodEntryRequest.addClassExclusionFilter("java.*");
         methodEntryRequest.addClassExclusionFilter("javax.*");
         methodEntryRequest.addClassExclusionFilter("sun.*");
@@ -423,10 +439,24 @@ public class JdiClient {
             methodEntryRequest.addClassExclusionFilter("net.minidev.*");
             methodEntryRequest.addClassExclusionFilter("org.apache.http.*");
             methodEntryRequest.addClassExclusionFilter("org.thymeleaf.*");
+            methodEntryRequest.addClassExclusionFilter("org.attoparser.*");
+            methodEntryRequest.addClassExclusionFilter("org.unbescape.*");
             methodEntryRequest.addClassExclusionFilter("com.linecorp.armeria.*");
             methodEntryRequest.addClassExclusionFilter("de.siegmar.fastcsv.*");
             methodEntryRequest.addClassExclusionFilter("org.antlr.*");
             methodEntryRequest.addClassExclusionFilter("com.github.javaparser.*");
+            methodEntryRequest.addClassExclusionFilter("io.github.classgraph.*");
+            methodEntryRequest.addClassExclusionFilter("nonapi.io.github.classgraph.*");
+            methodEntryRequest.addClassExclusionFilter("io.github.t12y.*");
+            methodEntryRequest.addClassExclusionFilter("ognl.*");
+            methodEntryRequest.addClassExclusionFilter("org.javassist.*");
+            methodEntryRequest.addClassExclusionFilter("info.picocli.*");
+            methodEntryRequest.addClassExclusionFilter("org.brotli.*");
+            methodEntryRequest.addClassExclusionFilter("com.aayushatharva.*");
+            methodEntryRequest.addClassExclusionFilter("io.netty.*");
+            methodEntryRequest.addClassExclusionFilter("io.micrometer.*");
+            methodEntryRequest.addClassExclusionFilter("com.fasterxml.jackson.*");
+            methodEntryRequest.addClassExclusionFilter("commons-codec.*");
         }
 
         methodEntryRequest.enable();
@@ -529,7 +559,10 @@ public class JdiClient {
             // - Step Over/Out: ALWAYS skip framework code (user wants to stay at their level)
             // - Step Into: Use the skip settings (user may want to descend into framework)
             if (shouldSkipFrameworkClass(className, origDepth)) {
-                log.debug("StepEvent in framework code, auto-continuing step");
+                // Increment framework step counter (log individual steps at TRACE level)
+                frameworkStepCount.merge(threadId, 1, Integer::sum);
+                log.trace("StepEvent in framework code, auto-continuing step (count={})",
+                         frameworkStepCount.get(threadId));
                 // Issue another step to skip framework code
                 // Use STEP_OUT to quickly exit framework code back to user code
                 cancelStep(stepEvent.thread());
@@ -539,6 +572,11 @@ public class JdiClient {
 
             // User code - clean up and report
             cancelStep(stepEvent.thread());
+            // Log aggregated framework step count if any steps were skipped
+            Integer skippedCount = frameworkStepCount.remove(threadId);
+            if (skippedCount != null && skippedCount > 0) {
+                log.debug("Auto-continued through {} framework steps", skippedCount);
+            }
             // Clear the original step tracking since we're done with this step sequence
             originalStepDepth.remove(threadId);
             listener.onStepComplete(stepEvent.thread(), stepEvent.location());
@@ -652,18 +690,41 @@ public class JdiClient {
      * When skipKarateFramework=false, user can step through all of these.
      */
     private static final String[] KARATE_DEPENDENCY_PREFIXES = {
+        // JSON/Data processing
         "com.jayway.jsonpath.",    // JSON path parsing
         "net.minidev.",            // JSON Smart (used by jsonpath)
-        "org.slf4j.",              // Logging
+        "com.google.",             // Google libraries (Gson, Guava, etc.)
+        "com.fasterxml.",          // Jackson JSON
+        "org.json.",               // JSON.org
+        "org.yaml.snakeyaml.",     // YAML parsing
+        "de.siegmar.fastcsv.",     // CSV parsing
+        // Logging
+        "org.slf4j.",              // Logging API
         "ch.qos.logback.",         // Logging implementation
+        "org.apache.logging.",     // Log4j2
+        "org.apache.log4j.",       // Log4j
+        // HTTP/Networking
         "io.netty.",               // HTTP client
         "org.apache.http.",        // HTTP client (Apache)
-        "org.thymeleaf.",          // Template engine
         "com.linecorp.armeria.",   // HTTP framework
-        "de.siegmar.fastcsv.",     // CSV parsing
+        // Template/Parsing
+        "org.thymeleaf.",          // Template engine
+        "org.attoparser.",         // HTML parser (used by Thymeleaf)
+        "org.unbescape.",          // Escape/unescape library
         "org.antlr.",              // Parser generator
-        "org.yaml.snakeyaml.",     // YAML parsing
         "com.github.javaparser.",  // Java parsing
+        "ognl.",                   // OGNL expression library
+        // Classpath/Reflection
+        "io.github.classgraph.",   // ClassGraph library
+        "nonapi.io.github.classgraph.", // ClassGraph internal
+        "org.javassist.",          // Bytecode manipulation
+        // Utilities
+        "info.picocli.",           // CLI parsing
+        "org.brotli.",             // Compression
+        "com.aayushatharva.",      // Brotli4j
+        "io.micrometer.",          // Metrics
+        "io.github.t12y.",         // Image comparison
+        "org.apache.commons.",     // Apache Commons
     };
 
     /**

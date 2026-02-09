@@ -308,6 +308,12 @@ public class KarateBackend implements DebugBackend {
                     listener.onBreakpointResolved(this, bp);
                 }
             }
+            case IpcEvents.FEATURE_COMPLETE -> {
+                log.debug("Feature execution complete - report generation will follow");
+                if (listener != null) {
+                    listener.onFeatureComplete(this);
+                }
+            }
             default -> log.warn("Unknown IPC event: {}", eventName);
         }
     }
