@@ -51,8 +51,8 @@ Pause execution when specific strings appear in log output. Useful for catching 
 Control which code is automatically skipped when stepping through Java code. By default, the debugger skips Karate framework classes and third-party dependencies so you can focus on your own code. When step filtering is enabled, stepping into framework code will automatically step out and return to user code.
 
 Configure these options in Settings > Tools > Karate Debug:
-- **Skip Karate Framework** - Set to `false` to step into Karate source code
-- **Skip Karate Dependencies** - Set to `false` to also step through Karate's internal libraries (jsonpath, netty, slf4j, etc.)
+- **Show Karate framework classes** - Check to step into Karate source code during debugging
+- **Show Karate dependencies** - Check to also step through Karate's internal libraries (jsonpath, netty, slf4j, etc.)
 
 ### Missing Sources Notification
 When stepping into library code that lacks source files, the debugger shows a notification with a "Download Sources" button. For Maven projects, this runs `mvn dependency:sources` to fetch the missing sources automatically.

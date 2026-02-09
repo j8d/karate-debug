@@ -21,8 +21,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service for detecting missing library sources and downloading them.
@@ -34,11 +32,9 @@ public final class SourceDownloadService {
     private static final Logger LOG = Logger.getInstance(SourceDownloadService.class);
 
     private final Project project;
-    
-    // Track which classes we've already shown notifications for (to avoid spam)
-    private final Set<String> notifiedClasses = ConcurrentHashMap.newKeySet();
-    
-    // Track if we've shown the general "sources missing" notification this session
+
+    // Track if we've shown the "sources missing" notification this debug session.
+    // We only show one notification per session to avoid spam.
     private volatile boolean hasShownSessionNotification = false;
 
     public SourceDownloadService(Project project) {
@@ -78,14 +74,13 @@ public final class SourceDownloadService {
     /**
      * Called when we detect a class with missing sources.
      * Shows a notification to the user with an option to download sources.
+     * Only shows one notification per debug session to avoid spam.
      */
     public void notifyMissingSources(String className) {
-        // Avoid spamming notifications
-        if (hasShownSessionNotification || notifiedClasses.contains(className)) {
+        // Only show one notification per debug session
+        if (hasShownSessionNotification) {
             return;
         }
-        
-        notifiedClasses.add(className);
         hasShownSessionNotification = true;
         
         ApplicationManager.getApplication().invokeLater(() -> {
@@ -241,9 +236,9 @@ public final class SourceDownloadService {
 
     /**
      * Reset the notification state. Called when a new debug session starts.
+     * This allows the notification to be shown again in a new session.
      */
     public void resetNotificationState() {
         hasShownSessionNotification = false;
-        // Keep notifiedClasses to avoid repeating notifications for the same classes
     }
 }

@@ -69,8 +69,12 @@ public class KarateStackFrame extends XStackFrame {
      * IntelliJ's Java class resolution for library sources.
      */
     private VirtualFile resolveSourceFile(String path) {
+        // Normalize to system-independent form (forward slashes) for IntelliJ's VirtualFile API
+        // This handles Windows backslash-separated paths from the debug server
+        String normalizedPath = path.replace('\\', '/');
+
         // First, try direct file system lookup (works for absolute paths)
-        VirtualFile file = LocalFileSystem.getInstance().findFileByPath(path);
+        VirtualFile file = LocalFileSystem.getInstance().findFileByPath(normalizedPath);
         if (file != null) {
             return file;
         }
@@ -78,14 +82,14 @@ public class KarateStackFrame extends XStackFrame {
         // If path looks like a Java class path (e.g., com/intuit/karate/core/ScenarioEngine.java),
         // try to resolve it using IntelliJ's Java PSI.
         // Check for absolute paths on both Unix (starts with /) and Windows (e.g., C:\ or C:/)
-        boolean isAbsolutePath = path.startsWith("/") ||
-                                 (path.length() > 2 && path.charAt(1) == ':');
-        if (path.endsWith(".java") && !isAbsolutePath) {
-            String className = pathToClassName(path);
+        boolean isAbsolutePath = normalizedPath.startsWith("/") ||
+                                 (normalizedPath.length() > 2 && normalizedPath.charAt(1) == ':');
+        if (normalizedPath.endsWith(".java") && !isAbsolutePath) {
+            String className = pathToClassName(normalizedPath);
             if (className != null) {
                 file = findClassSourceFile(className);
                 if (file != null) {
-                    LOG.debug("Resolved " + path + " to " + file.getPath() + " via JavaPsiFacade");
+                    LOG.debug("Resolved " + normalizedPath + " to " + file.getPath() + " via JavaPsiFacade");
                     return file;
                 }
             }

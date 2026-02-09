@@ -595,10 +595,16 @@ public class DapMultiplexer implements BackendEventListener {
      * Evaluates an expression in the context of a global frame ID.
      */
     public EvaluateResult evaluate(int globalFrameId, String expression, String context) {
-        // Karate `match` expressions should always be evaluated by the Karate backend,
-        // regardless of where the debugger is currently stopped.
-        // This allows match diagnostics to work even when stepped into Java/JS code.
+        // Karate `match` expressions should be evaluated by the Karate backend.
+        // However, if we're stopped in Java/JS, the Karate thread may be blocked waiting,
+        // and sending a synchronous IPC request can deadlock.
         boolean isMatchExpression = expression != null && expression.trim().startsWith("match ");
+
+        // Guard against deadlock: cannot evaluate match expressions while stopped in Java/JS
+        if (isMatchExpression && stoppedBackend != null && stoppedBackend != BackendType.KARATE) {
+            log.debug("Cannot evaluate match expression while stopped in {} backend", stoppedBackend);
+            return EvaluateResult.error("Cannot evaluate match expressions while stopped in " + stoppedBackend + " code. Step back to Karate code first.");
+        }
 
         // Handle frame ID 0 (used by VS Code for watch expressions without specific frame context)
         // Default to the currently stopped backend, or Karate if none stopped

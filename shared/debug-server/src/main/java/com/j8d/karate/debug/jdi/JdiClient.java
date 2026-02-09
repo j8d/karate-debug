@@ -307,10 +307,11 @@ public class JdiClient {
         // Remove any existing step request for this thread
         cancelStep(thread);
 
-        // Track original step type - only set if not already tracking (for auto-continue chains).
-        // This ensures we remember the user's original intent (INTO vs OVER/OUT) when we
+        // Track original step type for this user-initiated step.
+        // Overwrite any previous value to avoid preserving stale intent across interrupted steps.
+        // This ensures we remember the user's current intent (INTO vs OVER/OUT) when we
         // auto-continue through framework code via STEP_OUT.
-        originalStepDepth.putIfAbsent(thread.uniqueID(), depth);
+        originalStepDepth.put(thread.uniqueID(), depth);
 
         StepRequest stepReq = erm.createStepRequest(thread, StepRequest.STEP_LINE, depth);
         stepReq.addCountFilter(1); // Only one step
@@ -355,17 +356,23 @@ public class JdiClient {
 
     /**
      * Cancels any pending step request for the thread.
+     * Also clears the original step depth tracking to avoid stale entries affecting future steps.
      */
     public void cancelStep(ThreadReference thread) {
-        StepRequest stepReq = activeStepRequests.remove(thread.uniqueID());
+        long threadId = thread.uniqueID();
+        StepRequest stepReq = activeStepRequests.remove(threadId);
         if (stepReq != null) {
             erm.deleteEventRequest(stepReq);
         }
+        // Clear step tracking to avoid stale entries if step is cancelled (e.g., breakpoint hit, continue)
+        originalStepDepth.remove(threadId);
+        frameworkStepCount.remove(threadId);
     }
 
     /**
      * Cancels all active step requests.
      * Called when a Java step exits to framework code and we need to clean up.
+     * Also clears all step tracking state to avoid stale entries.
      */
     public void cancelAllSteps() {
         if (erm == null) return;
@@ -377,6 +384,8 @@ public class JdiClient {
             }
         }
         activeStepRequests.clear();
+        originalStepDepth.clear();
+        frameworkStepCount.clear();
         log.trace("Cancelled all active step requests");
     }
 
