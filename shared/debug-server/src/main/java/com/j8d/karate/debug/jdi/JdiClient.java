@@ -432,12 +432,14 @@ public class JdiClient {
         // This allows the IPC-Sender thread to continue running during debugging.
         methodEntryRequest.setSuspendPolicy(MethodEntryRequest.SUSPEND_EVENT_THREAD);
 
-        // Filter out JDK classes - always excluded (no source code)
-        methodEntryRequest.addClassExclusionFilter("java.*");
-        methodEntryRequest.addClassExclusionFilter("javax.*");
-        methodEntryRequest.addClassExclusionFilter("sun.*");
-        methodEntryRequest.addClassExclusionFilter("com.sun.*");
-        methodEntryRequest.addClassExclusionFilter("jdk.*");
+        // Conditionally filter out JDK classes based on user setting
+        if (skipJdkClasses) {
+            methodEntryRequest.addClassExclusionFilter("java.*");
+            methodEntryRequest.addClassExclusionFilter("javax.*");
+            methodEntryRequest.addClassExclusionFilter("sun.*");
+            methodEntryRequest.addClassExclusionFilter("com.sun.*");
+            methodEntryRequest.addClassExclusionFilter("jdk.*");
+        }
 
         // Conditionally exclude Karate framework classes based on skip setting
         // When skipKarateFramework is false, users can step into Karate source code
@@ -603,15 +605,14 @@ public class JdiClient {
                 return false; // Stay suspended, the new step request will resume
             }
 
+            // Capture skipped framework steps before cancelStep clears the counters
+            Integer skippedCount = frameworkStepCount.get(threadId);
             // User code - clean up and report (clear all tracking state)
             cancelStep(stepEvent.thread());
             // Log aggregated framework step count if any steps were skipped
-            Integer skippedCount = frameworkStepCount.remove(threadId);
             if (skippedCount != null && skippedCount > 0) {
                 log.debug("Auto-continued through {} framework steps", skippedCount);
             }
-            // Clear the original step tracking since we're done with this step sequence
-            originalStepDepth.remove(threadId);
             listener.onStepComplete(stepEvent.thread(), stepEvent.location());
             return false; // Stay suspended after step
 

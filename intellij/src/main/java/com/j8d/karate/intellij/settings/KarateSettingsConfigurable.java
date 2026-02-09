@@ -203,6 +203,8 @@ public class KarateSettingsConfigurable implements Configurable {
         settings.showJdkClasses = showJdkClassesCheckbox.isSelected();
         settings.showKarateFramework = showKarateFrameworkCheckbox.isSelected();
         settings.showKarateDependencies = showKarateDependenciesCheckbox.isSelected();
+        // Clear legacy polyglot flag - it's now controlled by enableJavaDebugging/enableJsDebugging
+        settings.enablePolyglotDebugging = false;
 
         // Notify listeners (e.g., status bar widgets) that settings have changed
         settings.fireSettingsChanged();

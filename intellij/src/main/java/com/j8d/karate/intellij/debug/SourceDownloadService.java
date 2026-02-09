@@ -35,7 +35,8 @@ public final class SourceDownloadService {
 
     // Track if we've shown the "sources missing" notification this debug session.
     // We only show one notification per session to avoid spam.
-    private volatile boolean hasShownSessionNotification = false;
+    // Note: Access is single-threaded via EDT (invokeLater), so volatile is not required.
+    private boolean hasShownSessionNotification = false;
 
     public SourceDownloadService(Project project) {
         this.project = project;
