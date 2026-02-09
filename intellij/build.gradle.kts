@@ -109,42 +109,76 @@ intellijPlatform {
         }
 
         description = """
-            <p>Debug Karate API tests with full breakpoint support,
-            step-through debugging, variable inspection, and real-time match diagnostics.</p>
+            <p>A powerful debugger for <a href="https://github.com/karatelabs/karate">Karate</a> API tests.
+            Set breakpoints directly in your <code>.feature</code> files, step through scenarios including
+            Java and JavaScript code, inspect variables, and run tests with a single click.</p>
 
             <h3>Features</h3>
             <ul>
-                <li><b>Breakpoint Debugging</b> - Set breakpoints in .feature files and step through your tests</li>
-                <li><b>Variable Inspection</b> - View and modify variables during debug sessions</li>
-                <li><b>Match Diagnostics</b> - See pass/fail highlights on match statements with actual values inline</li>
-                <li><b>Quick Fixes</b> - One-click fixes to update expected values from actual results</li>
-                <li><b>Conditional Breakpoints</b> - Set conditions on breakpoints using JavaScript expressions</li>
-                <li><b>File Navigation</b> - Clickable file references for classpath:, read(), and @tag patterns</li>
-                <li><b>Log Filtering</b> - Hide noisy log output with configurable exclude patterns</li>
-                <li><b>Log Breakpoints</b> - Pause execution when specific strings appear in logs</li>
-                <li><b>Gutter Icons</b> - Debug individual features or scenarios from the editor</li>
-                <li><b>Feature Explorer</b> - Browse and run tests from the Karate tool window</li>
-                <li><b>Project Auto-Detection</b> - Automatically detects Maven/Gradle Karate projects</li>
-                <li><b>Environment Switching</b> - Quick switch between Karate environments</li>
-                <li><b>Syntax Highlighting</b> - Full syntax highlighting for Karate feature files</li>
+                <li><b>Breakpoint Debugging for Karate, Java, and JavaScript</b> - Debug Karate, Java, and JavaScript
+                    code in the same session. Set breakpoints in <code>.feature</code>, <code>.java</code>, and
+                    <code>.js</code> files. Step through your tests line by line.</li>
+                <li><b>Hot Reload Variables</b> - Modify variable values on-the-fly while paused at a breakpoint.
+                    Right-click any variable in the Variables panel and set a new value.</li>
+                <li><b>Match Diagnostics</b> - See pass/fail highlights on match statements with actual values inline.
+                    One-click fixes to update expected values from actual results.</li>
+                <li><b>One-Click Test Execution</b> - Gutter icons appear next to every Feature and Scenario,
+                    letting you debug with a single click.</li>
+                <li><b>Feature Explorer</b> - Browse all your Karate features and scenarios in the Karate tool window.
+                    Navigate your test suite at a glance and run any test directly.</li>
+                <li><b>Environment Switching</b> - Quickly switch between environments (dev, qa, stage, or custom)
+                    from the status bar. Your selection persists across sessions.</li>
+                <li><b>Syntax Highlighting</b> - Full syntax highlighting for the Karate DSL, including Gherkin keywords,
+                    JSON/XML payloads, JavaScript expressions, and embedded variables.</li>
+                <li><b>File Navigation</b> - Clickable file references throughout your feature files. Ctrl+Click to
+                    navigate to <code>classpath:</code> files, <code>read()</code> targets, and <code>@tag</code> references.</li>
+                <li><b>Log Breakpoints</b> - Pause execution when specific strings appear in log output.
+                    Useful for catching exceptions or error messages without setting traditional breakpoints.</li>
+                <li><b>Log Filtering</b> - Hide noisy log output by configuring exclude patterns.
+                    Filter out verbose framework messages to focus on what matters.</li>
+                <li><b>Conditional Breakpoints</b> - Set conditions on breakpoints using JavaScript expressions.</li>
             </ul>
+
+            <h3>Configuration</h3>
+            <p>Configure the plugin via <b>Settings &gt; Tools &gt; Karate Debug</b>:</p>
+            <ul>
+                <li><b>Environments</b> - List of available Karate environments (comma-separated)</li>
+                <li><b>Default Environment</b> - Environment used when starting a debug session</li>
+                <li><b>Log Level</b> - Log level for Karate Debug output (error, warn, info, debug, trace)</li>
+                <li><b>Match Diagnostics</b> - Show passing/failing highlights and actual values</li>
+                <li><b>Log Filter</b> - Comma-separated strings to hide from log output</li>
+                <li><b>Log Breakpoints</b> - Comma-separated strings that pause execution when found in logs</li>
+            </ul>
+
+            <h3>Step Filtering (Java Debugging)</h3>
+            <p>Control which code is shown when stepping through Java code:</p>
+            <ul>
+                <li><b>Show JDK Classes</b> - Step into JDK core classes (java.*, javax.*, jdk.*, sun.*, com.sun.*)</li>
+                <li><b>Show Karate Framework</b> - Step into Karate framework classes (com.intuit.karate.*)</li>
+                <li><b>Show Karate Dependencies</b> - Step into Karate's third-party dependencies (jsonpath, netty, slf4j, etc.)</li>
+            </ul>
+            <p>When unchecked (default), stepping into framework code will automatically step out and return to user code.</p>
 
             <h3>Getting Started</h3>
             <ol>
                 <li>Open a project containing Karate tests</li>
-                <li>Open a .feature file</li>
+                <li>Open a <code>.feature</code> file</li>
                 <li>Set breakpoints by clicking in the gutter</li>
                 <li>Click the debug icon in the gutter or use the Karate tool window</li>
             </ol>
 
-            <p>Requires Java 17+ and a Karate project with Maven or Gradle.</p>
+            <h3>Requirements</h3>
+            <ul>
+                <li>Java 17+ (Java 21 recommended)</li>
+                <li>Maven or Gradle project with Karate dependencies</li>
+            </ul>
 
             <h3>Resources</h3>
             <ul>
                 <li><a href="https://karatedebug.com">Website</a> - Documentation and getting started guides</li>
-                <li><a href="https://karatedebug.com/?contact=bug">Report a Bug</a></li>
-                <li><a href="https://karatedebug.com/?contact=feature">Request a Feature</a></li>
-                <li><a href="https://karatedebug.com/?contact=general">Contact Us</a></li>
+                <li><a href="https://karatedebug.com/?contact=bug&amp;ide=intellij">Report a Bug</a></li>
+                <li><a href="https://karatedebug.com/?contact=feature&amp;ide=intellij">Request a Feature</a></li>
+                <li><a href="https://karatedebug.com/?contact=general&amp;ide=intellij">Contact Us</a></li>
                 <li><a href="https://karatedebug.com/license">License</a> - End User License Agreement</li>
             </ul>
         """.trimIndent()
