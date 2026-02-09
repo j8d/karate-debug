@@ -16,11 +16,11 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.ui.ColoredTextContainer;
 import com.intellij.ui.SimpleTextAttributes;
+import com.intellij.xdebugger.XDebuggerUtil;
 import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.frame.XCompositeNode;
 import com.intellij.xdebugger.frame.XStackFrame;
 import com.intellij.xdebugger.frame.XValueChildrenList;
-import com.intellij.xdebugger.impl.XSourcePositionImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,7 +58,7 @@ public class KarateStackFrame extends XStackFrame {
             VirtualFile file = resolveSourceFile(sourcePath);
             if (file != null) {
                 // DAP uses 1-based lines, IntelliJ uses 0-based
-                this.sourcePosition = XSourcePositionImpl.create(file, line - 1);
+                this.sourcePosition = XDebuggerUtil.getInstance().createPosition(file, line - 1);
             }
         }
     }

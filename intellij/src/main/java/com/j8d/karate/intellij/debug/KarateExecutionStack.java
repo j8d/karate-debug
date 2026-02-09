@@ -7,7 +7,6 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.frame.XExecutionStack;
 import com.intellij.xdebugger.frame.XStackFrame;
-import com.intellij.xdebugger.impl.XSourcePositionImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
