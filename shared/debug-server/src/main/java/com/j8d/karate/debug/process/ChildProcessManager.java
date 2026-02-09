@@ -116,7 +116,12 @@ public class ChildProcessManager {
             log.trace("Child process ready: {}", processInfo);
             return processInfo;
         } catch (java.util.concurrent.ExecutionException e) {
-            throw new IOException("Child process failed to start: " + e.getCause().getMessage(), e.getCause());
+            // Preserve the original exception chain - getCause() may be null
+            Throwable cause = e.getCause();
+            String message = (cause != null && cause.getMessage() != null)
+                ? cause.getMessage()
+                : e.getMessage();
+            throw new IOException("Child process failed to start: " + message, cause != null ? cause : e);
         }
     }
     

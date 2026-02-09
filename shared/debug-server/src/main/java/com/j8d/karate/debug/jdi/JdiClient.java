@@ -299,19 +299,32 @@ public class JdiClient {
      * Adds class exclusion filters to skip JDK and framework classes.
      */
     public void step(ThreadReference thread, int depth) {
+        stepInternal(thread, depth, true);
+    }
+
+    /**
+     * Internal step implementation.
+     * @param thread The thread to step
+     * @param depth The step depth (STEP_INTO, STEP_OVER, STEP_OUT)
+     * @param isUserInitiated If true, this is a user-initiated step and we track the original intent.
+     *                        If false, this is an internal auto-continue step (framework skipping)
+     *                        and we preserve the existing original intent.
+     */
+    private void stepInternal(ThreadReference thread, int depth, boolean isUserInitiated) {
         String depthName = depth == StepRequest.STEP_INTO ? "INTO" :
                           depth == StepRequest.STEP_OVER ? "OVER" : "OUT";
-        log.trace("Creating step request: thread={}, depth={}, suspended={}",
-                 thread.name(), depthName, thread.isSuspended());
+        log.trace("Creating step request: thread={}, depth={}, suspended={}, userInitiated={}",
+                 thread.name(), depthName, thread.isSuspended(), isUserInitiated);
 
-        // Remove any existing step request for this thread
-        cancelStep(thread);
+        // Remove any existing step request for this thread (but preserve tracking for auto-continue)
+        deleteStepRequest(thread);
 
-        // Track original step type for this user-initiated step.
-        // Overwrite any previous value to avoid preserving stale intent across interrupted steps.
-        // This ensures we remember the user's current intent (INTO vs OVER/OUT) when we
-        // auto-continue through framework code via STEP_OUT.
-        originalStepDepth.put(thread.uniqueID(), depth);
+        if (isUserInitiated) {
+            // Track original step type for this user-initiated step.
+            // Overwrite any previous value to avoid preserving stale intent across interrupted steps.
+            originalStepDepth.put(thread.uniqueID(), depth);
+        }
+        // For auto-continue steps, we preserve the existing originalStepDepth
 
         StepRequest stepReq = erm.createStepRequest(thread, StepRequest.STEP_LINE, depth);
         stepReq.addCountFilter(1); // Only one step
@@ -355,24 +368,34 @@ public class JdiClient {
     }
 
     /**
-     * Cancels any pending step request for the thread.
-     * Also clears the original step depth tracking to avoid stale entries affecting future steps.
+     * Deletes the JDI step request for a thread without clearing tracking state.
+     * Use this when issuing a new step as part of framework auto-continue,
+     * where we need to preserve the original user intent (INTO vs OVER/OUT).
      */
-    public void cancelStep(ThreadReference thread) {
+    private void deleteStepRequest(ThreadReference thread) {
         long threadId = thread.uniqueID();
         StepRequest stepReq = activeStepRequests.remove(threadId);
         if (stepReq != null) {
             erm.deleteEventRequest(stepReq);
         }
-        // Clear step tracking to avoid stale entries if step is cancelled (e.g., breakpoint hit, continue)
+    }
+
+    /**
+     * Cancels any pending step request for the thread and clears tracking state.
+     * Use this when the step sequence is complete or explicitly cancelled
+     * (e.g., breakpoint hit, user continue, step completed in user code).
+     */
+    public void cancelStep(ThreadReference thread) {
+        deleteStepRequest(thread);
+        // Clear step tracking - the step sequence is done
+        long threadId = thread.uniqueID();
         originalStepDepth.remove(threadId);
         frameworkStepCount.remove(threadId);
     }
 
     /**
-     * Cancels all active step requests.
-     * Called when a Java step exits to framework code and we need to clean up.
-     * Also clears all step tracking state to avoid stale entries.
+     * Cancels all active step requests and clears all tracking state.
+     * Called when we need to clean up all step state (e.g., session end).
      */
     public void cancelAllSteps() {
         if (erm == null) return;
@@ -574,12 +597,13 @@ public class JdiClient {
                          frameworkStepCount.get(threadId));
                 // Issue another step to skip framework code
                 // Use STEP_OUT to quickly exit framework code back to user code
-                cancelStep(stepEvent.thread());
-                step(stepEvent.thread(), StepRequest.STEP_OUT);
+                // Use stepInternal with isUserInitiated=false to preserve original step intent
+                deleteStepRequest(stepEvent.thread());
+                stepInternal(stepEvent.thread(), StepRequest.STEP_OUT, false);
                 return false; // Stay suspended, the new step request will resume
             }
 
-            // User code - clean up and report
+            // User code - clean up and report (clear all tracking state)
             cancelStep(stepEvent.thread());
             // Log aggregated framework step count if any steps were skipped
             Integer skippedCount = frameworkStepCount.remove(threadId);

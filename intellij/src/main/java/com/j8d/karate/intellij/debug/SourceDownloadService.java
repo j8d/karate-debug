@@ -64,11 +64,7 @@ public final class SourceDownloadService {
 
         // Files from the decompiler virtual file system are missing sources
         String protocol = resolvedFile.getFileSystem().getProtocol();
-        if ("decompiler".equals(protocol)) {
-            return true;
-        }
-
-        return false;
+        return "decompiler".equals(protocol);
     }
 
     /**
@@ -84,12 +80,17 @@ public final class SourceDownloadService {
         hasShownSessionNotification = true;
         
         ApplicationManager.getApplication().invokeLater(() -> {
+            // Extract simple class name for display (e.g., "ScenarioEngine" from "com.intuit.karate.core.ScenarioEngine")
+            String simpleClassName = className.contains(".")
+                ? className.substring(className.lastIndexOf('.') + 1)
+                : className;
+
             var notification = NotificationGroupManager.getInstance()
                 .getNotificationGroup("Karate Debug")
                 .createNotification(
                     "Library Sources Missing",
-                    "Source code for library classes is not available. " +
-                    "You're viewing decompiled code. Click 'Download Sources' to fetch them.",
+                    "Source code for '" + simpleClassName + "' is not available. " +
+                    "You're viewing decompiled code. Click 'Download Sources' to fetch library sources.",
                     NotificationType.INFORMATION
                 );
 
