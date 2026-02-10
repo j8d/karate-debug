@@ -12,6 +12,14 @@ on:
           - intellij
           - both
         default: 'both'
+      intellij_channel:
+        description: 'IntelliJ release channel'
+        required: true
+        type: choice
+        options:
+          - default
+          - eap
+        default: 'default'
       vscode_version:
         description: 'VS Code version (leave empty for current version in package.json)'
         required: false
@@ -184,6 +192,7 @@ jobs:
         working-directory: intellij
         env:
           JETBRAINS_PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+          PUBLISH_CHANNEL: ${{ github.event.inputs.intellij_channel }}
         run: ./gradlew publishPlugin
 
       - name: Upload IntelliJ artifact
@@ -194,6 +203,7 @@ jobs:
 
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
+      channel: ${{ github.event.inputs.intellij_channel }}
 
   # Create GitHub Release for VS Code
   create-vscode-release:
@@ -235,8 +245,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: intellij-v${{ needs.release-intellij.outputs.version }}
-          name: IntelliJ Plugin v${{ needs.release-intellij.outputs.version }}
+          name: IntelliJ Plugin v${{ needs.release-intellij.outputs.version }}${{ needs.release-intellij.outputs.channel == 'eap' && ' (EAP)' || '' }}
           files: artifacts/*
           generate_release_notes: true
+          prerelease: ${{ needs.release-intellij.outputs.channel == 'eap' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -281,7 +281,7 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
     }
 
     private void handleLaunch(JsonObject request, JsonObject args) {
-        log.debug("handleLaunch received args: {}", args);
+        log.trace("handleLaunch received args: {}", args);
 
         // Parse launch arguments
         featurePath = args.has("feature") ? args.get("feature").getAsString() : null;
@@ -331,7 +331,7 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
         boolean skipKarateFramework = !args.has("skipKarateFramework") || args.get("skipKarateFramework").getAsBoolean();
         boolean skipKarateDependencies = !args.has("skipKarateDependencies") || args.get("skipKarateDependencies").getAsBoolean();
 
-        log.info("Polyglot launch: feature={}, java={}, js={}, skipJdk={}, skipKarate={}, skipKarateDeps={}",
+        log.trace("Polyglot launch: feature={}, java={}, js={}, skipJdk={}, skipKarate={}, skipKarateDeps={}",
                 featurePath, enableJavaDebugging, enableJsDebugging, skipJdkClasses, skipKarateFramework, skipKarateDependencies);
 
         // Create child process config
@@ -356,7 +356,7 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
         // (VS Code sends setBreakpoints before launch, so we queue them)
         synchronized (preLaunchBreakpoints) {
             if (!preLaunchBreakpoints.isEmpty()) {
-                log.info("Transferring {} pre-launch breakpoint requests to coordinator", preLaunchBreakpoints.size());
+                log.trace("Transferring {} pre-launch breakpoint requests to coordinator", preLaunchBreakpoints.size());
                 for (PreLaunchBreakpoints bp : preLaunchBreakpoints) {
                     coordinator.setBreakpoints(bp.filePath(), bp.requests());
                 }
@@ -367,7 +367,7 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
         // Initialize asynchronously - store future so configurationDone can wait for it
         initializationFuture = coordinator.initialize()
             .thenRun(() -> {
-                log.debug("Coordinator initialized successfully");
+                log.trace("Coordinator initialized successfully");
                 sendResponse(request, true, null);
             })
             .exceptionally(e -> {
@@ -403,7 +403,7 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
         // VS Code sends setBreakpoints after initialized event but before launch.
         // If coordinator doesn't exist yet, queue the breakpoints for later.
         if (coordinator == null) {
-            log.debug("Pre-launch breakpoints received for {}, queuing {} breakpoints", sourcePath, requests.size());
+            log.trace("Pre-launch breakpoints received for {}, queuing {} breakpoints", sourcePath, requests.size());
             synchronized (preLaunchBreakpoints) {
                 // Remove any existing breakpoints for this file (VS Code sends all breakpoints on each request)
                 preLaunchBreakpoints.removeIf(bp -> bp.filePath().equals(sourcePath));
@@ -495,7 +495,15 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
     private void handleStackTrace(JsonObject request, JsonObject args) {
         int threadId = args.get("threadId").getAsInt();
         log.trace("handleStackTrace: threadId={}", threadId);
-        List<StackFrame> frames = coordinator.getStackFrames(threadId);
+
+        List<StackFrame> frames;
+        try {
+            frames = coordinator.getStackFrames(threadId);
+        } catch (Exception e) {
+            log.error("Error getting stack frames for thread {}: {}", threadId, e.getMessage());
+            log.trace("Stack trace:", e);
+            frames = List.of();
+        }
 
         JsonArray framesArray = new JsonArray();
         for (StackFrame frame : frames) {
@@ -1291,7 +1299,7 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
             bp.addProperty("message", breakpoint.message());
         }
         body.add("breakpoint", bp);
-        log.debug("Sending breakpoint event: id={}, verified={}, line={}, source={}",
+        log.trace("Sending breakpoint event: id={}, verified={}, line={}, source={}",
                 globalId, breakpoint.verified(), breakpoint.line(), breakpoint.source());
         sendEvent("breakpoint", body);
     }

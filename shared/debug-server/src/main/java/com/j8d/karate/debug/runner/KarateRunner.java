@@ -115,17 +115,24 @@ public class KarateRunner {
     
     private void start() throws IOException {
         log.info("KarateRunner starting...");
-        
+
         // Start IPC server on random port
         ipcServer.setHandler(commandHandler);
         ipcServer.start(0);
         int ipcPort = ipcServer.getPort();
-        
+
         // Print IPC port to stdout for parent to discover
         System.out.println("IPC_PORT=" + ipcPort);
         System.out.flush();
-        
+
         log.debug("IPC server started on port {}", ipcPort);
+
+        // Register disconnect listener to shutdown when parent disconnects.
+        // This prevents zombie processes when the parent crashes or is killed.
+        ipcServer.setDisconnectListener(() -> {
+            log.info("Parent disconnected, shutting down KarateRunner");
+            shutdown();
+        });
 
         // Wait for parent to connect, then send ready event
         waitForConnectionAndSendReady();
@@ -135,8 +142,8 @@ public class KarateRunner {
             log.debug("Shutdown hook triggered");
             ipcServer.stop();
         }));
-        
-        // Block main thread
+
+        // Block main thread until shutdown() is called
         synchronized (this) {
             try {
                 wait();
@@ -144,6 +151,8 @@ public class KarateRunner {
                 Thread.currentThread().interrupt();
             }
         }
+
+        log.info("KarateRunner exiting");
     }
     
     private void waitForConnectionAndSendReady() {

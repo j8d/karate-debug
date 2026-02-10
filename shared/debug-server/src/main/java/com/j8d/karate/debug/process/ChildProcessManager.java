@@ -78,16 +78,21 @@ public class ChildProcessManager {
 
     /**
      * Starts the child process and waits for it to be ready.
-     * 
+     *
      * @return ChildProcessInfo with discovered ports
      * @throws IOException if process cannot be started
      * @throws TimeoutException if child doesn't become ready in time
      */
     public ChildProcessInfo start() throws IOException, TimeoutException, InterruptedException {
         log.info("Starting child process...");
-        
+
+        // Clean up any zombie KarateRunner processes from previous sessions.
+        // This can happen if the IDE crashes, the debug server is killed, or
+        // the disconnect callback fails to trigger.
+        cleanupZombieProcesses();
+
         readyFuture = new CompletableFuture<>();
-        
+
         // Build command line
         List<String> command = buildCommand();
         // Log abbreviated command (full classpath is too long)
@@ -113,13 +118,63 @@ public class ChildProcessManager {
         // Wait for ready event
         try {
             processInfo = readyFuture.get(STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            log.debug("Child process ready: {}", processInfo);
+            log.trace("Child process ready: {}", processInfo);
             return processInfo;
         } catch (java.util.concurrent.ExecutionException e) {
-            throw new IOException("Child process failed to start: " + e.getCause().getMessage(), e.getCause());
+            // Extract a meaningful message from the cause if available
+            Throwable cause = e.getCause();
+            String message = (cause != null && cause.getMessage() != null)
+                ? cause.getMessage()
+                : e.getMessage();
+            // Always use 'e' as the cause to preserve the full stack trace
+            throw new IOException("Child process failed to start: " + message, e);
         }
     }
     
+    /**
+     * Cleans up any zombie KarateRunner processes from previous sessions.
+     * Uses platform-specific commands to find and kill orphaned processes.
+     */
+    private void cleanupZombieProcesses() {
+        String os = System.getProperty("os.name").toLowerCase();
+
+        try {
+            if (os.contains("win")) {
+                // Windows: Use tasklist/taskkill
+                // Find java processes with KarateRunner in command line
+                ProcessBuilder pb = new ProcessBuilder("cmd", "/c",
+                    "wmic process where \"commandline like '%KarateRunner%'\" get processid 2>nul");
+                Process p = pb.start();
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(p.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.matches("\\d+")) {
+                            int pid = Integer.parseInt(line);
+                            log.info("Killing zombie KarateRunner process: PID={}", pid);
+                            new ProcessBuilder("taskkill", "/F", "/PID", String.valueOf(pid)).start().waitFor();
+                        }
+                    }
+                }
+                p.waitFor(5, TimeUnit.SECONDS);
+            } else {
+                // Unix/Mac: Use pkill
+                ProcessBuilder pb = new ProcessBuilder("pkill", "-f", "KarateRunner");
+                pb.redirectErrorStream(true);
+                Process p = pb.start();
+                boolean killed = p.waitFor(5, TimeUnit.SECONDS);
+                if (killed && p.exitValue() == 0) {
+                    log.info("Killed zombie KarateRunner processes");
+                }
+                // Exit code 1 means no processes matched, which is fine
+            }
+        } catch (Exception e) {
+            // Log but don't fail - zombie cleanup is best-effort
+            log.debug("Failed to cleanup zombie processes: {}", e.getMessage());
+        }
+    }
+
     /**
      * Stops the child process.
      */
@@ -195,7 +250,7 @@ public class ChildProcessManager {
                 // Prepend debug server JAR to ensure our bundled GraalVM tools take precedence
                 String pathSeparator = System.getProperty("path.separator");
                 classpath = debugServerJar + pathSeparator + classpath;
-                log.debug("Added debug server JAR to classpath for GraalVM tools: {}", debugServerJar);
+                log.trace("Added debug server JAR to classpath for GraalVM tools: {}", debugServerJar);
             }
         }
 
@@ -238,7 +293,7 @@ public class ChildProcessManager {
                     if (jdwpMatcher.find()) {
                         try {
                             discoveredJdwpPort = Integer.parseInt(jdwpMatcher.group(1));
-                            log.debug("Discovered JDWP port: {}", discoveredJdwpPort);
+                            log.trace("Discovered JDWP port: {}", discoveredJdwpPort);
                         } catch (NumberFormatException e) {
                             log.warn("Failed to parse JDWP port from stdout: {}", line);
                         }
@@ -250,12 +305,12 @@ public class ChildProcessManager {
                     if (dapMatcher.find()) {
                         try {
                             discoveredDapPort = Integer.parseInt(dapMatcher.group(1));
-                            log.debug("Discovered GraalVM DAP server from stdout: port={}", discoveredDapPort);
+                            log.trace("Discovered GraalVM DAP server from stdout: port={}", discoveredDapPort);
 
                             // Notify listener for late JavaScript backend creation
                             DapDiscoveryListener listener = dapDiscoveryListener;
                             if (listener != null) {
-                                log.debug("Notifying DAP discovery listener");
+                                log.trace("Notifying DAP discovery listener");
                                 listener.onDapPortDiscovered(discoveredDapPort);
                             } else {
                                 log.trace("No DAP discovery listener registered");
@@ -302,7 +357,7 @@ public class ChildProcessManager {
                     if (jdwpMatcher.find()) {
                         try {
                             discoveredJdwpPort = Integer.parseInt(jdwpMatcher.group(1));
-                            log.debug("Discovered JDWP port from stderr: {}", discoveredJdwpPort);
+                            log.trace("Discovered JDWP port from stderr: {}", discoveredJdwpPort);
                         } catch (NumberFormatException e) {
                             log.warn("Failed to parse JDWP port from stderr: {}", line);
                         }
@@ -314,7 +369,7 @@ public class ChildProcessManager {
                     if (dapMatcher.find()) {
                         try {
                             discoveredDapPort = Integer.parseInt(dapMatcher.group(1));
-                            log.debug("Discovered GraalVM DAP server from stderr: port={}", discoveredDapPort);
+                            log.trace("Discovered GraalVM DAP server from stderr: port={}", discoveredDapPort);
 
                             // Notify listener for late JavaScript backend creation
                             DapDiscoveryListener listener = dapDiscoveryListener;
@@ -461,7 +516,7 @@ public class ChildProcessManager {
 
         ChildProcessInfo info = new ChildProcessInfo(ipcPort, jdwpPort, jsDapPort, graalVmVersion);
 
-        log.info("Child process ready: IPC={}, JDWP={}, JS-DAP={}", ipcPort, jdwpPort, jsDapPort);
+        log.trace("Child process ready: IPC={}, JDWP={}, JS-DAP={}", ipcPort, jdwpPort, jsDapPort);
 
         readyFuture.complete(info);
     }

@@ -48,10 +48,21 @@ public interface BackendEventListener {
      * Called when a breakpoint has been validated/resolved.
      * This is useful for breakpoints that couldn't be verified immediately
      * (e.g., Java breakpoints for classes not yet loaded).
-     * 
+     *
      * @param backend The backend that resolved the breakpoint
      * @param breakpoint The resolved breakpoint with updated information
      */
     void onBreakpointResolved(DebugBackend backend, Breakpoint breakpoint);
+
+    /**
+     * Called when the Karate feature has completed execution.
+     * Report generation will follow. This allows stopping auxiliary backends
+     * (like JavaScript) to avoid slowing down report generation.
+     *
+     * @param backend The Karate backend that completed the feature
+     */
+    default void onFeatureComplete(DebugBackend backend) {
+        // Default implementation does nothing
+    }
 }
 

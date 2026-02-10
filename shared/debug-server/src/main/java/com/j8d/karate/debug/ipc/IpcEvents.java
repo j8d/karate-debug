@@ -22,7 +22,10 @@ public final class IpcEvents {
     
     /** Execution has continued */
     public static final String CONTINUED = "continued";
-    
+
+    /** Feature execution is complete (report generation will follow) */
+    public static final String FEATURE_COMPLETE = "featureComplete";
+
     // ========== Output ==========
     
     /** Output from Karate execution (stdout, stderr, console) */

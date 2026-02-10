@@ -64,6 +64,9 @@ public class KarateDebugProcess extends XDebugProcess {
     public void sessionInitialized() {
         super.sessionInitialized();
 
+        // Reset missing sources notification state for new session
+        SourceDownloadService.getInstance(getSession().getProject()).resetNotificationState();
+
         // Start the DAP server and connect
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
             try {
@@ -138,8 +141,11 @@ public class KarateDebugProcess extends XDebugProcess {
     public void onStopped(int threadId, String reason) {
         // Fetch stack trace and create suspend context
         dapClient.getStackTrace().thenAccept(response -> {
+            // Create suspend context on background thread to avoid slow operations on EDT.
+            // Source file resolution in KarateStackFrame can involve file system lookups
+            // and PSI queries which are slow operations prohibited on EDT.
+            XSuspendContext suspendContext = createSuspendContext(threadId, response);
             ApplicationManager.getApplication().invokeLater(() -> {
-                XSuspendContext suspendContext = createSuspendContext(threadId, response);
                 getSession().positionReached(suspendContext);
             });
         }).exceptionally(e -> {

@@ -82,6 +82,18 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
     // Enable JavaScript debugging in polyglot mode
     public boolean enableJsDebugging = false;
 
+    // Step filtering: show JDK core classes when stepping (java.*, javax.*, jdk.*, sun.*, com.sun.*)
+    // When false (default), debugger skips these classes for cleaner stepping
+    public boolean showJdkClasses = false;
+
+    // Step filtering: show Karate framework classes when stepping (com.intuit.karate.*)
+    // When false (default), debugger skips these classes for cleaner stepping
+    public boolean showKarateFramework = false;
+
+    // Step filtering: show Karate's third-party dependencies when stepping (jsonpath, netty, slf4j, etc.)
+    // When false (default), debugger skips these classes for cleaner stepping
+    public boolean showKarateDependencies = false;
+
     // Listeners for settings changes (not serialized)
     @Transient
     private final List<Runnable> changeListeners = new CopyOnWriteArrayList<>();
@@ -264,9 +276,11 @@ public final class KarateProjectSettings implements PersistentStateComponent<Kar
 
     /**
      * Check if polyglot debugging is enabled.
+     * Polyglot mode is automatically enabled when either Java or JavaScript debugging is enabled,
+     * or when the legacy enablePolyglotDebugging flag is set (for backward compatibility).
      */
     public boolean isPolyglotDebuggingEnabled() {
-        return enablePolyglotDebugging;
+        return enablePolyglotDebugging || enableJavaDebugging || enableJsDebugging;
     }
 
     /**

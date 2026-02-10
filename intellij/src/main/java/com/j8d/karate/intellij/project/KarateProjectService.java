@@ -18,7 +18,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -170,12 +174,15 @@ public final class KarateProjectService {
     /**
      * Get the classpath for running Karate tests.
      * This includes project dependencies and compiled classes.
+     * Falls back to Maven if IntelliJ's module system doesn't have dependencies yet.
      */
     @NotNull
     public String getClasspath() {
         Set<String> classpathEntries = new LinkedHashSet<>();
 
         Module[] modules = ModuleManager.getInstance(project).getModules();
+        LOG.debug("Found " + modules.length + " modules");
+
         for (Module module : modules) {
             OrderEnumerator enumerator = ModuleRootManager.getInstance(module)
                 .orderEntries()
@@ -196,7 +203,94 @@ public final class KarateProjectService {
             }
         }
 
+        LOG.debug("IntelliJ classpath entries: " + classpathEntries.size());
+
+        // If IntelliJ doesn't have dependencies yet, fall back to Maven
+        if (classpathEntries.isEmpty()) {
+            LOG.debug("Falling back to Maven for classpath");
+            String mavenClasspath = getMavenClasspath();
+            if (mavenClasspath != null && !mavenClasspath.isEmpty()) {
+                return mavenClasspath;
+            }
+        }
+
         return String.join(File.pathSeparator, classpathEntries);
+    }
+
+    /**
+     * Get classpath from Maven by reading the cached classpath file or generating it.
+     */
+    @Nullable
+    private String getMavenClasspath() {
+        String basePath = project.getBasePath();
+        if (basePath == null) {
+            return null;
+        }
+
+        Path classpathFile = Path.of(basePath, "target", "debug-classpath.txt");
+
+        // Try to read existing classpath file
+        if (Files.exists(classpathFile)) {
+            try {
+                String classpath = Files.readString(classpathFile).trim();
+                if (!classpath.isEmpty()) {
+                    // Also add test-classes and classes directories
+                    Path testClasses = Path.of(basePath, "target", "test-classes");
+                    Path mainClasses = Path.of(basePath, "target", "classes");
+
+                    StringBuilder fullClasspath = new StringBuilder();
+                    if (Files.exists(testClasses)) {
+                        fullClasspath.append(testClasses).append(File.pathSeparator);
+                    }
+                    if (Files.exists(mainClasses)) {
+                        fullClasspath.append(mainClasses).append(File.pathSeparator);
+                    }
+                    fullClasspath.append(classpath);
+
+                    LOG.debug("Using Maven classpath with " + classpath.split(File.pathSeparator).length + " entries");
+                    return fullClasspath.toString();
+                }
+            } catch (IOException e) {
+                LOG.debug("Failed to read Maven classpath file: " + e.getMessage());
+            }
+        }
+
+        // Generate classpath file using Maven
+        try {
+            LOG.debug("Generating Maven classpath...");
+            ProcessBuilder pb = new ProcessBuilder("mvn", "-q", "dependency:build-classpath",
+                "-Dmdep.outputFile=target/debug-classpath.txt");
+            pb.directory(new File(basePath));
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            boolean completed = process.waitFor(30, TimeUnit.SECONDS);
+            if (completed && process.exitValue() == 0 && Files.exists(classpathFile)) {
+                String classpath = Files.readString(classpathFile).trim();
+
+                // Add test-classes and classes directories
+                Path testClasses = Path.of(basePath, "target", "test-classes");
+                Path mainClasses = Path.of(basePath, "target", "classes");
+
+                StringBuilder fullClasspath = new StringBuilder();
+                if (Files.exists(testClasses)) {
+                    fullClasspath.append(testClasses).append(File.pathSeparator);
+                }
+                if (Files.exists(mainClasses)) {
+                    fullClasspath.append(mainClasses).append(File.pathSeparator);
+                }
+                fullClasspath.append(classpath);
+
+                LOG.debug("Generated Maven classpath with " + classpath.split(File.pathSeparator).length + " entries");
+                return fullClasspath.toString();
+            } else {
+                LOG.debug("Maven classpath generation failed or timed out");
+            }
+        } catch (Exception e) {
+            LOG.debug("Failed to generate Maven classpath: " + e.getMessage());
+        }
+
+        return null;
     }
 
     /**
@@ -432,8 +526,31 @@ public final class KarateProjectService {
 
     private void detectFeatureFiles() {
         featureFiles.clear();
-        featureFiles.addAll(FilenameIndex.getAllFilesByExt(
-            project, "feature", GlobalSearchScope.projectScope(project)));
+        Collection<VirtualFile> allFeatures = FilenameIndex.getAllFilesByExt(
+            project, "feature", GlobalSearchScope.projectScope(project));
+
+        // Filter out feature files in build output directories (target/, build/, out/)
+        // These are copies of source files and would cause duplicates in the Feature Explorer
+        for (VirtualFile file : allFeatures) {
+            if (!isInBuildOutputDirectory(file)) {
+                featureFiles.add(file);
+            }
+        }
+    }
+
+    /**
+     * Check if a file is in a build output directory that should be excluded.
+     * This prevents duplicate feature files from appearing in the Feature Explorer.
+     */
+    private boolean isInBuildOutputDirectory(VirtualFile file) {
+        String path = file.getPath();
+        // Common build output directories
+        return path.contains("/target/") ||      // Maven
+               path.contains("/build/") ||       // Gradle
+               path.contains("/out/") ||         // IntelliJ default
+               path.contains("\\target\\") ||    // Windows Maven
+               path.contains("\\build\\") ||     // Windows Gradle
+               path.contains("\\out\\");         // Windows IntelliJ
     }
 
     @NotNull

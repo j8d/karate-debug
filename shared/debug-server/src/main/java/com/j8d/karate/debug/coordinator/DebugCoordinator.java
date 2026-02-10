@@ -127,7 +127,7 @@ public class DebugCoordinator {
     }
     
     private void doInitialize() throws IOException, TimeoutException, InterruptedException {
-        log.debug("Initializing DebugCoordinator...");
+        log.trace("Initializing DebugCoordinator...");
 
         // Create multiplexer
         multiplexer = new DapMultiplexer();
@@ -147,7 +147,7 @@ public class DebugCoordinator {
         processInfo = processManager.start();
         state = CoordinatorState.CHILD_READY;
 
-        log.debug("Child process ready: IPC={}, JDWP={}, JS-DAP={}",
+        log.trace("Child process ready: IPC={}, JDWP={}, JS-DAP={}",
             processInfo.getIpcPort(), processInfo.getJdwpPort(), processInfo.getJsDapPort());
 
         // Create and register backends
@@ -158,7 +158,7 @@ public class DebugCoordinator {
         connectBackends();
         state = CoordinatorState.BACKENDS_READY;
 
-        log.debug("All backends ready");
+        log.trace("All backends ready");
     }
 
     /**
@@ -215,7 +215,7 @@ public class DebugCoordinator {
     private void connectBackends() throws IOException, TimeoutException, InterruptedException {
         // Backends are already initialized via registerBackend() in createBackends().
         // This method exists for any future connection/start logic that may be needed.
-        log.debug("All backends registered and initialized");
+        log.trace("All backends registered and initialized");
     }
 
     /**
@@ -225,7 +225,7 @@ public class DebugCoordinator {
      */
     private void onDapPortDiscovered(int port) {
         if (jsBackend != null) {
-            log.debug("DAP port discovered but JavaScriptBackend already exists");
+            log.trace("DAP port discovered but JavaScriptBackend already exists");
             return;
         }
 
@@ -235,7 +235,7 @@ public class DebugCoordinator {
         }
 
         Path workspacePath = getWorkspacePath();
-        log.debug("Late-creating JavaScriptBackend for DAP port {}, workspace={}", port, workspacePath);
+        log.trace("Late-creating JavaScriptBackend for DAP port {}, workspace={}", port, workspacePath);
         jsBackend = new JavaScriptBackend(port, workspacePath);
         multiplexer.registerBackend(jsBackend);
 
@@ -272,7 +272,7 @@ public class DebugCoordinator {
         }
 
         for (QueuedBreakpoints queued : jsBreakpoints) {
-            log.debug("Applying {} queued JavaScript breakpoints for {}",
+            log.trace("Applying {} queued JavaScript breakpoints for {}",
                     queued.requests().size(), queued.filePath());
             List<Breakpoint> verifiedBreakpoints = multiplexer.setBreakpoints(queued.filePath(), queued.requests());
 
@@ -280,7 +280,7 @@ public class DebugCoordinator {
             if (eventListener != null) {
                 for (Breakpoint bp : verifiedBreakpoints) {
                     if (bp.verified()) {
-                        log.debug("Sending JS breakpoint resolved event for line {}", bp.line());
+                        log.trace("Sending JS breakpoint resolved event for line {}", bp.line());
                         eventListener.onBreakpointResolved(bp);
                     }
                 }
@@ -299,7 +299,7 @@ public class DebugCoordinator {
             synchronized (queuedBreakpoints) {
                 queuedBreakpoints.add(new QueuedBreakpoints(filePath, new ArrayList<>(requests)));
             }
-            log.debug("Queued {} breakpoints for {} (state={})", requests.size(), filePath, state);
+            log.trace("Queued {} breakpoints for {} (state={})", requests.size(), filePath, state);
 
             // Return unverified breakpoints - they will be verified later when backends are ready
             List<Breakpoint> unverified = new ArrayList<>();
@@ -318,7 +318,7 @@ public class DebugCoordinator {
      * JavaScript breakpoints are kept in the queue if the JS backend doesn't exist yet.
      */
     public void applyQueuedBreakpoints() {
-        log.debug("applyQueuedBreakpoints called, queue size={}", queuedBreakpoints.size());
+        log.trace("applyQueuedBreakpoints called, queue size={}", queuedBreakpoints.size());
         List<QueuedBreakpoints> toApply = new ArrayList<>();
         List<QueuedBreakpoints> toKeep = new ArrayList<>();
 
@@ -328,7 +328,7 @@ public class DebugCoordinator {
                 if (isJavaScriptFile(queued.filePath()) && jsBackend == null) {
                     // Keep JavaScript breakpoints for later when the backend is created
                     toKeep.add(queued);
-                    log.debug("Keeping {} JS breakpoints queued for {} (JS backend not ready)",
+                    log.trace("Keeping {} JS breakpoints queued for {} (JS backend not ready)",
                             queued.requests().size(), queued.filePath());
                 } else {
                     toApply.add(queued);
@@ -339,7 +339,7 @@ public class DebugCoordinator {
         }
 
         for (QueuedBreakpoints queued : toApply) {
-            log.debug("Applying {} queued breakpoints for {}", queued.requests().size(), queued.filePath());
+            log.trace("Applying {} queued breakpoints for {}", queued.requests().size(), queued.filePath());
             List<Breakpoint> verifiedBreakpoints = multiplexer.setBreakpoints(queued.filePath(), queued.requests());
 
             // Notify VS Code about verified breakpoints so they show as solid red
@@ -354,7 +354,7 @@ public class DebugCoordinator {
         }
 
         state = CoordinatorState.BREAKPOINTS_SET;
-        log.debug("Breakpoints applied, state={}", state);
+        log.trace("Breakpoints applied, state={}", state);
     }
 
     /**
@@ -385,14 +385,14 @@ public class DebugCoordinator {
         multiplexer.start();
 
         state = CoordinatorState.RUNNING;
-        log.debug("Execution started");
+        log.trace("Execution started");
     }
 
     /**
      * Stops the debug session and cleans up all resources.
      */
     public void stop() {
-        log.debug("Stopping DebugCoordinator");
+        log.trace("Stopping DebugCoordinator");
         state = CoordinatorState.TERMINATED;
 
         // Stop multiplexer (which stops all backends)
@@ -482,7 +482,7 @@ public class DebugCoordinator {
      */
     public List<String> getJavaClasspathEntries() {
         if (javaBackend == null) {
-            log.debug("Java backend not available, returning empty classpath");
+            log.trace("Java backend not available, returning empty classpath");
             return List.of();
         }
         return javaBackend.getClasspathEntries();

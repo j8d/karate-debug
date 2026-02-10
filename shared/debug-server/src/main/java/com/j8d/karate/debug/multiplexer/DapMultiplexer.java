@@ -595,10 +595,25 @@ public class DapMultiplexer implements BackendEventListener {
      * Evaluates an expression in the context of a global frame ID.
      */
     public EvaluateResult evaluate(int globalFrameId, String expression, String context) {
+        // Karate `match` expressions should be evaluated by the Karate backend.
+        // However, if we're stopped in Java/JS, the Karate thread may be blocked waiting,
+        // and sending a synchronous IPC request can deadlock.
+        boolean isMatchExpression = expression != null && expression.trim().startsWith("match ");
+
+        // Guard against deadlock: cannot evaluate match expressions while stopped in Java/JS
+        if (isMatchExpression && stoppedBackend != null && stoppedBackend != BackendType.KARATE) {
+            log.debug("Cannot evaluate match expression while stopped in {} backend", stoppedBackend);
+            return EvaluateResult.error("Cannot evaluate match expressions while stopped in " + stoppedBackend + " code. Step back to Karate code first.");
+        }
+
         // Handle frame ID 0 (used by VS Code for watch expressions without specific frame context)
         // Default to the currently stopped backend, or Karate if none stopped
         FrameRef ref;
-        if (globalFrameId == 0) {
+        if (isMatchExpression) {
+            // Route match expressions to Karate backend
+            ref = new FrameRef(BackendType.KARATE, 0);
+            log.trace("Evaluate match expression, routing to Karate backend");
+        } else if (globalFrameId == 0) {
             BackendType type = stoppedBackend != null ? stoppedBackend : BackendType.KARATE;
             ref = new FrameRef(type, 0);
             log.trace("Evaluate with frameId=0, stoppedBackend={}, using backend {}", stoppedBackend, type);
@@ -668,11 +683,13 @@ public class DapMultiplexer implements BackendEventListener {
             steppingInBackend = null;
             crossLanguageStepMode = false;
 
-            // Disable entry catching and cancel any pending steps
+            // Disable entry catching, cancel any pending steps, and resume the JVM.
+            // The resume is critical: a step event may have just fired (suspending the thread)
+            // and we need to ensure the JVM continues running when we switch back to Karate.
             if (backends.containsKey(BackendType.JAVA)) {
                 JavaBackend javaBackend = (JavaBackend) backends.get(BackendType.JAVA);
                 javaBackend.disableMethodEntry();
-                javaBackend.cancelAllSteps();
+                javaBackend.cancelAllStepsAndResume();
             }
             if (backends.containsKey(BackendType.JAVASCRIPT)) {
                 JavaScriptBackend jsBackend = (JavaScriptBackend) backends.get(BackendType.JAVASCRIPT);
@@ -761,6 +778,13 @@ public class DapMultiplexer implements BackendEventListener {
         // Java and JS backends are only active while Karate is running.
         if (type == BackendType.KARATE) {
             log.info("Karate backend terminated - ending debug session");
+
+            // Disable script entry catching to stop JavaScript stepping immediately
+            if (backends.containsKey(BackendType.JAVASCRIPT)) {
+                JavaScriptBackend jsBackend = (JavaScriptBackend) backends.get(BackendType.JAVASCRIPT);
+                jsBackend.disableScriptEntry();
+            }
+
             if (eventListener != null) {
                 eventListener.onTerminated();
             }
@@ -785,6 +809,39 @@ public class DapMultiplexer implements BackendEventListener {
     public void onOutput(DebugBackend backend, String category, String text) {
         if (eventListener != null) {
             eventListener.onOutput(category, text);
+        }
+    }
+
+    @Override
+    public void onFeatureComplete(DebugBackend backend) {
+        log.info("Feature complete - disabling debug overhead to speed up report generation");
+
+        // Disable JavaScript event processing to avoid slowing down report generation.
+        // The JS DAP server sends loadedSource events for every JS snippet during report
+        // generation (Thymeleaf templates), and we fetch content for each one. This creates
+        // significant overhead. Since debugging is done, we can safely ignore these events.
+        //
+        // IMPORTANT: We do NOT call stop() here because that disconnects the DAP socket,
+        // which breaks the Polyglot context and causes report generation to fail with
+        // "PolyglotException: java.net.SocketException: Socket closed"
+        if (backends.containsKey(BackendType.JAVASCRIPT)) {
+            JavaScriptBackend jsBackend = (JavaScriptBackend) backends.get(BackendType.JAVASCRIPT);
+            jsBackend.disableEventProcessing();
+        }
+
+        // Disable all Java debugging overhead
+        if (backends.containsKey(BackendType.JAVA)) {
+            JavaBackend javaBackend = (JavaBackend) backends.get(BackendType.JAVA);
+
+            // Cancel any active step requests - we don't want JDI stepping during report gen
+            javaBackend.cancelAllSteps();
+
+            // Disable method entry events (used for cross-language step-into)
+            javaBackend.disableMethodEntry();
+
+            // Disable class prepare events - many classes load during report generation
+            // (Thymeleaf templates, etc.) and each event briefly suspends the JVM
+            javaBackend.disableClassPrepareEvents();
         }
     }
 
