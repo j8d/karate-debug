@@ -173,6 +173,15 @@ intellijPlatform {
                 <li>Maven or Gradle project with Karate dependencies</li>
             </ul>
 
+            <h3>Early Access Program (EAP)</h3>
+            <p>Want to try new features before they're released? Join our EAP channel:</p>
+            <ol>
+                <li>Go to <b>Settings &gt; Plugins &gt; &#9881; (gear icon) &gt; Manage Plugin Repositories</b></li>
+                <li>Click <b>+</b> and add: <code>https://plugins.jetbrains.com/plugins/eap/list</code></li>
+                <li>EAP versions will now appear in the plugin updates</li>
+            </ol>
+            <p>EAP versions may contain experimental features and are updated more frequently.</p>
+
             <h3>Resources</h3>
             <ul>
                 <li><a href="https://karatedebug.com">Website</a> - Documentation and getting started guides</li>
@@ -220,6 +229,13 @@ intellijPlatform {
         // Publish token from JetBrains Marketplace account
         // Generate at: https://plugins.jetbrains.com/author/me/tokens
         token.set(providers.environmentVariable("JETBRAINS_PUBLISH_TOKEN"))
+
+        // Channel configuration for EAP/stable releases
+        // Set PUBLISH_CHANNEL env var to "eap" for pre-release, or leave empty for stable
+        // Users opt into EAP via: Settings → Plugins → ⚙️ → Manage Plugin Repositories
+        // Add: https://plugins.jetbrains.com/plugins/eap/list
+        val channel = providers.environmentVariable("PUBLISH_CHANNEL").orElse("default")
+        channels.set(listOf(channel.get()))
     }
     
     pluginVerification {

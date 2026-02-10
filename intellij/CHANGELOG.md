@@ -2,7 +2,7 @@
 
 All notable changes to the Karate Debug IntelliJ plugin will be documented in this file.
 
-## [0.2.0] - 2026-02-06
+## [0.2.0] - 2026-02-10
 
 ### Added
 - Step filtering settings - control which code is skipped when stepping through Java code:
@@ -14,10 +14,21 @@ All notable changes to the Karate Debug IntelliJ plugin will be documented in th
   - Runs `mvn dependency:sources` for Maven projects
   - Shows instructions for Gradle projects
   - "Don't Show Again" option to dismiss for the session
+- Auto-apply downloaded sources - after downloading sources, the plugin automatically refreshes and triggers a project reimport so sources are available immediately without restart
+- EAP (Early Access Program) channel support - beta testers can opt into pre-release versions
 
 ### Fixed
 - Step-into from Karate feature lines now correctly opens framework code when skip settings are disabled
+- Step-into no longer lands in Karate framework code (StepRuntime.execute) - now correctly stops at user code
+- Step-into no longer opens JDK classes - exclusion filters are now applied unconditionally
+- Feature Explorer no longer shows duplicate features from build output directories (target/, build/, out/)
+- Plugin version now correctly reported in license API calls (was showing "unknown")
 - Match expression evaluation now works correctly when stopped in JavaScript code
+- Zombie KarateRunner processes are now cleaned up on session start
+- Graceful KarateRunner shutdown when IPC connection is lost
+- GraalVM internal thread detection for auto-continue during debugging
+- SlowOperations EDT violations for PSI lookups
+- Debug server classpath resolution with Maven fallback
 - Reduced log verbosity by moving debug output to TRACE level
 
 ## [0.1.5] - 2026-01-22
