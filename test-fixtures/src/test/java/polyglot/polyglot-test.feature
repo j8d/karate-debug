@@ -47,7 +47,7 @@ Feature: Polyglot Debugging Test
     
     # Call JavaScript to format currency
     * def formatted = jsHelper.formatCurrency(amount)
-    * match formatted == '$123.46'
+    * match formatted == '$123.47'
     * print 'Formatted amount:', formatted
 
   Scenario: Test Java validation with missing fields

@@ -39,7 +39,7 @@ public class LicenseApiClient {
     private static String getPluginVersion() {
         try {
             var plugin = com.intellij.ide.plugins.PluginManagerCore.getPlugin(
-                    com.intellij.openapi.extensions.PluginId.getId("com.j8d.karate.intellij"));
+                    com.intellij.openapi.extensions.PluginId.getId("com.j8d.karate-debug"));
             return plugin != null ? plugin.getVersion() : "unknown";
         } catch (Exception e) {
             LOG.warn("Failed to get plugin version", e);
