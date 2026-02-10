@@ -203,9 +203,12 @@ public class KarateDapClient {
 
         // Debug server JAR should be first, then project classpath
         String projectClasspath = projectService.getClasspath();
+        debugProcess.log("Project classpath entries: " +
+            (projectClasspath != null ? projectClasspath.split(File.pathSeparator).length : 0));
         if (projectClasspath != null && !projectClasspath.isEmpty()) {
             return jarPath + File.pathSeparator + projectClasspath;
         }
+        debugProcess.log("WARNING: Project classpath is empty, using only debug server JAR");
         return jarPath;
     }
 

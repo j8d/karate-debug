@@ -47,12 +47,13 @@ Hide noisy log output by configuring exclude patterns. Filter out verbose framew
 ### Log Breakpoints
 Pause execution when specific strings appear in log output. Useful for catching exceptions or specific error messages without setting traditional breakpoints - just specify strings like "NullPointerException" or "ERROR" to break on.
 
-### Step Filtering
-Control which code is automatically skipped when stepping through Java code. By default, the debugger skips Karate framework classes and third-party dependencies so you can focus on your own code. When step filtering is enabled, stepping into framework code will automatically step out and return to user code.
+### Step Filtering [Experimental]
+Control which code is automatically skipped when stepping through Java code. By default, the debugger skips JDK classes, Karate framework classes, and third-party dependencies so you can focus on your own code. When step filtering is enabled, stepping into framework code will automatically step out and return to user code.
 
 Configure these options in Settings > Tools > Karate Debug:
-- **Show Karate framework classes** - Check to step into Karate source code during debugging
-- **Show Karate dependencies** - Check to also step through Karate's internal libraries (jsonpath, netty, slf4j, etc.)
+- **Show JDK classes** - Check to step into JDK core classes (java.*, javax.*, jdk.*, sun.*, com.sun.*)
+- **Show Karate framework classes** - Check to step into Karate source code (com.intuit.karate.*)
+- **Show Karate dependencies** - Check to step through Karate's internal libraries (jsonpath, netty, slf4j, etc.)
 
 ### Missing Sources Notification
 When stepping into library code that lacks source files, the debugger shows a notification with a "Download Sources" button. For Maven projects, this runs `mvn dependency:sources` to fetch the missing sources automatically.

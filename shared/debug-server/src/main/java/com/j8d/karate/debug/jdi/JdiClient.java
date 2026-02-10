@@ -432,20 +432,23 @@ public class JdiClient {
         // This allows the IPC-Sender thread to continue running during debugging.
         methodEntryRequest.setSuspendPolicy(MethodEntryRequest.SUSPEND_EVENT_THREAD);
 
-        // Conditionally filter out JDK classes based on user setting
-        if (skipJdkClasses) {
-            methodEntryRequest.addClassExclusionFilter("java.*");
-            methodEntryRequest.addClassExclusionFilter("javax.*");
-            methodEntryRequest.addClassExclusionFilter("sun.*");
-            methodEntryRequest.addClassExclusionFilter("com.sun.*");
-            methodEntryRequest.addClassExclusionFilter("jdk.*");
-        }
+        // ALWAYS exclude JDK classes from method entry catching.
+        // Method entry is used for cross-language step-into from Karate to Java.
+        // We want to catch the first USER method, not JDK internals.
+        // The skipJdkClasses setting is respected in step filtering (shouldSkipClass()),
+        // not in method entry catching.
+        methodEntryRequest.addClassExclusionFilter("java.*");
+        methodEntryRequest.addClassExclusionFilter("javax.*");
+        methodEntryRequest.addClassExclusionFilter("sun.*");
+        methodEntryRequest.addClassExclusionFilter("com.sun.*");
+        methodEntryRequest.addClassExclusionFilter("jdk.*");
 
-        // Conditionally exclude Karate framework classes based on skip setting
-        // When skipKarateFramework is false, users can step into Karate source code
-        if (skipKarateFramework) {
-            methodEntryRequest.addClassExclusionFilter("com.intuit.karate.*");
-        }
+        // ALWAYS exclude Karate framework classes from method entry catching.
+        // Method entry is used for cross-language step-into from Karate feature files to Java.
+        // We want to catch the first USER method, not Karate's internal execution methods
+        // like StepRuntime.execute(). The skipKarateFramework setting is respected in
+        // step filtering (shouldSkipClass()), not in method entry catching.
+        methodEntryRequest.addClassExclusionFilter("com.intuit.karate.*");
 
         // Always exclude GraalVM/Truffle runtime - internal execution classes
         methodEntryRequest.addClassExclusionFilter("org.graalvm.*");

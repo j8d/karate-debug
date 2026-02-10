@@ -78,16 +78,21 @@ public class ChildProcessManager {
 
     /**
      * Starts the child process and waits for it to be ready.
-     * 
+     *
      * @return ChildProcessInfo with discovered ports
      * @throws IOException if process cannot be started
      * @throws TimeoutException if child doesn't become ready in time
      */
     public ChildProcessInfo start() throws IOException, TimeoutException, InterruptedException {
         log.info("Starting child process...");
-        
+
+        // Clean up any zombie KarateRunner processes from previous sessions.
+        // This can happen if the IDE crashes, the debug server is killed, or
+        // the disconnect callback fails to trigger.
+        cleanupZombieProcesses();
+
         readyFuture = new CompletableFuture<>();
-        
+
         // Build command line
         List<String> command = buildCommand();
         // Log abbreviated command (full classpath is too long)
@@ -126,6 +131,50 @@ public class ChildProcessManager {
         }
     }
     
+    /**
+     * Cleans up any zombie KarateRunner processes from previous sessions.
+     * Uses platform-specific commands to find and kill orphaned processes.
+     */
+    private void cleanupZombieProcesses() {
+        String os = System.getProperty("os.name").toLowerCase();
+
+        try {
+            if (os.contains("win")) {
+                // Windows: Use tasklist/taskkill
+                // Find java processes with KarateRunner in command line
+                ProcessBuilder pb = new ProcessBuilder("cmd", "/c",
+                    "wmic process where \"commandline like '%KarateRunner%'\" get processid 2>nul");
+                Process p = pb.start();
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(p.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.matches("\\d+")) {
+                            int pid = Integer.parseInt(line);
+                            log.info("Killing zombie KarateRunner process: PID={}", pid);
+                            new ProcessBuilder("taskkill", "/F", "/PID", String.valueOf(pid)).start().waitFor();
+                        }
+                    }
+                }
+                p.waitFor(5, TimeUnit.SECONDS);
+            } else {
+                // Unix/Mac: Use pkill
+                ProcessBuilder pb = new ProcessBuilder("pkill", "-f", "KarateRunner");
+                pb.redirectErrorStream(true);
+                Process p = pb.start();
+                boolean killed = p.waitFor(5, TimeUnit.SECONDS);
+                if (killed && p.exitValue() == 0) {
+                    log.info("Killed zombie KarateRunner processes");
+                }
+                // Exit code 1 means no processes matched, which is fine
+            }
+        } catch (Exception e) {
+            // Log but don't fail - zombie cleanup is best-effort
+            log.debug("Failed to cleanup zombie processes: {}", e.getMessage());
+        }
+    }
+
     /**
      * Stops the child process.
      */

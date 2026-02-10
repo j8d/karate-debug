@@ -92,9 +92,9 @@ public class KarateSettingsConfigurable implements Configurable {
         logBreakpointsField = new JBTextField(settings.logBreakpoints);
 
         // Polyglot debugging settings (enabling either Java or JS automatically enables polyglot mode)
-        enableJavaDebuggingCheckbox = new JBCheckBox("[Experimental] Enable Java debugging",
+        enableJavaDebuggingCheckbox = new JBCheckBox("Enable Java debugging",
             settings.enableJavaDebugging);
-        enableJsDebuggingCheckbox = new JBCheckBox("[Experimental] Enable JavaScript debugging",
+        enableJsDebuggingCheckbox = new JBCheckBox("Enable JavaScript debugging",
             settings.enableJsDebugging);
 
         // Step filtering settings (show = step into these classes, unchecked = skip them)
@@ -132,7 +132,7 @@ public class KarateSettingsConfigurable implements Configurable {
             .addComponent(enableJavaDebuggingCheckbox)
             .addComponent(enableJsDebuggingCheckbox)
             .addSeparator()
-            .addComponent(new JBLabel("Step Filtering (show these classes when stepping through Java code):"))
+            .addComponent(new JBLabel("[Experimental] Step Filtering (show these classes when stepping through Java code):"))
             .addComponent(showJdkClassesCheckbox)
             .addComponent(showKarateFrameworkCheckbox)
             .addComponent(showKarateDependenciesCheckbox)

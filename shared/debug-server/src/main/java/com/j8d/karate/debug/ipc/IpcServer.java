@@ -31,6 +31,16 @@ public class IpcServer {
 
     private static final Logger log = LoggerFactory.getLogger(IpcServer.class);
 
+    /**
+     * Listener for IPC server disconnect events.
+     */
+    public interface DisconnectListener {
+        /**
+         * Called when the parent process disconnects.
+         */
+        void onParentDisconnected();
+    }
+
     private final Gson gson = new Gson();
     private final AtomicInteger sequenceNumber = new AtomicInteger(1);
     private final BlockingQueue<IpcMessage> sendQueue = new LinkedBlockingQueue<>();
@@ -39,18 +49,26 @@ public class IpcServer {
     private Socket clientSocket;
     private BufferedReader reader;
     private IpcServerHandler handler;
+    private DisconnectListener disconnectListener;
     private Thread acceptThread;
     private Thread readerThread;
     private Thread senderThread;
     private volatile boolean running = false;
     private volatile boolean clientConnected = false;
     private int actualPort;
-    
+
     /**
      * Sets the command handler.
      */
     public void setHandler(IpcServerHandler handler) {
         this.handler = handler;
+    }
+
+    /**
+     * Sets the disconnect listener to be notified when the parent disconnects.
+     */
+    public void setDisconnectListener(DisconnectListener listener) {
+        this.disconnectListener = listener;
     }
     
     /**
@@ -249,6 +267,16 @@ public class IpcServer {
         } finally {
             clientConnected = false;
             log.info("IPC reader thread ending, parent disconnected");
+
+            // Notify listener that parent has disconnected
+            DisconnectListener listener = disconnectListener;
+            if (listener != null) {
+                try {
+                    listener.onParentDisconnected();
+                } catch (Exception e) {
+                    log.error("Error in disconnect listener", e);
+                }
+            }
         }
     }
 

@@ -673,6 +673,7 @@ public class RunnerDebugger implements RuntimeHook {
     }
 
     private String toClasspathPath(String absolutePath) {
+        // Source directories (checked first for proper source mapping)
         String[] sourceRoots = {
             "src/test/java/",
             "src/test/resources/",
@@ -680,9 +681,31 @@ public class RunnerDebugger implements RuntimeHook {
             "src/main/resources/"
         };
 
+        // Build output directories (Karate may report paths from compiled classpath)
+        String[] buildOutputRoots = {
+            "target/test-classes/",      // Maven test output
+            "target/classes/",            // Maven main output
+            "build/classes/java/test/",   // Gradle test output
+            "build/classes/java/main/",   // Gradle main output
+            "build/resources/test/",      // Gradle test resources
+            "build/resources/main/",      // Gradle main resources
+            "out/test/classes/",          // IntelliJ test output
+            "out/production/classes/"     // IntelliJ main output
+        };
+
         String normalizedPath = absolutePath.replace('\\', '/');
 
+        // Check source roots first
         for (String root : sourceRoots) {
+            int idx = normalizedPath.indexOf(root);
+            if (idx >= 0) {
+                String relativePath = normalizedPath.substring(idx + root.length());
+                return "classpath:" + relativePath;
+            }
+        }
+
+        // Check build output roots (Karate runs from classpath which points here)
+        for (String root : buildOutputRoots) {
             int idx = normalizedPath.indexOf(root);
             if (idx >= 0) {
                 String relativePath = normalizedPath.substring(idx + root.length());

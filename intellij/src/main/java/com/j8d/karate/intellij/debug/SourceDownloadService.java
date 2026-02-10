@@ -6,8 +6,11 @@ import com.intellij.execution.process.ProcessAdapter;
 import com.intellij.execution.process.ProcessEvent;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
+import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.actionSystem.ex.ActionUtil;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
@@ -16,6 +19,7 @@ import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.VirtualFileManager;
 import com.j8d.karate.intellij.project.KarateProjectService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -210,17 +214,70 @@ public final class SourceDownloadService {
     }
 
     private void showSuccess() {
-        ApplicationManager.getApplication().invokeLater(() -> {
-            var notification = NotificationGroupManager.getInstance()
-                .getNotificationGroup("Karate Debug")
-                .createNotification(
-                    "Sources Downloaded",
-                    "Library sources have been downloaded. Please reload your Maven/Gradle project " +
-                    "(Maven tool window > Reload All Projects) for IntelliJ to recognize them.",
-                    NotificationType.INFORMATION
-                );
-            notification.notify(project);
+        // Refresh the VFS to pick up newly downloaded source JARs
+        VirtualFileManager.getInstance().asyncRefresh(() -> {
+            // After VFS refresh, trigger a project reimport to attach sources to libraries
+            ApplicationManager.getApplication().invokeLater(() -> {
+                triggerProjectReimport();
+
+                var notification = NotificationGroupManager.getInstance()
+                    .getNotificationGroup("Karate Debug")
+                    .createNotification(
+                        "Sources Downloaded",
+                        "Library sources have been downloaded and the project is being refreshed. " +
+                        "Sources should be available shortly.",
+                        NotificationType.INFORMATION
+                    );
+                notification.notify(project);
+            });
         });
+    }
+
+    /**
+     * Triggers a project reimport to pick up newly downloaded source JARs.
+     * Tries Maven first, then falls back to the generic external system refresh.
+     */
+    private void triggerProjectReimport() {
+        ActionManager actionManager = ActionManager.getInstance();
+
+        // Try Maven-specific reimport first
+        AnAction mavenReimport = actionManager.getAction("Maven.Reimport");
+        if (mavenReimport != null) {
+            LOG.debug("Triggering Maven.Reimport action");
+            invokeAction(mavenReimport);
+            return;
+        }
+
+        // Try generic external system refresh (works for both Maven and Gradle)
+        AnAction externalRefresh = actionManager.getAction("ExternalSystem.RefreshAllProjects");
+        if (externalRefresh != null) {
+            LOG.debug("Triggering ExternalSystem.RefreshAllProjects action");
+            invokeAction(externalRefresh);
+            return;
+        }
+
+        LOG.debug("No reimport action found, sources may not be available until manual refresh");
+    }
+
+    /**
+     * Invokes an action programmatically.
+     */
+    private void invokeAction(AnAction action) {
+        DataContext dataContext = dataId -> {
+            if (com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT.is(dataId)) {
+                return project;
+            }
+            return null;
+        };
+
+        AnActionEvent event = AnActionEvent.createFromAnAction(
+            action,
+            null,
+            "SourceDownloadService",
+            dataContext
+        );
+
+        ActionUtil.performActionDumbAwareWithCallbacks(action, event);
     }
 
     private void showError(String message) {

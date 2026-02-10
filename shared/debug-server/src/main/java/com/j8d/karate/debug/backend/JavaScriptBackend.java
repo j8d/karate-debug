@@ -63,6 +63,9 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
     private volatile int inlineSnippetStepCount = 0;
     // Maximum number of consecutive inline snippet step-ins before giving up
     private static final int MAX_INLINE_SNIPPET_STEPS = 50;
+    // Track when a pending pause request was cancelled (Java caught step first)
+    // If GraalVM later pauses due to this, we need to auto-continue
+    private volatile boolean pendingPauseCancelled = false;
 
     // Source content matcher for mapping "Unnamed" sources to .js files
     private final JavaScriptSourceMatcher sourceMatcher;
@@ -331,6 +334,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
         scriptEntryCatchingEnabled = true;
         pendingStepIn = true;
+        pendingPauseCancelled = false; // New pause request, not cancelled
         inlineSnippetStepCount = 0; // Reset counter for new cross-language step
 
         log.trace("Enabled script entry catching for cross-language step-into");
@@ -347,6 +351,10 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
     /**
      * Disables script entry catching.
+     * Called when Java catches the cross-language step first.
+     * If a pause request was sent to GraalVM DAP, we immediately send a continue
+     * to cancel its effect. The continue will be queued behind the pause in GraalVM's
+     * message queue, so when GraalVM processes both: pause then continue = not stuck.
      */
     public void disableScriptEntry() {
         if (!scriptEntryCatchingEnabled) {
@@ -356,7 +364,32 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
         pendingStepIn = false;
         scriptEntryCatchingEnabled = false;
         inlineSnippetStepCount = 0;
-        log.trace("Disabled script entry catching");
+
+        // Immediately send continue to cancel the pending pause request.
+        // This must be done NOW, not when the user resumes/steps, because:
+        // 1. The pause request is async and GraalVM may not have processed it yet
+        // 2. By sending continue now, it queues behind pause in GraalVM's message queue
+        // 3. GraalVM will process: pause (thread suspended) -> continue (thread resumed)
+        // 4. Net effect: thread is not stuck when user continues from Java
+        //
+        // Also set the flag as a safety net - if onStopped() receives a "pause" event,
+        // it will auto-continue (in case the immediate continue didn't work).
+        pendingPauseCancelled = true;
+        log.trace("Disabled script entry catching, sending continue to cancel pending pause");
+        try {
+            JsonObject args = new JsonObject();
+            args.addProperty("threadId", currentThreadId);
+            dapClient.send("continue", args).whenComplete((result, error) -> {
+                if (error != null) {
+                    log.trace("Continue to cancel pending pause failed: {}", error.getMessage());
+                } else {
+                    log.trace("Continue to cancel pending pause succeeded");
+                    pendingPauseCancelled = false; // Clear flag since continue worked
+                }
+            });
+        } catch (Exception e) {
+            log.trace("Could not send continue to cancel pending pause: {}", e.getMessage());
+        }
     }
 
     /**
@@ -375,6 +408,7 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
         pendingStepIn = false;
         isSteppingInJs = false;
         inlineSnippetStepCount = 0;
+        pendingPauseCancelled = false;
 
         // Clear all JavaScript breakpoints first to reduce overhead
         try {
@@ -598,6 +632,19 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
 
         log.trace("DAP stopped: reason={}, threadId={}", reason, threadId);
 
+        // Check if this is a pause from a cancelled cross-language step request.
+        // This happens when Java caught the step first and we called disableScriptEntry(),
+        // but GraalVM hadn't processed the pause request yet. When it later processes the
+        // pause, we get a stop with reason "pause" that we need to auto-continue from.
+        if (pendingPauseCancelled && "pause".equals(reason)) {
+            log.trace("Auto-continuing: pause from cancelled cross-language step (Java caught step first)");
+            pendingPauseCancelled = false;
+            JsonObject continueArgs = new JsonObject();
+            continueArgs.addProperty("threadId", threadId);
+            dapClient.send("continue", continueArgs);
+            return;
+        }
+
         // Fetch stack frames asynchronously to avoid blocking the DAP reader thread
         // (calling sendSync from the reader thread would cause deadlock)
         String description = body.has("description") ? body.get("description").getAsString() : reason;
@@ -609,6 +656,17 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
                 JsonObject result = dapClient.sendSync("stackTrace", args);
                 if (result != null && result.has("stackFrames")) {
                     currentStackFrames = result.getAsJsonArray("stackFrames");
+
+                    // Check if we paused an internal GraalVM thread (e.g., DAP server's socket reader).
+                    // This can happen when we send a pause request - GraalVM may pause any thread,
+                    // including its own internal threads. We need to auto-continue in this case.
+                    if (isInternalGraalVMThread(currentStackFrames)) {
+                        log.trace("Auto-continuing: paused internal GraalVM thread (not user code)");
+                        JsonObject continueArgs = new JsonObject();
+                        continueArgs.addProperty("threadId", threadId);
+                        dapClient.send("continue", continueArgs);
+                        return;
+                    }
 
                     // Determine if we should pause or auto-continue
                     // GraalVM DAP stops on every script execution with "debugger_statement"
@@ -1022,6 +1080,47 @@ public class JavaScriptBackend implements DebugBackend, DapEventListener {
             case "wasm-expression-stack" -> "WASM Expression Stack";
             default -> type;
         };
+    }
+
+    /**
+     * Checks if the stack frames indicate an internal GraalVM thread (not user code).
+     * This can happen when we send a pause request and GraalVM pauses its own internal
+     * threads (e.g., the DAP server's socket reader thread) instead of user code.
+     *
+     * @param stackFrames The stack frames from the stopped event
+     * @return true if this appears to be an internal GraalVM thread
+     */
+    private boolean isInternalGraalVMThread(JsonArray stackFrames) {
+        if (stackFrames == null || stackFrames.isEmpty()) {
+            return false;
+        }
+
+        for (int i = 0; i < stackFrames.size(); i++) {
+            JsonObject frame = stackFrames.get(i).getAsJsonObject();
+            String frameName = frame.has("name") ? frame.get("name").getAsString() : "";
+
+            JsonObject source = frame.has("source") ? frame.getAsJsonObject("source") : null;
+            String path = source != null && source.has("path") ? source.get("path").getAsString() : "";
+
+            // Check for GraalVM DAP server internals
+            if (path.contains("com/oracle/truffle/tools/dap") ||
+                frameName.contains("DebugProtocolServer")) {
+                return true;
+            }
+
+            // Check for GraalVM polyglot internals
+            if (path.contains("com/oracle/truffle/polyglot") ||
+                frameName.contains("SystemThread")) {
+                return true;
+            }
+
+            // Check for Java socket I/O (indicates we paused a thread waiting on I/O)
+            if (path.startsWith("sun/nio/ch/") || path.startsWith("java/nio/")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // ========== Inner Classes ==========
