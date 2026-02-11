@@ -5,6 +5,12 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-02-11
+
+### Fixed
+- Fixed critical bug where extension failed to activate with "Cannot find module 'ws'" error
+- All marketplace installations since v0.7.0 were affected by missing node_modules in the packaged extension
+
 ## [0.7.1] - 2026-02-05
 
 ### Changed
