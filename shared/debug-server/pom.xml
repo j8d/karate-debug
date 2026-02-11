@@ -18,7 +18,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Using Karate fork with GraalVM 25.0.2 for compatibility with chromeinspector/dap-tool -->
         <!-- See docs/KARATE-FORK-STRATEGY.md for details -->
-        <karate.version>v1.5.2-j8d.1</karate.version>
+        <karate.version>v1.5.2-j8d.3</karate.version>
         <!--
              GraalVM version for dap-tool dependency.
              Note: Karate 1.5.2 bundles GraalJS/polyglot 24.0.0, but we use dap-tool 25.0.2
