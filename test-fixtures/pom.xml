@@ -14,7 +14,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Using Karate fork with GraalVM 25.0.2 for compatibility with chromeinspector/dap-tool -->
-        <karate.version>v1.5.2-j8d.1</karate.version>
+        <karate.version>v1.5.2-j8d.3</karate.version>
     </properties>
 
     <dependencies>
