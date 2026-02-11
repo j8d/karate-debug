@@ -100,11 +100,11 @@ jobs:
 
       - name: Package extension
         working-directory: vscode
-        run: npx vsce package --no-dependencies
+        run: npx vsce package
 
       - name: Publish to VS Code Marketplace
         working-directory: vscode
-        run: npx vsce publish --no-dependencies -p ${{ secrets.AZUREPAT }}
+        run: npx vsce publish -p ${{ secrets.AZUREPAT }}
 
       - name: Upload VS Code artifact
         uses: actions/upload-artifact@v6
