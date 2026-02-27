@@ -10,6 +10,7 @@ import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.ProjectActivity;
+import com.j8d.karate.intellij.licensing.AnalyticsTracker;
 import com.j8d.karate.intellij.licensing.LicenseManager;
 import kotlin.Unit;
 import kotlin.coroutines.Continuation;
@@ -23,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 public class KarateProjectStartupActivity implements ProjectActivity {
 
     private static final Logger LOG = Logger.getInstance(KarateProjectStartupActivity.class);
+    private static final String LAST_VERSION_KEY = "karateDebug.lastVersion";
 
     @Nullable
     @Override
@@ -30,8 +32,12 @@ public class KarateProjectStartupActivity implements ProjectActivity {
         LOG.info("Karate Debug: Starting project detection for " + project.getName());
 
         // Initialize license manager (application-level, only needs to happen once)
-        LicenseManager.getInstance().initialize()
+        LicenseManager licenseManager = LicenseManager.getInstance();
+        licenseManager.initialize()
                 .thenAccept(status -> LOG.info("License status: " + status));
+
+        // Track lifecycle events (fire-and-forget)
+        trackLifecycleEvent(licenseManager);
 
         // Initialize build file listener for auto-refresh
         KarateBuildFileListener.getInstance(project);
@@ -103,6 +109,47 @@ public class KarateProjectStartupActivity implements ProjectActivity {
         message.append(".");
 
         return message.toString();
+    }
+
+    /**
+     * Track lifecycle events (initialized/updated) for analytics.
+     * Uses PropertiesComponent to persist the last seen version across restarts.
+     */
+    private void trackLifecycleEvent(LicenseManager licenseManager) {
+        try {
+            String currentVersion = getPluginVersion();
+            String lastVersion = com.intellij.ide.util.PropertiesComponent.getInstance()
+                    .getValue(LAST_VERSION_KEY);
+
+            AnalyticsTracker tracker = new AnalyticsTracker(
+                    licenseManager.getMachineId(),
+                    currentVersion
+            );
+
+            // Always send 'initialized' on every activation to track active installs
+            tracker.trackLifecycleEvent(AnalyticsTracker.LifecycleEventType.INITIALIZED, null);
+
+            // Additionally track version updates for adoption metrics
+            if (lastVersion != null && !lastVersion.equals(currentVersion)) {
+                tracker.trackLifecycleEvent(AnalyticsTracker.LifecycleEventType.UPDATED, lastVersion);
+            }
+
+            // Store current version for next activation
+            com.intellij.ide.util.PropertiesComponent.getInstance()
+                    .setValue(LAST_VERSION_KEY, currentVersion);
+        } catch (Exception e) {
+            LOG.debug("Failed to track lifecycle event", e);
+        }
+    }
+
+    private static String getPluginVersion() {
+        try {
+            var plugin = com.intellij.ide.plugins.PluginManagerCore.getPlugin(
+                    com.intellij.openapi.extensions.PluginId.getId("com.j8d.karate-debug"));
+            return plugin != null ? plugin.getVersion() : "unknown";
+        } catch (Exception e) {
+            return "unknown";
+        }
     }
 }
 
