@@ -54,7 +54,7 @@ jobs:
           mvn clean package -q
 
       - name: Upload debug-server JAR
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: debug-server-jar
           path: shared/debug-server/target/karate-debug-server-1.0.0.jar
@@ -75,7 +75,7 @@ jobs:
           node-version: '24'
 
       - name: Download debug-server JAR
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: debug-server-jar
           path: vscode/resources/
@@ -107,7 +107,7 @@ jobs:
         run: npx vsce publish -p ${{ secrets.AZUREPAT }}
 
       - name: Upload VS Code artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vscode-extension
           path: vscode/*.vsix
@@ -153,7 +153,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Download debug-server JAR
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: debug-server-jar
           path: shared/debug-server/target/
@@ -196,7 +196,7 @@ jobs:
         run: ./gradlew publishPlugin
 
       - name: Upload IntelliJ artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: intellij-plugin
           path: intellij/build/distributions/*-signed.zip
@@ -213,7 +213,7 @@ jobs:
 
     steps:
       - name: Download VS Code artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: vscode-extension
           path: artifacts/
@@ -236,7 +236,7 @@ jobs:
 
     steps:
       - name: Download IntelliJ artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: intellij-plugin
           path: artifacts/
