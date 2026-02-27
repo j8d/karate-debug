@@ -5,7 +5,7 @@ All notable changes to the Karate Debug IntelliJ plugin will be documented in th
 ## [0.2.1] - 2026-02-27
 
 ### Added
-- Analytics tracking for usage insights and product improvement
+- Analytics tracking for anonymous usage insights and product improvement
 
 ### Fixed
 - Force HTTP/1.1 for analytics API calls to ensure compatibility with all server configurations
