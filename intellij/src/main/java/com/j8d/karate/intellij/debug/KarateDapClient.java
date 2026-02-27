@@ -513,6 +513,8 @@ public class KarateDapClient {
 
     private void handleTerminatedEvent() {
         debugProcess.log("Debug session terminated");
+        // Mark as normal termination before stopping
+        debugProcess.markTerminatedNormally();
         ApplicationManager.getApplication().invokeLater(() -> {
             debugProcess.getSession().stop();
         });

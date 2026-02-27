@@ -4,17 +4,25 @@ import * as net from 'net';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { GraalInspectorClient } from './graalInspector';
+import { AnalyticsTracker, SessionOutcome } from './analyticsTracker';
 
 export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
     private readonly context: vscode.ExtensionContext;
     private readonly outputChannel: vscode.OutputChannel;
+    private readonly analyticsTracker: AnalyticsTracker | null;
     private serverProcess: ChildProcess | null = null;
     private lastJsDebugPort: number = 0;
     private graalInspector: GraalInspectorClient | null = null;
+    private sessionExitedNormally: boolean = false;
 
-    constructor(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel) {
+    constructor(
+        context: vscode.ExtensionContext,
+        outputChannel: vscode.OutputChannel,
+        analyticsTracker?: AnalyticsTracker
+    ) {
         this.context = context;
         this.outputChannel = outputChannel;
+        this.analyticsTracker = analyticsTracker ?? null;
     }
 
     private log(message: string): void {
@@ -56,6 +64,15 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
 
         // Clean up any previous session before starting a new one
         this.cleanupPreviousSession();
+
+        // Reset session tracking state
+        this.sessionExitedNormally = false;
+
+        // Track session start (fire-and-forget)
+        const featureFile = config.feature as string | undefined;
+        this.analyticsTracker?.startSession(featureFile).catch(() => {
+            // Ignore errors - analytics should not affect debugging
+        });
 
         // Find a free port for the debug server
         const port = await this.findFreePort();
@@ -136,6 +153,14 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
      * Clean up any previous debug session - kill server process and free ports
      */
     private cleanupPreviousSession(): void {
+        // Track session end (fire-and-forget)
+        if (this.analyticsTracker?.hasActiveSession()) {
+            const outcome: SessionOutcome = this.sessionExitedNormally ? 'completed' : 'stopped';
+            this.analyticsTracker.endSession(outcome).catch(() => {
+                // Ignore errors - analytics should not affect debugging
+            });
+        }
+
         // Disconnect the GraalVM inspector client
         if (this.graalInspector) {
             this.graalInspector.disconnect();
@@ -359,10 +384,14 @@ export class KarateDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         serverProcess.on('error', (err) => {
             this.log(`ERROR: Failed to start debug server: ${err.message}`);
             vscode.window.showErrorMessage(`Failed to start debug server: ${err.message}`);
+            // Mark session as crashed on error
+            this.analyticsTracker?.endSession('crashed').catch(() => {});
         });
 
         serverProcess.on('exit', (code) => {
             this.log(`Debug server exited with code ${code}`);
+            // Mark session as completed on normal exit (code 0)
+            this.sessionExitedNormally = code === 0;
         });
 
         return serverProcess;
