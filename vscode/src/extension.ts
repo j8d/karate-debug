@@ -6,6 +6,7 @@ import { MatchDiagnosticsProvider } from './matchDiagnostics';
 import { LicenseManager } from './licensing';
 import { KarateDocumentLinkProvider } from './documentLinks';
 import { registerJsInlineValuesProvider } from './jsInlineValues';
+import { AnalyticsTracker } from './analyticsTracker';
 
 // Global output channel for logging
 export let outputChannel: vscode.OutputChannel;
@@ -124,8 +125,27 @@ export function activate(context: vscode.ExtensionContext) {
     const defaultEnv = config.get<string>('defaultEnvironment', 'dev');
     currentEnvironment = context.workspaceState.get('karateEnv', defaultEnv);
 
+    // Initialize analytics tracker for session and lifecycle tracking
+    const currentVersion = context.extension.packageJSON.version as string;
+    const analyticsTracker = new AnalyticsTracker(
+        licenseManager.machineIdentifier,
+        currentVersion
+    );
+
+    // Track lifecycle events (fire-and-forget)
+    // Send 'initialized' on every activation to track active installs
+    analyticsTracker.trackLifecycleEvent('initialized').catch(() => {});
+
+    // Additionally track version updates for adoption metrics
+    const lastVersionKey = 'karate-debug.lastVersion';
+    const lastVersion = context.globalState.get<string>(lastVersionKey);
+    if (lastVersion && lastVersion !== currentVersion) {
+        analyticsTracker.trackLifecycleEvent('updated', lastVersion).catch(() => {});
+    }
+    context.globalState.update(lastVersionKey, currentVersion);
+
     // Register debug adapter factory
-    const factory = new KarateDebugAdapterFactory(context, outputChannel);
+    const factory = new KarateDebugAdapterFactory(context, outputChannel, analyticsTracker);
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterDescriptorFactory('karate', factory)
     );

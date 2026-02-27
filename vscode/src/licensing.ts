@@ -637,4 +637,19 @@ export class LicenseManager {
             username: this.currentStatus.githubUsername
         };
     }
+
+    /**
+     * Get the machine ID for analytics tracking.
+     * Returns the already-generated stable machine identifier.
+     */
+    get machineIdentifier(): string {
+        return this.machineId;
+    }
+
+    /**
+     * Get the client version for analytics tracking.
+     */
+    get version(): string {
+        return this.clientVersion;
+    }
 }
