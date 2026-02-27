@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.7.4] - 2026-02-27
 
 ### Added
-- Analytics tracking for usage insights and product improvement
+- Analytics tracking for anonymous usage insights and product improvement
 
 ## [0.7.3] - 2026-02-11
 
