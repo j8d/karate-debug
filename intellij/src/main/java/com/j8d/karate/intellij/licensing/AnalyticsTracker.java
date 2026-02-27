@@ -65,6 +65,7 @@ public class AnalyticsTracker {
 
     public AnalyticsTracker(@NotNull String machineId, @NotNull String clientVersion) {
         this.httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)  // Force HTTP/1.1 for compatibility
                 .connectTimeout(TIMEOUT)
                 .build();
         this.machineId = machineId;
