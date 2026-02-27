@@ -1,4 +1,3 @@
-import * as os from 'os';
 import { API_BASE_URL } from './config';
 
 export type SessionOutcome = 'completed' | 'stopped' | 'crashed' | 'timeout';
