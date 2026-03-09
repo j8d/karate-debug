@@ -5,6 +5,14 @@ All notable changes to the Karate Debug extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2026-03-09
+
+### Fixed
+- Fixed critical variable scoping bug where called scenarios (with @ignore tag) could not access parent scope variables or magic variables (karate, response, etc.) - variables were stored in GraalVM JS bindings but not exposed in the Variables view or evaluation context
+- Fixed Match Diagnostics evaluation bug where evaluating match statements with undefined variables would corrupt the Karate engine state - the debug server now safely checks variable existence before evaluation and returns an error message instead of throwing
+- Fixed Match Diagnostics engine corruption when paused at def/set statements - Match Diagnostics now skips evaluation when paused at variable definition statements to prevent evaluating variables before they are fully defined
+- Improved socket error suppression to only filter shutdown-related errors (containing "Socket closed" or "Broken pipe") while preserving legitimate network errors during active debug sessions
+
 ## [0.7.4] - 2026-02-27
 
 ### Added

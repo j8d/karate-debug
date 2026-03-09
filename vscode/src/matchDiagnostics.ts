@@ -265,6 +265,17 @@ export class MatchDiagnosticsProvider {
         const currentLine = await this.getCurrentDebugLine();
         console.log(`[evaluateMatchStatements] current debug line=${currentLine}`);
 
+        // Don't evaluate if paused at a def/set statement - the variable isn't defined yet
+        // This prevents engine corruption when evaluating variables that are being defined
+        if (currentLine >= 0) {
+            const lineText = document.lineAt(currentLine).text.trim();
+            if (lineText.match(/^\*\s+(def|set)\s+/)) {
+                console.log(`[evaluateMatchStatements] paused at def/set statement (line ${currentLine}), skipping to avoid engine corruption`);
+                this.clearDecorations();
+                return;
+            }
+        }
+
         const scenarioRanges = this.findScenarioRanges(document);
         const currentScenario = this.findScenarioForLine(scenarioRanges, currentLine);
 
@@ -277,7 +288,10 @@ export class MatchDiagnosticsProvider {
 
         console.log(`[evaluateMatchStatements] current scenario range [${currentScenario.startLine}, ${currentScenario.endLine}]`);
 
-        // Only process lines within the current scenario
+        // Process all lines within the current scenario
+        // The server-side hasVariable() check will safely handle undefined variables
+        console.log(`[evaluateMatchStatements] evaluating match statements from line ${currentScenario.startLine} to ${currentScenario.endLine}`);
+
         for (let i = currentScenario.startLine; i <= currentScenario.endLine; i++) {
             const line = document.lineAt(i);
             const match = MatchDiagnosticsProvider.MATCH_REGEX.exec(line.text);

@@ -2,6 +2,13 @@
 
 All notable changes to the Karate Debug IntelliJ plugin will be documented in this file.
 
+## [0.2.2] - 2026-03-09
+
+### Fixed
+- Fixed critical variable scoping bug where called scenarios (with @ignore tag) could not access parent scope variables or magic variables (karate, response, etc.) - variables were stored in GraalVM JS bindings but not exposed in the Variables view or evaluation context
+- Improved variable evaluation in debug console to correctly handle magic variables from GraalVM JS bindings
+- Improved socket error suppression to only filter shutdown-related errors (containing "Socket closed" or "Broken pipe") while preserving legitimate network errors during active debug sessions
+
 ## [0.2.1] - 2026-02-27
 
 ### Added

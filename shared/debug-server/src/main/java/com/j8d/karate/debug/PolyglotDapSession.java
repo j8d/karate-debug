@@ -197,7 +197,14 @@ public class PolyglotDapSession implements MultiplexerEventListener, OutputEvent
                 writer.write(jsonBytes);
                 writer.flush();
             } catch (IOException e) {
-                log.error("Error sending message", e);
+                // Suppress harmless shutdown errors when client closes socket
+                // "Broken pipe" or "Socket closed" during disconnect is normal
+                String msg = e.getMessage();
+                if (!running || (msg != null && (msg.contains("Broken pipe") || msg.contains("Socket closed")))) {
+                    log.trace("Client disconnected during message send: {}", msg);
+                } else {
+                    log.error("Error sending message", e);
+                }
             }
         }
     }

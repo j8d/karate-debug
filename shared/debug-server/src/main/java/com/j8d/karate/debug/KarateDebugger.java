@@ -3,10 +3,12 @@ package com.j8d.karate.debug;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.graalvm.polyglot.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +26,8 @@ import com.intuit.karate.core.ScenarioRuntime;
 import com.intuit.karate.core.Step;
 import com.intuit.karate.core.StepResult;
 import com.intuit.karate.core.Variable;
+import com.intuit.karate.graal.JsEngine;
+import com.intuit.karate.graal.JsValue;
 
 /**
  * Integrates with Karate's execution engine to provide debugging capabilities.
@@ -577,16 +581,44 @@ public class KarateDebugger implements RuntimeHook {
         JsonArray variables = new JsonArray();
 
         if (currentRuntime != null) {
-            Map<String, Variable> vars = currentRuntime.engine.vars;
+            // Get all variables from the JS engine bindings (includes magic variables)
+            // Magic variables include parent scenario variables and config variables
+            // that are not stored in engine.vars but are accessible in the JS context
+            JsEngine jsEngine = currentRuntime.engine.getJsEngine();
+            if (jsEngine != null) {
+                Set<String> allKeys = jsEngine.bindings.getMemberKeys();
 
-            for (Map.Entry<String, Variable> entry : vars.entrySet()) {
-                JsonObject var = new JsonObject();
-                var.addProperty("name", entry.getKey());
-                Object value = entry.getValue().getValue();
-                var.addProperty("value", formatValue(value));
-                var.addProperty("type", value != null ? value.getClass().getSimpleName() : "null");
-                var.addProperty("variablesReference", 0);
-                variables.add(var);
+                for (String key : allKeys) {
+                    // Skip internal/system variables that start with underscore or are functions
+                    if (key.startsWith("_") || key.equals("karate")) {
+                        continue;
+                    }
+
+                    try {
+                        // Get value from JS bindings
+                        Object value = jsEngine.bindings.getMember(key);
+
+                        // Skip functions and other non-data values
+                        if (value instanceof Value) {
+                            Value graalValue = (Value) value;
+                            if (graalValue.canExecute()) {
+                                continue; // Skip functions
+                            }
+                            // Convert GraalVM Value to Java object
+                            value = JsValue.toJava(graalValue);
+                        }
+
+                        JsonObject var = new JsonObject();
+                        var.addProperty("name", key);
+                        var.addProperty("value", formatValue(value));
+                        var.addProperty("type", value != null ? value.getClass().getSimpleName() : "null");
+                        var.addProperty("variablesReference", 0);
+                        variables.add(var);
+                    } catch (Exception e) {
+                        // Skip variables that can't be accessed
+                        logger.trace("Skipping variable '{}': {}", key, e.getMessage());
+                    }
+                }
             }
         }
 
@@ -678,7 +710,8 @@ public class KarateDebugger implements RuntimeHook {
             // to avoid corrupting engine state with evaluations of non-existent variables
             if ("hover".equals(context) || "watch".equals(context)) {
                 String rootVar = expression.split("[.\\[\\(]")[0].trim();
-                if (!currentRuntime.engine.vars.containsKey(rootVar)) {
+                // Use hasVariable() to check JS bindings (includes magic variables)
+                if (!currentRuntime.engine.hasVariable(rootVar)) {
                     return new EvaluateResult("undefined", "undefined");
                 }
             }
@@ -738,7 +771,8 @@ public class KarateDebugger implements RuntimeHook {
             // Check if the root variable on the left-hand side exists
             // to avoid corrupting engine state with evaluations of non-existent variables
             String rootVar = lhs.split("[.\\[\\(]")[0].trim();
-            if (!currentRuntime.engine.vars.containsKey(rootVar)) {
+            // Use hasVariable() to check JS bindings (includes magic variables)
+            if (!currentRuntime.engine.hasVariable(rootVar)) {
                 return new EvaluateResult("Variable not defined: " + rootVar, "error");
             }
 
