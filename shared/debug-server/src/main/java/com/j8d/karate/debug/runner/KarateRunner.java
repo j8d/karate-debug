@@ -46,6 +46,9 @@ public class KarateRunner {
     }
     
     public static void main(String[] args) {
+        // Suppress harmless socket errors during shutdown
+        com.j8d.karate.debug.DebugServer.suppressDapShutdownErrors();
+
         KarateRunner runner = new KarateRunner();
         runner.parseArgs(args);
 

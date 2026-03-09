@@ -208,7 +208,7 @@ public class DebugServer {
      * The GraalVM DAP library uses java.util.logging (JUL), not SLF4J/Logback, so we need
      * to configure JUL directly with a filter.
      */
-    private static void suppressDapShutdownErrors() {
+    public static void suppressDapShutdownErrors() {
         java.util.logging.Logger dapLogger = java.util.logging.Logger.getLogger("dap");
         dapLogger.setFilter(record -> {
             String message = record.getMessage();
