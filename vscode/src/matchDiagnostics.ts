@@ -277,12 +277,11 @@ export class MatchDiagnosticsProvider {
 
         console.log(`[evaluateMatchStatements] current scenario range [${currentScenario.startLine}, ${currentScenario.endLine}]`);
 
-        // Only process lines within the current scenario AND at or before the current debug line
-        // This prevents evaluating match statements that reference variables not yet defined
-        const endLine = Math.min(currentScenario.endLine, currentLine);
-        console.log(`[evaluateMatchStatements] evaluating match statements from line ${currentScenario.startLine} to ${endLine} (current debug line: ${currentLine})`);
+        // Process all lines within the current scenario
+        // The server-side hasVariable() check will safely handle undefined variables
+        console.log(`[evaluateMatchStatements] evaluating match statements from line ${currentScenario.startLine} to ${currentScenario.endLine}`);
 
-        for (let i = currentScenario.startLine; i <= endLine; i++) {
+        for (let i = currentScenario.startLine; i <= currentScenario.endLine; i++) {
             const line = document.lineAt(i);
             const match = MatchDiagnosticsProvider.MATCH_REGEX.exec(line.text);
 

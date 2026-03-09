@@ -9,8 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fixed critical variable scoping bug where called scenarios (with @ignore tag) could not access parent scope variables or magic variables (karate, response, etc.) - variables were stored in GraalVM JS bindings but not exposed in the Variables view or evaluation context
-- Fixed Match Diagnostics timing bug where stepping through code would fail with ReferenceError - Match Diagnostics was evaluating all match statements in the scenario, including those referencing variables not yet defined, causing engine corruption
-- Match Diagnostics now only evaluates match statements at or before the current debug line
+- Fixed Match Diagnostics evaluation bug where evaluating match statements with undefined variables would corrupt the Karate engine state - the debug server now safely checks variable existence before evaluation and returns an error message instead of throwing
 
 ## [0.7.4] - 2026-02-27
 

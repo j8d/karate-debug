@@ -105,7 +105,7 @@ public JsonArray getVariables(int variablesReference) {
 3. **Skip functions** to only show data variables
 4. **Convert GraalVM Values** to Java objects for display
 5. **Fixed evaluate() and evaluateMatch()** to use `engine.hasVariable()` instead of `engine.vars.containsKey()` - this allows hover/watch/debug console to access magic variables
-6. **Fixed Match Diagnostics timing** - Only evaluate match statements at or before the current debug line to prevent evaluating expressions that reference variables not yet defined
+6. **Fixed Match Diagnostics evaluation** - Added hasVariable() check in evaluateMatch() to safely handle undefined variables by returning an error message instead of throwing ReferenceError
 
 ## Testing
 
@@ -118,23 +118,30 @@ Created `test-fixtures/src/test/java/called-scenario/parent-child-vars.feature` 
 - Magic variables (karate, response, etc.) are accessible
 - Variables appear in the debug Variables view
 
-**Bug #2 - Match Diagnostics Timing (VS Code only):**
-- When paused at line 43 (`def fileName`), Match Diagnostics only evaluates match statements at or before line 43
-- Match statements at lines 56-57 are NOT evaluated until execution reaches them
-- Before fix: Stepping over line 43 would fail with "fileName is not defined" because Match Diagnostics tried to evaluate lines 56-57
-- After fix: Stepping works correctly
+**Bug #2 - Match Diagnostics Evaluation (VS Code only):**
+- When paused at line 43 (`def fileName`), Match Diagnostics evaluates ALL match statements in the scenario (including lines 56-57)
+- Before fix: Server would throw ReferenceError when evaluating undefined variables, corrupting the Karate engine state
+- After fix: Server safely checks hasVariable() and returns "Variable not defined" error message
+- This preserves the valuable "look ahead" functionality while preventing engine corruption
 
 ### Verification Steps
 
+**To test bug #1 (Variable Scoping):**
 1. Set a breakpoint in the `@childScenario` scenario
 2. Run the test in debug mode
 3. Check the Variables view - you should now see:
    - `parentVar` = "I am from parent"
-   - `parentNumber` = 42
-   - `myData` = { name: 'John', age: 30 }
-   - `myList` = [1, 2, 3]
-   - `env` = "dev"
-   - `baseUrl` = "https://pokeapi.co/api/v2"
+   - `base64CCD` = "SGVsbG8gV29ybGQ="
+   - `karate` = (magic variable)
+   - All other parent scope and config variables
+
+**To test bug #2 (Match Diagnostics) in VS Code:**
+1. Set breakpoint at line 43 (`* def fileName = 'encoded-20230525184521'`)
+2. Run in debug mode
+3. Step over (F10) the line
+4. Before the fix: Would fail with ReferenceError, corrupting the engine
+5. After the fix: Steps successfully, Match Diagnostics shows "Variable not defined" error for lines 56-57 without breaking execution
+6. Bonus: You can now see "look ahead" failures - match statements that will fail when execution reaches them
 
 ## Impact
 
