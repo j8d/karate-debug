@@ -2,6 +2,11 @@
 
 All notable changes to the Karate Debug IntelliJ plugin will be documented in this file.
 
+## [0.2.3] - 2026-03-09
+
+### Fixed
+- Replaced deprecated AnActionEvent.createFromAnAction() with modern AnActionEvent.createEvent() API to ensure compatibility with future IntelliJ Platform releases
+
 ## [0.2.2] - 2026-03-09
 
 ### Fixed

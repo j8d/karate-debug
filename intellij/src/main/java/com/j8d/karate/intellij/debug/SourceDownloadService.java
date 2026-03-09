@@ -270,11 +270,13 @@ public final class SourceDownloadService {
             return null;
         };
 
-        AnActionEvent event = AnActionEvent.createFromAnAction(
+        AnActionEvent event = AnActionEvent.createEvent(
             action,
-            null,
+            dataContext,
             "SourceDownloadService",
-            dataContext
+            action.getTemplatePresentation().clone(),
+            ActionManager.getInstance(),
+            0
         );
 
         ActionUtil.performActionDumbAwareWithCallbacks(action, event);
