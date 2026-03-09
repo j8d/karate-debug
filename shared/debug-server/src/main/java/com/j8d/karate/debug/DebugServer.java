@@ -192,6 +192,33 @@ public class DebugServer {
         ch.qos.logback.classic.Logger karateLogger =
             (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.intuit.karate");
         karateLogger.setLevel(level);
+
+        // Suppress harmless GraalVM DAP shutdown errors
+        // These "Socket closed" errors occur during normal shutdown when the client closes
+        // the socket before the server finishes sending final responses - they're not real errors
+        suppressDapShutdownErrors();
+    }
+
+    /**
+     * Suppress harmless "Socket closed" errors from GraalVM DAP library during shutdown.
+     * These errors occur when the debug client closes the connection before the DAP server
+     * finishes sending its final disconnect response - this is a normal race condition
+     * during shutdown and not indicative of any actual problem.
+     *
+     * The GraalVM DAP library uses java.util.logging (JUL), not SLF4J/Logback, so we need
+     * to configure JUL directly with a filter.
+     */
+    private static void suppressDapShutdownErrors() {
+        java.util.logging.Logger dapLogger = java.util.logging.Logger.getLogger("dap");
+        dapLogger.setFilter(record -> {
+            String message = record.getMessage();
+            // Suppress "Socket closed" errors during disconnect
+            if (message != null && message.contains("Socket closed")) {
+                return false;
+            }
+            // Allow all other log messages
+            return true;
+        });
     }
 
     private static void printUsage() {
