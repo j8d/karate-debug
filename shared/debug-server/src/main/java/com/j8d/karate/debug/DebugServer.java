@@ -212,10 +212,29 @@ public class DebugServer {
         java.util.logging.Logger dapLogger = java.util.logging.Logger.getLogger("dap");
         dapLogger.setFilter(record -> {
             String message = record.getMessage();
-            // Suppress "Socket closed" errors during disconnect
-            if (message != null && message.contains("Socket closed")) {
+            Throwable thrown = record.getThrown();
+
+            // Suppress "Socket closed" and "Broken pipe" errors during disconnect
+            if (message != null && (message.contains("Socket closed") || message.contains("Broken pipe"))) {
                 return false;
             }
+
+            // Suppress exceptions that contain "Socket closed" or "Broken pipe" in their message or cause chain
+            if (thrown != null) {
+                Throwable current = thrown;
+                while (current != null) {
+                    String exMessage = current.getMessage();
+                    if (exMessage != null && (exMessage.contains("Socket closed") || exMessage.contains("Broken pipe"))) {
+                        return false;
+                    }
+                    // Also check the exception class name
+                    if (current instanceof java.net.SocketException) {
+                        return false;
+                    }
+                    current = current.getCause();
+                }
+            }
+
             // Allow all other log messages
             return true;
         });
