@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed critical variable scoping bug where called scenarios (with @ignore tag) could not access parent scope variables or magic variables (karate, response, etc.) - variables were stored in GraalVM JS bindings but not exposed in the Variables view or evaluation context
 - Fixed Match Diagnostics evaluation bug where evaluating match statements with undefined variables would corrupt the Karate engine state - the debug server now safely checks variable existence before evaluation and returns an error message instead of throwing
+- Suppressed harmless "Broken pipe" and "Socket closed" errors that appeared at the end of debug sessions - these errors occurred during normal shutdown and were confusing users into thinking their tests had errors
 
 ## [0.7.4] - 2026-02-27
 
