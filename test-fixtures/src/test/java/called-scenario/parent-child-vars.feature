@@ -11,8 +11,8 @@ Feature: Test parent-child variable scoping and Match Diagnostics timing
      defined. Without proper server-side protection, this caused ReferenceError and corrupted the
      Karate engine state.
 
-  To test bug #2: Set breakpoint at line 43 (def fileName) and step over it. Before the fix,
-  Match Diagnostics would evaluate lines 56-57 (which reference fileName and resultMessage) and
+  To test bug #2: Set breakpoint at line 44 (def fileName) and step over it. Before the fix,
+  Match Diagnostics would evaluate lines 57-58 (which reference fileName and resultMessage) and
   the server would throw ReferenceError, corrupting the engine. After the fix, the server safely
   checks variable existence and returns "Variable not defined" error without corrupting the engine.
 
@@ -50,7 +50,7 @@ Scenario: Child scenario that defines new variables
   * def resultMessage = 'upload success'
 
   # These match statements reference variables defined above
-  # When paused at line 43 (def fileName), Match Diagnostics evaluates these lines
+  # When paused at line 44 (def fileName), Match Diagnostics evaluates these lines
   # Before the fix: Server would throw ReferenceError for undefined variables, corrupting engine
   # After the fix: Server safely checks hasVariable() and returns "Variable not defined" error
   # This allows Match Diagnostics to show "look ahead" failures without breaking execution

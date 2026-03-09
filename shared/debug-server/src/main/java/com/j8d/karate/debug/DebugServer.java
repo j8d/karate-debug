@@ -227,8 +227,9 @@ public class DebugServer {
                     if (exMessage != null && (exMessage.contains("Socket closed") || exMessage.contains("Broken pipe"))) {
                         return false;
                     }
-                    // Also check the exception class name
-                    if (current instanceof java.net.SocketException) {
+                    // Only suppress SocketException if it contains shutdown-related messages
+                    if (current instanceof java.net.SocketException && exMessage != null &&
+                        (exMessage.contains("Socket closed") || exMessage.contains("Broken pipe"))) {
                         return false;
                     }
                     current = current.getCause();
