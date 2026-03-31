@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.6] - 2026-03-09
 
-### Changed
-- No changes for VS Code extension in this release (version bump only to stay in sync with IntelliJ plugin)
+### Added
+- One-time notification for existing users about price reduction from $29.99 to $9.99
 
 ## [0.7.5] - 2026-03-09
 

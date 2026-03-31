@@ -4,6 +4,9 @@ All notable changes to the Karate Debug IntelliJ plugin will be documented in th
 
 ## [0.2.3] - 2026-03-09
 
+### Added
+- One-time notification for existing users about price reduction from $29.99 to $9.99
+
 ### Fixed
 - Replaced deprecated AnActionEvent.createFromAnAction() with modern AnActionEvent.createEvent() API to ensure compatibility with future IntelliJ Platform releases
 
