@@ -190,7 +190,7 @@ export class LicenseManager {
             const status = await this.validateLicense();
 
             // Show pricing notification to existing users (one-time)
-            await this.showPricingNotificationIfNeeded(userId);
+            await this.showPricingNotificationIfNeeded();
 
             return status;
         }
@@ -202,7 +202,7 @@ export class LicenseManager {
     /**
      * Show one-time pricing notification to existing users about price reduction.
      */
-    private async showPricingNotificationIfNeeded(userId: string): Promise<void> {
+    private async showPricingNotificationIfNeeded(): Promise<void> {
         const hasShownPricingNotification = this.context.globalState.get<boolean>('hasShownPricingNotification_v0.7.6');
 
         if (hasShownPricingNotification) {

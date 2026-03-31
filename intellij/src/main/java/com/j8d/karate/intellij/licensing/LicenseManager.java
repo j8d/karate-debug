@@ -167,7 +167,7 @@ public final class LicenseManager {
             // User is logged in - validate their subscription
             return validateLicense().thenApply(status -> {
                 // Show pricing notification to existing users (one-time)
-                showPricingNotificationIfNeeded(userId);
+                showPricingNotificationIfNeeded();
                 return status;
             });
         } else {
@@ -178,8 +178,9 @@ public final class LicenseManager {
 
     /**
      * Show one-time pricing notification to existing users about price reduction.
+     * Must be called from a background thread - notification will be shown on EDT.
      */
-    private void showPricingNotificationIfNeeded(@NotNull String userId) {
+    private void showPricingNotificationIfNeeded() {
         PropertiesComponent properties = PropertiesComponent.getInstance();
         boolean hasShown = properties.getBoolean(KEY_PRICING_NOTIFICATION_SHOWN, false);
 
@@ -190,27 +191,29 @@ public final class LicenseManager {
         // Mark as shown immediately to prevent duplicate notifications
         properties.setValue(KEY_PRICING_NOTIFICATION_SHOWN, true);
 
-        // Show the notification
-        NotificationGroupManager.getInstance()
-                .getNotificationGroup("Karate Debug")
-                .createNotification(
-                        "Karate Debug Price Reduction",
-                        "🎉 Great news! Karate Debug is now $9.99 (previously $29.99). Purchase today to unlock unlimited debugging!",
-                        NotificationType.INFORMATION
-                )
-                .addAction(new com.intellij.openapi.actionSystem.AnAction("Learn More") {
-                    @Override
-                    public void actionPerformed(@NotNull com.intellij.openapi.actionSystem.AnActionEvent e) {
-                        BrowserUtil.browse("https://www.karatedebug.com/?pricing=announcement&ide=intellij");
-                    }
-                })
-                .addAction(new com.intellij.openapi.actionSystem.AnAction("Purchase Now") {
-                    @Override
-                    public void actionPerformed(@NotNull com.intellij.openapi.actionSystem.AnActionEvent e) {
-                        startCheckout(null);
-                    }
-                })
-                .notify(null);
+        // Show the notification on EDT to avoid UI-thread violations
+        ApplicationManager.getApplication().invokeLater(() -> {
+            NotificationGroupManager.getInstance()
+                    .getNotificationGroup("Karate Debug")
+                    .createNotification(
+                            "Karate Debug Price Reduction",
+                            "🎉 Great news! Karate Debug is now $9.99 (previously $29.99). Purchase today to unlock unlimited debugging!",
+                            NotificationType.INFORMATION
+                    )
+                    .addAction(new com.intellij.openapi.actionSystem.AnAction("Learn More") {
+                        @Override
+                        public void actionPerformed(@NotNull com.intellij.openapi.actionSystem.AnActionEvent e) {
+                            BrowserUtil.browse("https://www.karatedebug.com/?pricing=announcement&ide=intellij");
+                        }
+                    })
+                    .addAction(new com.intellij.openapi.actionSystem.AnAction("Purchase Now") {
+                        @Override
+                        public void actionPerformed(@NotNull com.intellij.openapi.actionSystem.AnActionEvent e) {
+                            startCheckout(null);
+                        }
+                    })
+                    .notify(null);
+        });
     }
 
     /**
