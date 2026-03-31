@@ -12,7 +12,8 @@ cd vscode && npm install && code .
 
 **IntelliJ:**
 ```bash
-cd intellij && ./gradlew runIde
+cd intellij
+./gradlew runIde
 # Tools → Reset Pricing Notification (Test), then restart IDE
 ```
 
@@ -85,12 +86,12 @@ Both VS Code and IntelliJ require:
 
 1. **Build and Launch Plugin**:
    ```bash
-   # From the repository root:
+   # IMPORTANT: Must cd into intellij directory first
    cd intellij
    ./gradlew runIde
 
-   # Or from repository root directly:
-   ./intellij/gradlew runIde
+   # Alternative: Use -p flag to specify project directory
+   # ./intellij/gradlew -p intellij runIde
    ```
 
    **Alternative - Using IntelliJ IDEA**:
