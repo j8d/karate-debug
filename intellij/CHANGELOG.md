@@ -8,9 +8,8 @@ All notable changes to the Karate Debug IntelliJ plugin will be documented in th
 - One-time notification for existing users about price reduction from $29.99 to $9.99
 
 ### Fixed
-- Replaced deprecated `AnActionEvent.createFromAnAction()` with modern `AnActionEvent.createEvent()` API (scheduled for removal)
 - Replaced deprecated `ProcessAdapter` with `ProcessListener` interface
-- Replaced deprecated `ActionUtil.performActionDumbAwareWithCallbacks()` with modern `ActionUtil.invokeAction()`
+- Replaced deprecated `ActionUtil.performActionDumbAwareWithCallbacks()` with modern `ActionUtil.invokeAction()` (also eliminates the scheduled-for-removal `AnActionEvent.createFromAnAction()` API that was previously used)
 - All deprecated API usages eliminated to ensure compatibility with future IntelliJ Platform releases
 
 ## [0.2.2] - 2026-03-09
