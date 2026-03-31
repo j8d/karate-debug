@@ -2,6 +2,20 @@
 
 This document describes how to test the pricing notification feature that informs existing users about the price reduction from $29.99 to $9.99.
 
+## 🚀 Quick Start
+
+**VS Code:**
+```bash
+cd vscode && npm install && code .
+# Press F5, then run "Karate Debug: Test Reset Pricing Notification", reload window
+```
+
+**IntelliJ:**
+```bash
+cd intellij && ./gradlew runIde
+# Tools → Reset Pricing Notification (Test), then restart IDE
+```
+
 ## Prerequisites
 
 Both VS Code and IntelliJ require:
@@ -71,10 +85,17 @@ Both VS Code and IntelliJ require:
 
 1. **Build and Launch Plugin**:
    ```bash
+   # From the repository root:
    cd intellij
    ./gradlew runIde
+
+   # Or from repository root directly:
+   ./intellij/gradlew runIde
    ```
-   Or in IntelliJ IDEA: Run → Debug 'Run Plugin'
+
+   **Alternative - Using IntelliJ IDEA**:
+   - Open the `intellij` folder in IntelliJ IDEA
+   - Run → Debug 'Run Plugin' (or 'Run IDE for UI Tests')
 
 2. **Ensure You're Logged In**:
    - Look for status bar widget (bottom right)
