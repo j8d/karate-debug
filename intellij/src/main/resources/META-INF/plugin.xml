@@ -159,14 +159,6 @@
             <add-to-group group-id="RunMenu" anchor="after" relative-to-action="RunClass"/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
         </group>
-
-        <!-- Test action to reset pricing notification (for development/testing) -->
-        <action id="KarateDebug.TestResetPricingNotification"
-                class="com.j8d.karate.intellij.actions.TestResetPricingNotificationAction"
-                text="Reset Pricing Notification (Test)"
-                description="Clear the pricing notification flag to test the notification again">
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
-        </action>
     </actions>
 
     <!-- Intention actions (quick fixes) -->

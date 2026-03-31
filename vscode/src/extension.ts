@@ -117,12 +117,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('karateDebug.logout', () => licenseManager.logout()),
         vscode.commands.registerCommand('karateDebug.upgrade', () => licenseManager.startCheckout()),
         vscode.commands.registerCommand('karateDebug.manageSubscription', () => licenseManager.openSubscriptionPortal()),
-        vscode.commands.registerCommand('karateDebug.showLicenseInfo', () => showLicenseInfo()),
-        // Test command to reset pricing notification flag (for testing only)
-        vscode.commands.registerCommand('karateDebug.testResetPricingNotification', async () => {
-            await context.globalState.update('hasShownPricingNotification_v0.7.6', undefined);
-            vscode.window.showInformationMessage('Pricing notification flag cleared. Reload window to test notification.');
-        })
+        vscode.commands.registerCommand('karateDebug.showLicenseInfo', () => showLicenseInfo())
     );
 
     // Load saved environment (fall back to default from settings)
