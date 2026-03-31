@@ -2,8 +2,8 @@ package com.j8d.karate.intellij.debug;
 
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.OSProcessHandler;
-import com.intellij.execution.process.ProcessAdapter;
 import com.intellij.execution.process.ProcessEvent;
+import com.intellij.execution.process.ProcessListener;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
 import com.intellij.openapi.actionSystem.ActionManager;
@@ -154,7 +154,7 @@ public final class SourceDownloadService {
                     
                     OSProcessHandler handler = new OSProcessHandler(commandLine);
 
-                    handler.addProcessListener(new ProcessAdapter() {
+                    handler.addProcessListener(new ProcessListener() {
                         @Override
                         public void processTerminated(@NotNull ProcessEvent event) {
                             if (event.getExitCode() == 0) {
@@ -260,7 +260,7 @@ public final class SourceDownloadService {
     }
 
     /**
-     * Invokes an action programmatically.
+     * Invokes an action programmatically using modern API.
      */
     private void invokeAction(AnAction action) {
         DataContext dataContext = dataId -> {
@@ -270,14 +270,8 @@ public final class SourceDownloadService {
             return null;
         };
 
-        AnActionEvent event = AnActionEvent.createFromAnAction(
-            action,
-            null,
-            "SourceDownloadService",
-            dataContext
-        );
-
-        ActionUtil.performActionDumbAwareWithCallbacks(action, event);
+        // Use modern ActionUtil.invokeAction instead of deprecated performActionDumbAwareWithCallbacks
+        ActionUtil.invokeAction(action, dataContext, "SourceDownloadService", null, null);
     }
 
     private void showError(String message) {

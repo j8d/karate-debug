@@ -187,11 +187,43 @@ export class LicenseManager {
 
         // If user is logged in, validate their subscription
         if (userId) {
-            return this.validateLicense();
+            const status = await this.validateLicense();
+
+            // Show pricing notification to existing users (one-time)
+            await this.showPricingNotificationIfNeeded();
+
+            return status;
         }
 
         // Otherwise, start/check anonymous trial (no auth required)
         return this.startOrCheckAnonymousTrial();
+    }
+
+    /**
+     * Show one-time pricing notification to existing users about price reduction.
+     */
+    private async showPricingNotificationIfNeeded(): Promise<void> {
+        const hasShownPricingNotification = this.context.globalState.get<boolean>('hasShownPricingNotification_v0.7.6');
+
+        if (hasShownPricingNotification) {
+            return; // Already shown
+        }
+
+        // Mark as shown immediately to prevent duplicate notifications
+        await this.context.globalState.update('hasShownPricingNotification_v0.7.6', true);
+
+        // Show the notification
+        const action = await vscode.window.showInformationMessage(
+            '🎉 Great news! Karate Debug is now $9.99 (previously $29.99). Purchase today to unlock unlimited debugging!',
+            'Learn More',
+            'Purchase Now'
+        );
+
+        if (action === 'Learn More') {
+            vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?pricing=announcement&ide=vscode'));
+        } else if (action === 'Purchase Now') {
+            await this.startCheckout();
+        }
     }
 
     /**

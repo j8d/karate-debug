@@ -33,6 +33,7 @@ public final class LicenseManager {
     private static final String KEY_USER_ID = "karateDebug.userId";
     private static final String KEY_GITHUB_USERNAME = "karateDebug.githubUsername";
     private static final String KEY_TRIAL_START = "karateDebug.trialStartTimestamp";
+    private static final String KEY_PRICING_NOTIFICATION_SHOWN = "karateDebug.pricingNotificationShown_v0.2.3";
 
     private final LicenseApiClient apiClient;
     private final String machineId;
@@ -164,11 +165,55 @@ public final class LicenseManager {
 
         if (userId != null) {
             // User is logged in - validate their subscription
-            return validateLicense();
+            return validateLicense().thenApply(status -> {
+                // Show pricing notification to existing users (one-time)
+                showPricingNotificationIfNeeded();
+                return status;
+            });
         } else {
             // Start/check anonymous trial
             return startOrCheckAnonymousTrial();
         }
+    }
+
+    /**
+     * Show one-time pricing notification to existing users about price reduction.
+     * Must be called from a background thread - notification will be shown on EDT.
+     */
+    private void showPricingNotificationIfNeeded() {
+        PropertiesComponent properties = PropertiesComponent.getInstance();
+        boolean hasShown = properties.getBoolean(KEY_PRICING_NOTIFICATION_SHOWN, false);
+
+        if (hasShown) {
+            return; // Already shown
+        }
+
+        // Mark as shown immediately to prevent duplicate notifications
+        properties.setValue(KEY_PRICING_NOTIFICATION_SHOWN, true);
+
+        // Show the notification on EDT to avoid UI-thread violations
+        ApplicationManager.getApplication().invokeLater(() -> {
+            NotificationGroupManager.getInstance()
+                    .getNotificationGroup("Karate Debug")
+                    .createNotification(
+                            "Karate Debug Price Reduction",
+                            "🎉 Great news! Karate Debug is now $9.99 (previously $29.99). Purchase today to unlock unlimited debugging!",
+                            NotificationType.INFORMATION
+                    )
+                    .addAction(new com.intellij.openapi.actionSystem.AnAction("Learn More") {
+                        @Override
+                        public void actionPerformed(@NotNull com.intellij.openapi.actionSystem.AnActionEvent e) {
+                            BrowserUtil.browse("https://www.karatedebug.com/?pricing=announcement&ide=intellij");
+                        }
+                    })
+                    .addAction(new com.intellij.openapi.actionSystem.AnAction("Purchase Now") {
+                        @Override
+                        public void actionPerformed(@NotNull com.intellij.openapi.actionSystem.AnActionEvent e) {
+                            startCheckout(null);
+                        }
+                    })
+                    .notify(null);
+        });
     }
 
     /**
