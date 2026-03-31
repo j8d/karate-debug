@@ -270,13 +270,14 @@ public final class SourceDownloadService {
             return null;
         };
 
+        // Use modern AnActionEvent.createEvent API (replacement for deprecated createFromAnAction)
+        // Signature: createEvent(DataContext, Presentation, String, ActionUiKind, InputEvent)
         AnActionEvent event = AnActionEvent.createEvent(
-            action,
             dataContext,
-            "SourceDownloadService",
             action.getTemplatePresentation().clone(),
-            ActionManager.getInstance(),
-            0
+            "SourceDownloadService",
+            com.intellij.openapi.actionSystem.ActionUiKind.NONE,
+            null
         );
 
         ActionUtil.performActionDumbAwareWithCallbacks(action, event);
