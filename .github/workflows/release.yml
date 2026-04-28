@@ -219,7 +219,7 @@ jobs:
           path: artifacts/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: vscode-v${{ needs.release-vscode.outputs.version }}
           name: VS Code Extension v${{ needs.release-vscode.outputs.version }}
@@ -242,7 +242,7 @@ jobs:
           path: artifacts/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: intellij-v${{ needs.release-intellij.outputs.version }}
           name: IntelliJ Plugin v${{ needs.release-intellij.outputs.version }}${{ needs.release-intellij.outputs.channel == 'eap' && ' (EAP)' || '' }}
