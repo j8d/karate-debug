@@ -2,7 +2,7 @@ import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 
 plugins {
     id("java")
-    id("org.jetbrains.intellij.platform") version "2.13.1"
+    id("org.jetbrains.intellij.platform") version "2.15.0"
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -89,7 +89,7 @@ dependencies {
     }
 
     // Gson for DAP JSON protocol
-    implementation("com.google.code.gson:gson:2.13.2")
+    implementation("com.google.code.gson:gson:2.14.0")
 
     // Add the shared debug-server JAR
     implementation(files("../shared/debug-server/target/karate-debug-server-1.0.0.jar"))
@@ -250,7 +250,7 @@ intellijPlatform {
 
 tasks {
     wrapper {
-        gradleVersion = "9.4.1"
+        gradleVersion = "9.5.0"
     }
     
     // Ensure debug-server JAR is built before compiling
