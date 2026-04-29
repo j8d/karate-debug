@@ -7,7 +7,7 @@
   "author": {
     "name": "j8d"
   },
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "Apache-2.0",
   "icon": "resources/karate-icon.png",
   "galleryBanner": {
     "color": "#1e1e1e",
@@ -18,7 +18,7 @@
     "url": "https://github.com/j8d-org/karate-debug"
   },
   "bugs": {
-    "email": "ryan@karatedebug.com"
+    "url": "https://github.com/j8d/karate-debug/issues"
   },
   "homepage": "https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug",
   "engines": {
@@ -332,26 +332,6 @@
         "command": "karateDebug.openSettings",
         "title": "Karate Debug: Open Settings",
         "icon": "$(gear)"
-      },
-      {
-        "command": "karateDebug.login",
-        "title": "Karate Debug: Sign In with GitHub"
-      },
-      {
-        "command": "karateDebug.logout",
-        "title": "Karate Debug: Sign Out"
-      },
-      {
-        "command": "karateDebug.upgrade",
-        "title": "Karate Debug: Upgrade to Pro"
-      },
-      {
-        "command": "karateDebug.manageSubscription",
-        "title": "Karate Debug: Manage Subscription"
-      },
-      {
-        "command": "karateDebug.showLicenseInfo",
-        "title": "Karate Debug: License Info"
       }
     ],
     "viewsContainers": {

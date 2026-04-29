@@ -19,8 +19,6 @@ import com.intellij.xdebugger.breakpoints.XBreakpointHandler;
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
 import com.intellij.xdebugger.frame.XExecutionStack;
 import com.intellij.xdebugger.frame.XSuspendContext;
-import com.j8d.karate.intellij.licensing.AnalyticsTracker;
-import com.j8d.karate.intellij.licensing.LicenseManager;
 import com.j8d.karate.intellij.project.KarateProjectSettings;
 import com.j8d.karate.intellij.run.KarateRunConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -47,7 +45,6 @@ public class KarateDebugProcess extends XDebugProcess {
     private final ExecutionEnvironment environment;
     private final KarateDapClient dapClient;
     private final MatchDiagnosticsService matchDiagnosticsService;
-    private final AnalyticsTracker analyticsTracker;
     private ConsoleView consoleView;
     private boolean terminatedNormally = false;
     private boolean userStopped = false;
@@ -60,13 +57,6 @@ public class KarateDebugProcess extends XDebugProcess {
         this.environment = environment;
         this.dapClient = new KarateDapClient(this);
         this.matchDiagnosticsService = new MatchDiagnosticsService(session.getProject(), dapClient);
-
-        // Initialize analytics tracker
-        LicenseManager licenseManager = LicenseManager.getInstance();
-        this.analyticsTracker = new AnalyticsTracker(
-                licenseManager.getMachineId(),
-                getPluginVersion()
-        );
 
         // Register match diagnostics as a session listener
         session.addSessionListener(matchDiagnosticsService);
@@ -85,9 +75,6 @@ public class KarateDebugProcess extends XDebugProcess {
     @Override
     public void sessionInitialized() {
         super.sessionInitialized();
-
-        // Track analytics session start (fire-and-forget)
-        analyticsTracker.startSession(configuration.getFeatureFile());
 
         // Reset missing sources notification state for new session
         SourceDownloadService.getInstance(getSession().getProject()).resetNotificationState();
@@ -119,20 +106,6 @@ public class KarateDebugProcess extends XDebugProcess {
 
     @Override
     public void stop() {
-        // Determine session outcome based on how we got here
-        AnalyticsTracker.SessionOutcome outcome;
-        if (terminatedNormally) {
-            outcome = AnalyticsTracker.SessionOutcome.COMPLETED;
-        } else if (userStopped) {
-            outcome = AnalyticsTracker.SessionOutcome.STOPPED;
-        } else {
-            // Neither terminated nor user-stopped - likely a crash
-            outcome = AnalyticsTracker.SessionOutcome.CRASHED;
-        }
-
-        // Track analytics session end (fire-and-forget)
-        analyticsTracker.endSession(outcome);
-
         dapClient.stop();
         matchDiagnosticsService.dispose();
     }

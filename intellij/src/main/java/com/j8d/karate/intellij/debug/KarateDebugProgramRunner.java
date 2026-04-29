@@ -15,7 +15,6 @@ import com.intellij.xdebugger.XDebugProcess;
 import com.intellij.xdebugger.XDebugProcessStarter;
 import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.XDebuggerManager;
-import com.j8d.karate.intellij.licensing.LicenseManager;
 import com.j8d.karate.intellij.run.KarateRunConfiguration;
 import com.j8d.karate.intellij.run.KarateRunProfileState;
 import org.jetbrains.annotations.NotNull;
@@ -45,13 +44,6 @@ public class KarateDebugProgramRunner extends GenericProgramRunner<RunnerSetting
                                                         @NotNull ExecutionEnvironment environment)
             throws ExecutionException {
 
-        // Check license before allowing debug
-        LicenseManager licenseManager = LicenseManager.getInstance();
-        if (!licenseManager.isLicenseValid()) {
-            showTrialExpiredNotification(environment.getProject());
-            return null;
-        }
-
         if (!(state instanceof KarateRunProfileState)) {
             throw new ExecutionException("Invalid run profile state");
         }
@@ -77,24 +69,5 @@ public class KarateDebugProgramRunner extends GenericProgramRunner<RunnerSetting
         return descriptor;
     }
 
-    private void showTrialExpiredNotification(Project project) {
-        com.intellij.notification.Notification notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup("Karate Debug")
-            .createNotification(
-                "Trial Expired",
-                "Your Karate Debug trial has expired. Please purchase a license to continue debugging.",
-                NotificationType.WARNING
-            );
-
-        notification.addAction(new com.intellij.openapi.actionSystem.AnAction("Purchase License") {
-            @Override
-            public void actionPerformed(@NotNull com.intellij.openapi.actionSystem.AnActionEvent e) {
-                LicenseManager.getInstance().startCheckout(project);
-                notification.expire();
-            }
-        });
-
-        notification.notify(project);
-    }
 }
 
