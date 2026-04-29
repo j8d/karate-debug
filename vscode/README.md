@@ -1,15 +1,11 @@
 # Karate Debug
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/j8d.karate-debug?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/j8d.karate-debug)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
-[![Rating](https://img.shields.io/visual-studio-marketplace/r/j8d.karate-debug)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
-[![JetBrains Plugin](https://img.shields.io/jetbrains/plugin/v/29773?label=IntelliJ%20Plugin&logo=intellij-idea)](https://plugins.jetbrains.com/plugin/29773-karate-debug)
 [![Java](https://img.shields.io/badge/Java-17%2B-orange?logo=openjdk)](https://openjdk.org/)
-[![License](https://img.shields.io/badge/License-Commercial-blue)](https://www.karatedebug.com/license)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE)
 
 A powerful VS Code extension for debugging [Karate](https://github.com/karatelabs/karate) tests. Set breakpoints directly in your `.feature` files, step through scenarios including Java and JavaScript code, inspect variables, and run tests with a single click.
 
-> **This is a new extension!** Feature requests, bug reports, and any other feedback or contributions are welcome! Feel free to [Contact Me](https://www.karatedebug.com/?contact=general&ide=vscode).
+> **This is a new extension!** Feature requests, bug reports, and any other feedback or contributions are welcome! Feel free to [open an issue](https://github.com/j8d/karate-debug/issues).
 
 ## Features
 
@@ -143,12 +139,12 @@ When step filtering is enabled, stepping into framework code will automatically 
 
 ## Contributing
 
-Contributions are welcome! Feel free to [Contact Me](https://www.karatedebug.com/?contact=general&ide=vscode).
+Contributions are welcome! Please see [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines, or [open an issue](https://github.com/j8d/karate-debug/issues) to discuss your ideas.
 
 
 ## License
 
-This extension is proprietary software. See the [full license terms](https://www.karatedebug.com/license).
+This extension is open-source software licensed under the [Apache License 2.0](LICENSE).
 
 ## Acknowledgments
 

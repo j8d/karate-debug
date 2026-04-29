@@ -7,9 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.6] - 2026-03-09
 
-### Added
-- One-time notification for existing users about price reduction from $29.99 to $9.99
-
 ## [0.7.5] - 2026-03-09
 
 ### Fixed
@@ -19,9 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved socket error suppression to only filter shutdown-related errors (containing "Socket closed" or "Broken pipe") while preserving legitimate network errors during active debug sessions
 
 ## [0.7.4] - 2026-02-27
-
-### Added
-- Analytics tracking for anonymous usage insights and product improvement
 
 ## [0.7.3] - 2026-02-11
 
@@ -94,14 +88,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.7] - 2026-01-05
 
-### Changed
-- Trial now starts automatically when you install the extension - no sign-in required
-- GitHub sign-in is only needed when purchasing a Pro subscription
-- Purchase flow now triggers GitHub authentication automatically if not signed in
-
-### Fixed
-- Trial days remaining now displays consistently between status bar and info popup
-
 ## [0.6.6] - 2025-01-02
 
 ### Removed
@@ -117,21 +103,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Brighter green/red colors for match diagnostics underlines
 - Use `DiagnosticSeverity.Hint` to avoid duplicate squiggly underlines
 
-### Fixed
-- Fixed logout not updating status - clicking status bar after logout now correctly shows "Sign In" option
-
 ## [0.6.4] - 2025-01-01
 
 ### Added
 - CI workflow with linting and automated tests on every push/PR
 - ESLint configuration for TypeScript code quality
-- License page at https://www.karatedebug.com/license
 
 ### Changed
 - Release workflow now automatically publishes to VS Code Marketplace
 - Updated copyright to 2025-2026
-- Updated contact email to ryan@karatedebug.com
-- License now correctly states 30-day trial period
 
 ### Fixed
 - Fixed ESLint warnings with proper error type handling
@@ -140,9 +120,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.3] - 2024-12-29
 
 ### Changed
-- Updated README with trust-building content: privacy assurances, clearer pricing, FAQ section
-- Added social proof badges (installs, rating)
-- Streamlined getting started flow
+- Updated README
+- Added badges
 
 ## [0.6.2] - 2024-12-29
 
@@ -176,22 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.1] - 2024-12-23
 
-### Fixed
-- Fresh installs now correctly show "Sign In" instead of "Trial Expired"
-- Browser tab auto-closes after OAuth redirect
-- Logout now properly clears trial state
-
 ## [0.5.0] - 2024-12-23
-
-### Added
-- GitHub authentication for license management
-- 30-day free trial for new users
-- Stripe integration for Pro subscriptions
-- License status bar indicator showing trial days remaining
-- Machine activation tracking (up to 5 machines per license)
-
-### Changed
-- Debug features now require active trial or Pro subscription
 
 ## [0.4.0] - 2024-12-22
 

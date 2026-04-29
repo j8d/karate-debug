@@ -1,5 +1,10 @@
 # Karate Debug
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub stars](https://img.shields.io/github/stars/j8d/karate-debug.svg?style=social&label=Star)](https://github.com/j8d/karate-debug)
+[![VS Code Version](https://img.shields.io/visual-studio-marketplace/v/j8d.karate-debug)](https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug)
+[![IntelliJ Plugin](https://img.shields.io/jetbrains/plugin/v/26605-karate-debug)](https://plugins.jetbrains.com/plugin/26605-karate-debug)
+
 A debugging solution for Karate API tests supporting both VS Code and IntelliJ IDEA.
 
 ## Project Structure
@@ -71,4 +76,5 @@ Releases are triggered manually via GitHub Actions:
 
 - **VS Code Marketplace**: https://marketplace.visualstudio.com/items?itemName=j8d.karate-debug
 - **JetBrains Marketplace**: https://plugins.jetbrains.com/plugin/26605-karate-debug
-- **Website**: https://karatedebug.com
+- **GitHub Repository**: https://github.com/j8d/karate-debug
+- **Report Issues**: https://github.com/j8d/karate-debug/issues
