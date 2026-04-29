@@ -2,6 +2,11 @@
 
 All notable changes to the Karate Debug IntelliJ plugin will be documented in this file.
 
+## [0.2.4] - 2026-04-29
+
+### Changed
+- Open-source release: Removed all licensing, trial, and payment functionality
+
 ## [0.2.3] - 2026-03-09
 
 ### Fixed
