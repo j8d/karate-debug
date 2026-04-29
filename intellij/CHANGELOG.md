@@ -2,10 +2,12 @@
 
 All notable changes to the Karate Debug IntelliJ plugin will be documented in this file.
 
-## [0.2.3] - 2026-03-09
+## [0.2.4] - 2026-04-29
 
-### Added
-- One-time notification for existing users about price reduction from $29.99 to $9.99
+### Changed
+- Open-source release: Removed all licensing, trial, and payment functionality
+
+## [0.2.3] - 2026-03-09
 
 ### Fixed
 - Replaced deprecated `ProcessAdapter` with `ProcessListener` interface
@@ -20,9 +22,6 @@ All notable changes to the Karate Debug IntelliJ plugin will be documented in th
 - Improved socket error suppression to only filter shutdown-related errors (containing "Socket closed" or "Broken pipe") while preserving legitimate network errors during active debug sessions
 
 ## [0.2.1] - 2026-02-27
-
-### Added
-- Analytics tracking for anonymous usage insights and product improvement
 
 ### Fixed
 - Force HTTP/1.1 for analytics API calls to ensure compatibility with all server configurations
@@ -122,5 +121,4 @@ All notable changes to the Karate Debug IntelliJ plugin will be documented in th
 - Project auto-detection for Maven and Gradle
 - Environment and log level switching
 - Full syntax highlighting for Karate feature files
-- 30-day trial with optional GitHub sign-in
 

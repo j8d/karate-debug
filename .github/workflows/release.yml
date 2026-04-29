@@ -64,6 +64,7 @@ jobs:
     needs: build-debug-server
     if: ${{ github.event.inputs.platform == 'vscode' || github.event.inputs.platform == 'both' }}
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout
@@ -120,6 +121,7 @@ jobs:
     needs: build-debug-server
     if: ${{ github.event.inputs.platform == 'intellij' || github.event.inputs.platform == 'both' }}
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Free disk space

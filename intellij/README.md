@@ -9,7 +9,7 @@ No complex setup. No configuration files. No sign-up required. Just install and 
 1. **Install** - Search "Karate Debug" in IntelliJ Plugins (Settings > Plugins > Marketplace)
 2. **Open** - Navigate to any `.feature` file in your project
 3. **Click** - Hit the debug gutter icon next to any Feature or Scenario
-4. **Debug** - Your 30-day free trial starts automatically (no sign-in required)
+4. **Debug** - Start debugging immediately - it's free and open-source!
 
 ## Features
 
@@ -100,30 +100,10 @@ For advanced scenarios, create a Karate Debug run configuration:
 | Scenario | Optional scenario name (runs all if empty) |
 | Environment | Karate environment (`karate.env` system property) |
 
-## License Management
-
-### Status Bar
-The license status appears in the IntelliJ status bar:
-- **"Trial: Xd left"** - Active trial with days remaining
-- **"Karate Debug Pro"** - Active Pro subscription
-- **"Trial Expired"** - Trial ended, click to purchase
-
-### How Licensing Works
-- **Trial starts automatically** when you install the plugin - no sign-in required
-- **GitHub sign-in is only needed when you purchase** a Pro subscription
-- **Your license activates on up to 5 machines** after purchase
-
-## Pricing
-
-**Free Trial** - $0 for 30 days with full access to all features. No sign-up or credit card required.
-
-**Karate Debug Pro** - $29.99/month for unlimited debugging sessions, priority support, up to 5 machine activations, and early access to new features.
-
 ## Privacy and Security
 
-- **Your code stays local.** All debugging happens on your machine. We never see, access, or store your code, tests, or test data.
-- **No sign-in required for trial.** Your trial starts automatically when you install. GitHub sign-in is only needed when you purchase.
-- **Works offline.** Once activated, Karate Debug works fully offline. An internet connection is only needed for initial activation and periodic license checks.
+- **Your code stays local.** All debugging happens on your machine - your code, tests, and test data never leave your computer.
+- **Works offline.** Karate Debug works fully offline once installed.
 
 ## FAQ
 
@@ -131,21 +111,18 @@ The license status appears in the IntelliJ status bar:
 IntelliJ IDEA 2024.1+, Java 17+ (21 recommended), a Maven project with Karate dependencies. Tests should be in `src/test/java` or `src/test/resources`.
 
 **Can I use it on multiple machines?**
-Pro subscribers can activate on up to 5 machines - perfect for work laptop, home desktop, and CI environments.
-
-**What happens after the 30-day trial?**
-Subscribe to Pro for $29.99/month to continue using all features. No credit card is required to start the trial.
+Yes! Karate Debug is free and open-source - use it on as many machines as you need.
 
 **Is there also a VS Code version?**
 Yes! Search "Karate Debug" in the VS Code Extensions marketplace.
 
 ## Feedback
 
-Have a feature request or found a bug? Email us at [ryan@karatedebug.com](mailto:ryan@karatedebug.com).
+Have a feature request or found a bug? Please [open an issue](https://github.com/j8d/karate-debug/issues) on GitHub.
 
 ## License
 
-This plugin is proprietary software. See the [full license terms](https://www.karatedebug.com/license).
+This plugin is open-source software licensed under the [Apache License 2.0](../LICENSE).
 
 ## Acknowledgments
 

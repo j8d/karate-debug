@@ -3,10 +3,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { KarateDebugAdapterFactory } from './debugAdapter';
 import { MatchDiagnosticsProvider } from './matchDiagnostics';
-import { LicenseManager } from './licensing';
 import { KarateDocumentLinkProvider } from './documentLinks';
 import { registerJsInlineValuesProvider } from './jsInlineValues';
-import { AnalyticsTracker } from './analyticsTracker';
 
 // Global output channel for logging
 export let outputChannel: vscode.OutputChannel;
@@ -75,9 +73,6 @@ let currentEnvironment = 'dev';
 let environmentStatusBar: vscode.StatusBarItem;
 let logLevelStatusBar: vscode.StatusBarItem;
 
-// License manager
-let licenseManager: LicenseManager;
-
 // Tree item types for Feature Explorer
 type FeatureItemType = 'folder' | 'feature' | 'scenario';
 
@@ -97,55 +92,13 @@ export function activate(context: vscode.ExtensionContext) {
     // Migrate old launch configurations to new default
     migrateLaunchConfigurations();
 
-    // Initialize license manager and check trial status
-    // Trial now starts automatically - no login required
-    licenseManager = new LicenseManager(context);
-    licenseManager.initialize().then(async status => {
-        outputChannel.appendLine(`License status: ${status.status}, days remaining: ${status.daysRemaining}`);
-
-        if (status.status === 'expired') {
-            // Trial/subscription expired - prompt to purchase
-            await licenseManager.showTrialExpiredMessage();
-        }
-        // Note: 'none' status only happens if offline on first install
-        // In that case, features still work and we'll sync when online
-    });
-
-    // Register license commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('karateDebug.login', () => licenseManager.login()),
-        vscode.commands.registerCommand('karateDebug.logout', () => licenseManager.logout()),
-        vscode.commands.registerCommand('karateDebug.upgrade', () => licenseManager.startCheckout()),
-        vscode.commands.registerCommand('karateDebug.manageSubscription', () => licenseManager.openSubscriptionPortal()),
-        vscode.commands.registerCommand('karateDebug.showLicenseInfo', () => showLicenseInfo())
-    );
-
     // Load saved environment (fall back to default from settings)
     const config = vscode.workspace.getConfiguration('karateDebug');
     const defaultEnv = config.get<string>('defaultEnvironment', 'dev');
     currentEnvironment = context.workspaceState.get('karateEnv', defaultEnv);
 
-    // Initialize analytics tracker for session and lifecycle tracking
-    const currentVersion = context.extension.packageJSON.version as string;
-    const analyticsTracker = new AnalyticsTracker(
-        licenseManager.machineIdentifier,
-        currentVersion
-    );
-
-    // Track lifecycle events (fire-and-forget)
-    // Send 'initialized' on every activation to track active installs
-    analyticsTracker.trackLifecycleEvent('initialized').catch(() => {});
-
-    // Additionally track version updates for adoption metrics
-    const lastVersionKey = 'karate-debug.lastVersion';
-    const lastVersion = context.globalState.get<string>(lastVersionKey);
-    if (lastVersion && lastVersion !== currentVersion) {
-        analyticsTracker.trackLifecycleEvent('updated', lastVersion).catch(() => {});
-    }
-    context.globalState.update(lastVersionKey, currentVersion);
-
     // Register debug adapter factory
-    const factory = new KarateDebugAdapterFactory(context, outputChannel, analyticsTracker);
+    const factory = new KarateDebugAdapterFactory(context, outputChannel);
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterDescriptorFactory('karate', factory)
     );
@@ -211,13 +164,6 @@ export function activate(context: vscode.ExtensionContext) {
     // Register debug command (with line number argument from CodeLens or tree view)
     context.subscriptions.push(
         vscode.commands.registerCommand('karateDebug.debugFeature', async (arg?: vscode.Uri | FeatureItem, line?: number) => {
-            // Check trial status before allowing debug
-            if (!licenseManager.isTrialValid()) {
-                // Trial expired - prompt to purchase (no login required for trial)
-                await licenseManager.showTrialExpiredMessage();
-                return;
-            }
-
             let filePath: string;
             let scenarioLine: number;
 
@@ -258,13 +204,6 @@ export function activate(context: vscode.ExtensionContext) {
     // Register debug entire feature command
     context.subscriptions.push(
         vscode.commands.registerCommand('karateDebug.debugEntireFeature', async (arg?: vscode.Uri | FeatureItem) => {
-            // Check trial status before allowing debug
-            if (!licenseManager.isTrialValid()) {
-                // Trial expired - prompt to purchase (no login required for trial)
-                await licenseManager.showTrialExpiredMessage();
-                return;
-            }
-
             let filePath: string;
 
             if (!arg) {
@@ -363,56 +302,7 @@ export function getCurrentEnvironment(): string {
     return currentEnvironment;
 }
 
-async function showLicenseInfo(): Promise<void> {
-    const status = licenseManager.getStatus();
 
-    if (status.status === 'none') {
-        // Offline on first install - just inform
-        const action = await vscode.window.showInformationMessage(
-            'Karate Debug: Unable to verify trial. Please check your internet connection.',
-            'Contact Developer'
-        );
-        if (action === 'Contact Developer') {
-            vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?contact=general&ide=vscode'));
-        }
-    } else if (status.status === 'active') {
-        const action = await vscode.window.showInformationMessage(
-            `Karate Debug Pro - Licensed to ${status.githubUsername}`,
-            'Manage Subscription',
-            'Contact Developer'
-        );
-        if (action === 'Manage Subscription') {
-            await licenseManager.openSubscriptionPortal();
-        } else if (action === 'Contact Developer') {
-            vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?contact=general&ide=vscode'));
-        }
-    } else if (status.status === 'trialing') {
-        const action = await vscode.window.showInformationMessage(
-            `Karate Debug Trial: ${status.daysRemaining} days remaining`,
-            'Purchase License',
-            'Contact Developer'
-        );
-        if (action === 'Purchase License') {
-            await licenseManager.startCheckout();
-        } else if (action === 'Contact Developer') {
-            vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?contact=general&ide=vscode'));
-        }
-    } else {
-        const action = await vscode.window.showWarningMessage(
-            'Karate Debug: Trial expired. Purchase a license or sign in if you already have one.',
-            'Purchase License',
-            'Sign In',
-            'Contact Developer'
-        );
-        if (action === 'Purchase License') {
-            await licenseManager.startCheckout();
-        } else if (action === 'Sign In') {
-            await licenseManager.login();
-        } else if (action === 'Contact Developer') {
-            vscode.env.openExternal(vscode.Uri.parse('https://www.karatedebug.com/?contact=general&ide=vscode'));
-        }
-    }
-}
 
 async function debugKarateFeature(uri: vscode.Uri, line: number) {
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);

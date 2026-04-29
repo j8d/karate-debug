@@ -130,8 +130,6 @@ npx vsce publish major   # 0.3.1 -> 1.0.0
 - `package.json` - Extension manifest, version, contributions
 - `src/extension.ts` - CodeLens, Feature Explorer, commands
 - `src/debugAdapter.ts` - Spawns Java debug server, handles DAP
-- `src/licensing.ts` - License management, trial flow, GitHub auth
-- `src/config.ts` - Build-time configuration (API URL, GitHub client ID)
 - `debug-server/pom.xml` - Java dependencies (Karate, logging)
 - `.github/workflows/release.yml` - Automated release workflow
 
@@ -170,43 +168,6 @@ origin  git@github-j8d:j8d/karate-debug.git
 - Must be populated when EITHER `showFailing` OR `showActualValues` is enabled
 - Decorations only added when `showFailing` is enabled
 - Inlay hints check `showActualValues` setting independently
-
-## Licensing Architecture
-
-### Trial Flow
-1. **Anonymous Trial** (no login required):
-   - Extension generates stable `machineId` from hostname + username hash
-   - Calls `POST /api/trial/start` with `machineId` and `machineName`
-   - Server creates trial in `anonymous_trials` table (30 days)
-   - Extension stores nothing locally - trial state lives on server
-
-2. **Trial Linking** (when user later signs in):
-   - During GitHub OAuth callback, server links anonymous trial to user account
-   - Remaining trial days transfer to the authenticated user
-   - Original `anonymous_trials` record marked as converted
-
-3. **Purchase Flow**:
-   - If not logged in, `startCheckout()` triggers GitHub auth first
-   - After auth, redirects to Stripe checkout
-   - Subscription stored in `subscriptions` table
-
-### Key Classes
-- `LicenseManager` - Singleton managing license state, status bar, commands
-- `LicenseStatus` - Current license state: `active`, `trialing`, `expired`, `none`
-- `AnonymousTrialResponse` - API response from `/api/trial/start` and `/api/trial/status`
-
-### API Endpoints (karate-debug-api)
-- `POST /api/trial/start` - Start anonymous machine trial
-- `GET /api/trial/status` - Check trial status by machineId
-- `GET /api/auth/github` - Initiate GitHub OAuth
-- `GET /api/auth/callback` - Handle OAuth callback, link trials
-- `POST /api/subscription/checkout` - Create Stripe checkout session
-- `GET /api/license/status` - Get license status for authenticated user
-
-### Build Environments
-- **Dev** (`npm run package:dev`): Points to `localhost:3000`, dev GitHub OAuth app
-- **Prod** (`npm run package:prod`): Points to `karate-debug-api.vercel.app`, prod OAuth app
-- Config injected at build time via `scripts/set-build-env.js`
 
 ## IntelliJ Plugin Patterns
 
@@ -270,20 +231,6 @@ When displaying failure info, distinguish between:
 1. **Value mismatches** - Show "actual: <value> [Fix]"
 2. **Syntax/type errors** - Show error message directly without "actual:" prefix and no [Fix] button
 Use `isErrorMessage` flag in `MatchFailureInfo` to track this.
-
-### Licensing Architecture (IntelliJ)
-- `LicenseManager` - Singleton service via `ApplicationManager.getService()`
-- `LicenseApiClient` - Async HTTP client using `HttpClient` with `CompletableFuture`
-- `LicenseStatusBarWidget` - Implements `StatusBarWidget` with `MultipleTextValuesPresentation`
-- `KarateAuthRestService` - Extends `RestService` for OAuth callback handling
-
-### GitHub OAuth Flow (IntelliJ)
-IntelliJ uses its built-in REST server for OAuth callbacks:
-1. Get port via `BuiltInServerManager.getInstance().getPort()`
-2. Build callback URL: `http://localhost:<port>/api/karate-debug/auth/callback`
-3. Pass callback in OAuth state: `state=intellij:<url_encoded_callback>`
-4. API server parses state and redirects to localhost callback
-5. `KarateAuthRestService.execute()` receives callback with `?code=xxx`
 
 ### Auto-Expiring Notifications
 ```java
