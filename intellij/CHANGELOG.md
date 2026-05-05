@@ -2,6 +2,11 @@
 
 All notable changes to the Karate Debug IntelliJ plugin will be documented in this file.
 
+## [0.2.5] - 2026-05-05
+
+### Fixed
+- Fixed plugin publishing issue that caused "plugin archive file cannot be extracted" error on JetBrains Marketplace
+
 ## [0.2.4] - 2026-04-29
 
 ### Changed
